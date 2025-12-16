@@ -25,17 +25,15 @@ export default function HomeScreen() {
   const selectedCharacter = userData.selectedCharacter || 'casual';
   const enabledHabits = userData.enabledHabits || ['study'];
   
-  // Check if onboarding is complete
-  const isOnboardingComplete = userData.buddyName && userData.studentLevel;
-  
-  // Redirect based on onboarding status
+  // Always redirect to onboarding for testing
   useEffect(() => {
-    if (!isOnboardingComplete) {
+    // Small delay to ensure layout is mounted
+    const timer = setTimeout(() => {
       router.replace('/onboarding/welcome');
-    } else {
-      router.replace('/(tabs)');
-    }
-  }, [isOnboardingComplete]);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // Update energy periodically (just caps it, no drain)
   useEffect(() => {

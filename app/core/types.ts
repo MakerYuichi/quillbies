@@ -21,13 +21,14 @@ export interface UserData {
   enabledHabits?: string[]; // ['study', 'meals', 'hydration', 'sleep', 'exercise']
   
   // Daily habit tracking
-  sleepHours: number;
+  sleepHours: number; // Accumulated sleep hours today
   ateBreakfast: boolean;
   waterGlasses: number;
   
   // Streaks
   currentStreak: number;
   lastCheckInDate: string;
+  lastSleepReset?: string; // Date when sleep was last reset (for daily accumulation)
 }
 
 export interface SessionData {

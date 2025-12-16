@@ -51,11 +51,12 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     qCoins: 0,
     messPoints: 0,
     lastActiveTimestamp: Date.now(),
-    sleepHours: 7,
+    sleepHours: 0, // Accumulated sleep today (starts at 0)
     ateBreakfast: false,
     waterGlasses: 0,
     currentStreak: 0,
-    lastCheckInDate: new Date().toDateString()
+    lastCheckInDate: new Date().toDateString(),
+    lastSleepReset: new Date().toDateString() // Track when sleep was last reset
   },
   
   session: null,
@@ -63,6 +64,7 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
   // Initialize user with default values
   initializeUser: () => {
     const now = Date.now();
+    const today = new Date().toDateString();
     set({
       userData: {
         energy: 100,
@@ -70,11 +72,12 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         qCoins: 0,
         messPoints: 0,
         lastActiveTimestamp: now,
-        sleepHours: 7,
+        sleepHours: 0,
         ateBreakfast: false,
         waterGlasses: 0,
         currentStreak: 0,
-        lastCheckInDate: new Date().toDateString()
+        lastCheckInDate: today,
+        lastSleepReset: today
       }
     });
   },
@@ -247,14 +250,25 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
   // Log water intake
   logWater: () => {
     const { userData } = get();
+    const newCount = userData.waterGlasses + 1;
     
-    if (userData.waterGlasses >= 8) return; // Max 8 glasses
+    // Base rewards
+    const energyGain = 5;
+    const coinGain = 5;
+    
+    // Bonus for reaching exactly 8 glasses (daily goal)
+    const bonusEnergy = newCount === 8 ? 20 : 0;
+    const bonusCoins = newCount === 8 ? 10 : 0;
     
     set({
       userData: {
         ...userData,
-        waterGlasses: userData.waterGlasses + 1,
-        qCoins: userData.qCoins + 5 // 5 coins per glass
+        waterGlasses: newCount,
+        energy: Math.min(
+          userData.energy + energyGain + bonusEnergy,
+          userData.maxEnergyCap
+        ),
+        qCoins: userData.qCoins + coinGain + bonusCoins
       }
     });
   },
@@ -274,29 +288,41 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     });
   },
   
-  // Log sleep hours
+  // Log sleep hours - ACCUMULATES throughout the day
   logSleep: (hours: number) => {
     const { userData } = get();
     
-    // 1. Create temp data with new sleep hours
-    const tempData = { ...userData, sleepHours: hours };
+    // Check if it's a new day - reset sleep if so
+    const today = new Date().toDateString();
+    const isNewDay = userData.lastSleepReset !== today;
     
-    // 2. Calculate NEW max cap
+    // 1. Calculate accumulated sleep (reset if new day)
+    const accumulatedSleep = isNewDay ? hours : userData.sleepHours + hours;
+    
+    console.log(`[Sleep] Adding ${hours}h → Total today: ${accumulatedSleep}h (was ${userData.sleepHours}h)`);
+    
+    // 2. Create temp data with accumulated sleep hours
+    const tempData = { ...userData, sleepHours: accumulatedSleep };
+    
+    // 3. Calculate NEW max cap based on total sleep
     const newMaxCap = calculateMaxEnergyCap(tempData);
     
-    console.log(`[Sleep] ${hours}h → New max cap: ${newMaxCap} (was ${userData.maxEnergyCap})`);
+    console.log(`[Sleep] New max cap: ${newMaxCap} (was ${userData.maxEnergyCap})`);
     
-    // 3. CAP current energy to new max (if it's higher)
+    // 4. CAP current energy to new max (if it's higher)
     const newEnergy = Math.min(userData.energy, newMaxCap);
     
-    console.log(`[Sleep] Energy capped: ${userData.energy} → ${newEnergy}`);
+    // 5. Add bonus energy for good sleep (if total >= 8h)
+    const bonusEnergy = accumulatedSleep >= 8 ? 10 : 0;
+    const finalEnergy = Math.min(newEnergy + bonusEnergy, newMaxCap);
     
     set({
       userData: {
         ...userData,
-        sleepHours: hours,
+        sleepHours: accumulatedSleep, // ACCUMULATE, don't replace
         maxEnergyCap: newMaxCap,
-        energy: newEnergy, // CRITICAL: Cap the energy!
+        energy: finalEnergy,
+        lastSleepReset: today // Update reset date
       }
     });
   },
@@ -314,21 +340,23 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     });
   },
   
-  // Reset daily values (for testing)
+  // Reset daily values (for testing or new day)
   resetDay: () => {
     const { userData } = get();
+    const today = new Date().toDateString();
     
     set({
       userData: {
         ...userData,
         ateBreakfast: false,
         waterGlasses: 0,
-        sleepHours: 7,
+        sleepHours: 0, // Reset accumulated sleep
+        lastSleepReset: today,
         maxEnergyCap: calculateMaxEnergyCap({
           ...userData,
           ateBreakfast: false,
           waterGlasses: 0,
-          sleepHours: 7
+          sleepHours: 0
         })
       }
     });
