@@ -1,0 +1,25 @@
+📥 CAVICHE FONT REQUIRED
+
+Please place your Caviche font file here:
+- File name: Caviche-Regular.ttf
+- Location: This folder (assets/fonts/)
+
+Where to get Caviche font:
+1. Download from: https://www.dafont.com/caviche.font
+2. Or search "Caviche font download" on Google
+3. Download the .ttf file
+4. Place it in this folder
+
+After adding the font:
+1. Restart the app: npx expo start --clear
+2. The title will display in Caviche font!
+
+Current status:
+❌ Caviche-Regular.ttf not found
+⚠️  App will show error until font is added
+
+Alternative (temporary):
+If you can't find Caviche, you can use Caveat instead:
+- In welcome.tsx, change 'Caviche' to 'Caveat_700Bold'
+- Remove the Caviche require line
+- Add back: import { Caveat_700Bold } from '@expo-google-fonts/caveat'
