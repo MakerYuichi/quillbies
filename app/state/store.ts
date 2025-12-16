@@ -41,6 +41,7 @@ interface QuillbyStore {
   setCharacter: (character: string) => void;
   setBuddyName: (name: string) => void;
   setProfile: (userName: string, studentLevel: string, country: string, timezone: string) => void;
+  setHabits: (habits: string[]) => void;
 }
 
 export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
@@ -371,6 +372,19 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         studentLevel,
         country,
         timezone
+      }
+    });
+  },
+  
+  // Onboarding: Set enabled habits
+  setHabits: (habits: string[]) => {
+    const { userData } = get();
+    console.log(`[Onboarding] Habits enabled: ${habits.join(', ')}`);
+    
+    set({
+      userData: {
+        ...userData,
+        enabledHabits: habits
       }
     });
   }

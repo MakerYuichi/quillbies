@@ -34,7 +34,14 @@
           "color": "#ffffff"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Quillby uses your location once during setup to detect your country and timezone for accurate study reminders.",
+          "locationWhenInUsePermission": "Quillby uses your location once during setup to detect your country and timezone for accurate study reminders."
+        }
+      ]
     ]
   }
 }

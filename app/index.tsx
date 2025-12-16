@@ -19,12 +19,21 @@ export default function HomeScreen() {
     resetDay
   } = useQuillbyStore();
   
-  // Redirect to welcome screen on first launch
-  // TODO: Add proper onboarding completion flag to store
+  // Get personalized data from onboarding
+  const buddyName = userData.buddyName || 'Quillby';
+  const userName = userData.userName || 'Friend';
+  const selectedCharacter = userData.selectedCharacter || 'casual';
+  const enabledHabits = userData.enabledHabits || ['study'];
+  
+  // Check if onboarding is complete
+  const isOnboardingComplete = userData.buddyName && userData.studentLevel;
+  
+  // Redirect to onboarding if not complete
   useEffect(() => {
-    // For now, always redirect to welcome (remove this later when you add completion flag)
-    router.replace('/onboarding/welcome');
-  }, []);
+    if (!isOnboardingComplete) {
+      router.replace('/onboarding/welcome');
+    }
+  }, [isOnboardingComplete]);
   
   // Update energy periodically (just caps it, no drain)
   useEffect(() => {
@@ -76,6 +85,12 @@ export default function HomeScreen() {
   
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Personalized Welcome Header */}
+      <View style={styles.welcomeHeader}>
+        <Text style={styles.welcomeText}>Welcome back, {userName}! 👋</Text>
+        <Text style={styles.buddyText}>{buddyName} is ready to help you focus</Text>
+      </View>
+      
       {/* Header with Q-Coins and Max Cap */}
       <View style={styles.header}>
         <View style={styles.coinContainer}>
@@ -118,44 +133,74 @@ export default function HomeScreen() {
         </Text>
       </TouchableOpacity>
       
-      {/* Daily Habits Section */}
+      {/* Daily Habits Section - Only show enabled habits */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Daily Care</Text>
+        <Text style={styles.sectionTitle}>Daily Care for {buddyName}</Text>
         
-        <View style={styles.habitRow}>
-          <TouchableOpacity 
-            style={[styles.habitButton, userData.ateBreakfast && styles.habitButtonDone]}
-            onPress={logBreakfast}
-            disabled={userData.ateBreakfast}
-          >
-            <Text style={styles.habitButtonText}>
-              {userData.ateBreakfast ? '✅ Ate Breakfast' : '🍳 Log Breakfast'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Meals - Only show if enabled */}
+        {enabledHabits.includes('meals') && (
+          <View style={styles.habitRow}>
+            <TouchableOpacity 
+              style={[styles.habitButton, userData.ateBreakfast && styles.habitButtonDone]}
+              onPress={logBreakfast}
+              disabled={userData.ateBreakfast}
+            >
+              <Text style={styles.habitButtonText}>
+                {userData.ateBreakfast ? '✅ Ate Breakfast' : '🍎 Log Breakfast'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
-        <View style={styles.habitRow}>
-          <TouchableOpacity 
-            style={styles.habitButton}
-            onPress={logWater}
-            disabled={userData.waterGlasses >= 8}
-          >
-            <Text style={styles.habitButtonText}>
-              💧 Log Water ({userData.waterGlasses}/8)
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Hydration - Only show if enabled */}
+        {enabledHabits.includes('hydration') && (
+          <View style={styles.habitRow}>
+            <TouchableOpacity 
+              style={styles.habitButton}
+              onPress={logWater}
+              disabled={userData.waterGlasses >= 8}
+            >
+              <Text style={styles.habitButtonText}>
+                💧 Log Water ({userData.waterGlasses}/8)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
-        <View style={styles.habitRow}>
-          <TouchableOpacity 
-            style={styles.habitButton}
-            onPress={handleLogSleep}
-          >
-            <Text style={styles.habitButtonText}>
-              😴 Log Sleep ({userData.sleepHours}h)
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Sleep - Only show if enabled */}
+        {enabledHabits.includes('sleep') && (
+          <View style={styles.habitRow}>
+            <TouchableOpacity 
+              style={styles.habitButton}
+              onPress={handleLogSleep}
+            >
+              <Text style={styles.habitButtonText}>
+                😴 Log Sleep ({userData.sleepHours}h)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Exercise - Only show if enabled */}
+        {enabledHabits.includes('exercise') && (
+          <View style={styles.habitRow}>
+            <TouchableOpacity 
+              style={styles.habitButton}
+              onPress={() => Alert.alert('Exercise', 'Exercise logging coming soon!')}
+            >
+              <Text style={styles.habitButtonText}>
+                🏃 Log Exercise
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Show message if no habits enabled */}
+        {enabledHabits.length === 1 && enabledHabits[0] === 'study' && (
+          <Text style={styles.noHabitsText}>
+            💡 Enable more habits in settings to track meals, water, sleep, and exercise!
+          </Text>
+        )}
       </View>
       
       {/* Testing Section */}
@@ -326,5 +371,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginVertical: 2,
+  },
+  welcomeHeader: {
+    backgroundColor: '#FFF',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+  },
+  welcomeText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 5,
+  },
+  buddyText: {
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  noHabitsText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 10,
+    padding: 15,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
   },
 });

@@ -17,6 +17,9 @@ export interface UserData {
   country?: string;
   timezone?: string;
   
+  // Habits
+  enabledHabits?: string[]; // ['study', 'meals', 'hydration', 'sleep', 'exercise']
+  
   // Daily habit tracking
   sleepHours: number;
   ateBreakfast: boolean;

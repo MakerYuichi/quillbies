@@ -9,12 +9,14 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
 import RNPickerSelect from 'react-native-picker-select';
 import * as Localization from 'expo-localization';
+import * as Location from 'expo-location';
 import { useQuillbyStore } from '../state/store';
 
 // Get screen dimensions for responsive layout
@@ -138,26 +140,137 @@ export default function ProfileScreen() {
     }
   }, [country]);
 
-  const detectTimezone = async () => {
+  const detectLocation = async () => {
     try {
-      const deviceTimezone = Localization.getCalendars()[0]?.timeZone || Localization.timezone;
-      console.log(`[Profile] Detected device timezone: ${deviceTimezone}`);
+      console.log('[Profile] User clicked detect location button');
       
-      // Find country that has this timezone
-      for (const [countryCode, timezones] of Object.entries(COUNTRY_TIMEZONES)) {
-        if (timezones.includes(deviceTimezone)) {
-          setCountry(countryCode);
-          setTimezone(deviceTimezone);
-          console.log(`[Profile] Auto-detected: ${countryCode}, ${deviceTimezone}`);
-          return;
-        }
+      // 1. Show explanation and ask for user confirmation first
+      const userConfirmed = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          '📍 Detect Your Location',
+          'Quillby needs access to your location to automatically detect your country and timezone. This helps set up your study schedule correctly.\n\nYour location is only used once for setup and is not stored or tracked.',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => resolve(false)
+            },
+            {
+              text: 'Allow Access',
+              onPress: () => resolve(true)
+            }
+          ]
+        );
+      });
+      
+      if (!userConfirmed) {
+        console.log('[Profile] User canceled location permission');
+        return;
       }
       
-      // If not found, just set the timezone
-      setTimezone(deviceTimezone);
-      console.log(`[Profile] Timezone detected but country not in list: ${deviceTimezone}`);
+      console.log('[Profile] User agreed, requesting system permission...');
+      
+      // 2. Request system location permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        console.log('[Profile] Location permission denied by system');
+        Alert.alert(
+          'Permission Denied',
+          'Location access is needed to detect your country. Please select it manually from the list.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      console.log('[Profile] Location permission granted, getting location...');
+      
+      // 3. Get current location (low accuracy = faster, less battery)
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Lowest, // Fastest, most battery-friendly
+      });
+      
+      console.log('[Profile] Got coordinates:', location.coords.latitude, location.coords.longitude);
+      
+      // 4. Convert coordinates to country
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      
+      if (geocode.length === 0) {
+        throw new Error('No geocode results');
+      }
+      
+      const countryCode = geocode[0].isoCountryCode;
+      const countryName = geocode[0].country;
+      const region = geocode[0].region;
+      
+      console.log('[Profile] Geocode result:', { countryCode, countryName, region });
+      
+      // 5. Map ISO country code to our country codes
+      const countryCodeMap: Record<string, string> = {
+        'US': 'US',
+        'GB': 'UK', // ISO code GB maps to our UK
+        'CA': 'CA',
+        'AU': 'AU',
+        'IN': 'IN',
+        'DE': 'DE',
+        'FR': 'FR',
+        'JP': 'JP',
+        'KR': 'KR',
+        'BR': 'BR',
+        'MX': 'MX',
+        'ES': 'ES',
+        'IT': 'IT',
+        'NL': 'NL',
+        'SE': 'SE',
+      };
+      
+      // 6. Check if country is in our list
+      if (countryCode && countryCodeMap[countryCode]) {
+        const mappedCountryCode = countryCodeMap[countryCode];
+        setCountry(mappedCountryCode);
+        
+        // Try to match timezone
+        const timezones = COUNTRY_TIMEZONES[mappedCountryCode];
+        if (timezones && timezones.length > 0) {
+          // Try to get device timezone and match it
+          const calendars = Localization.getCalendars();
+          const deviceTimezone = calendars[0]?.timeZone;
+          
+          if (deviceTimezone && timezones.includes(deviceTimezone)) {
+            setTimezone(deviceTimezone);
+            console.log('[Profile] Matched device timezone:', deviceTimezone);
+          } else {
+            setTimezone(timezones[0]); // Use first timezone as default
+            console.log('[Profile] Using default timezone:', timezones[0]);
+          }
+        }
+        
+        Alert.alert(
+          '✅ Location Detected!',
+          `Detected: ${countryName}${region ? `, ${region}` : ''}\n\nYou can adjust the timezone if needed.`,
+          [{ text: 'Great!' }]
+        );
+        
+      } else {
+        console.log('[Profile] Country not in our list:', countryCode, countryName);
+        Alert.alert(
+          'Country Not in List',
+          `Detected: ${countryName || 'Unknown'}. Please select your country manually from the list.`,
+          [{ text: 'OK' }]
+        );
+      }
+      
     } catch (error) {
-      console.error('[Profile] Could not detect timezone:', error);
+      console.error('[Profile] Location detection failed:', error);
+      
+      Alert.alert(
+        'Detection Failed',
+        'Could not detect your location. Please select country and timezone manually.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -165,8 +278,8 @@ export default function ProfileScreen() {
     if (isFormValid) {
       // Save to store
       setProfile(userName, studentLevel, country, timezone);
-      // Navigate to next screen (habit setup or home)
-      router.push('/'); // For now, go to home screen
+      // Navigate to habit setup screen
+      router.push('/onboarding/habit-setup');
     }
   };
 
@@ -291,10 +404,10 @@ export default function ProfileScreen() {
             {!country && (
               <TouchableOpacity
                 style={styles.detectButton}
-                onPress={detectTimezone}
+                onPress={detectLocation}
               >
                 <Text style={styles.detectButtonText}>
-                  📍 Detect my timezone automatically
+                  📍 Detect my location automatically
                 </Text>
               </TouchableOpacity>
             )}
