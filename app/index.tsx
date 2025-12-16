@@ -28,10 +28,12 @@ export default function HomeScreen() {
   // Check if onboarding is complete
   const isOnboardingComplete = userData.buddyName && userData.studentLevel;
   
-  // Redirect to onboarding if not complete
+  // Redirect based on onboarding status
   useEffect(() => {
     if (!isOnboardingComplete) {
       router.replace('/onboarding/welcome');
+    } else {
+      router.replace('/(tabs)');
     }
   }, [isOnboardingComplete]);
   

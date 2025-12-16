@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useQuillbyStore } from './state/store';
 
 export default function RootLayout() {
@@ -11,11 +12,12 @@ export default function RootLayout() {
   }, []);
   
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false, // Hide header for all screens (onboarding needs full screen)
-      }}
-    >
+    <SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false, // Hide header for all screens (onboarding needs full screen)
+        }}
+      >
       {/* Onboarding Screens - Welcome is now the ENTRY POINT */}
       <Stack.Screen 
         name="onboarding/welcome" 
@@ -57,6 +59,7 @@ export default function RootLayout() {
           headerTintColor: '#fff',
         }} 
       />
-    </Stack>
+      </Stack>
+    </SafeAreaProvider>
   );
 }

@@ -101,9 +101,10 @@ export default function HabitSetupScreen() {
     setHabits(selectedHabits);
     
     console.log('[Onboarding] Habits selected:', selectedHabits);
+    console.log('[Onboarding] Complete! Navigating to main app...');
     
-    // Navigate to main app
-    router.replace('/'); // Go to home screen
+    // Navigate to main app with tabs
+    router.replace('/(tabs)');
   };
 
   return (
