@@ -15,11 +15,47 @@ export default function HamsterCharacter({ selectedCharacter, currentAnimation, 
   const getCharacterImage = () => {
     // For casual character, check if we have the animation
     if (selectedCharacter === 'casual') {
+      // Water drinking animation (only for water button)
       if (currentAnimation === 'eating') {
         try {
           return require('../../assets/hamsters/casual/drinking.png');
         } catch {
           return require('../../assets/hamsters/casual/idle-sit.png');
+        }
+      }
+      // Normal eating animation (for maintain weight goal)
+      if (currentAnimation === 'eating-normal') {
+        try {
+          return require('../../assets/hamsters/casual/eating-normal.png');
+        } catch {
+          // Fallback to idle
+          return require('../../assets/hamsters/casual/idle-sit.png');
+        }
+      }
+      // Light eating animation (for lose weight goal)
+      if (currentAnimation === 'eating-light') {
+        try {
+          return require('../../assets/hamsters/casual/eating-light.png');
+        } catch {
+          // Fallback to normal eating
+          try {
+            return require('../../assets/hamsters/casual/eating-normal.png');
+          } catch {
+            return require('../../assets/hamsters/casual/idle-sit.png');
+          }
+        }
+      }
+      // Heavy eating animation (for gain weight goal)
+      if (currentAnimation === 'eating-heavy') {
+        try {
+          return require('../../assets/hamsters/casual/eating-heavy.png');
+        } catch {
+          // Fallback to normal eating
+          try {
+            return require('../../assets/hamsters/casual/eating-normal.png');
+          } catch {
+            return require('../../assets/hamsters/casual/idle-sit.png');
+          }
         }
       }
       if (currentAnimation === 'sleeping' || isSleeping) {

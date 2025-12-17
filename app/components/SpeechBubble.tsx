@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     width: (SCREEN_WIDTH * 355) / 393,
     height: (SCREEN_HEIGHT * 87) / 852,
     left: (SCREEN_WIDTH * 17) / 393,
-    top: (SCREEN_HEIGHT * 647) / 852,
+    top: (SCREEN_HEIGHT * 620) / 852, // Moved up to accommodate buttons
     backgroundColor: '#FFFBFB',
     borderWidth: 1,
     borderColor: '#000000',

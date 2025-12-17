@@ -59,7 +59,10 @@ const HABIT_OPTIONS = [
 
 export default function HabitSetupScreen() {
   const router = useRouter();
-  const setHabits = useQuillbyStore((state) => state.setHabits);
+  const { setHabits, setWeightGoal } = useQuillbyStore((state) => ({ 
+    setHabits: state.setHabits, 
+    setWeightGoal: state.setWeightGoal 
+  }));
 
   // Initialize all habits with their default states
   const [habits, setHabitsState] = useState(
@@ -68,6 +71,9 @@ export default function HabitSetupScreen() {
       enabled: habit.enabledByDefault
     }))
   );
+
+  // Weight goal state (only shown when meals habit is enabled)
+  const [weightGoal, setWeightGoalState] = useState<'lose' | 'maintain' | 'gain'>('maintain');
 
   // Load custom fonts
   const [fontsLoaded] = useFonts({
@@ -100,12 +106,22 @@ export default function HabitSetupScreen() {
     const selectedHabits = habits.filter(h => h.enabled).map(h => h.id);
     setHabits(selectedHabits);
     
+    // Save weight goal if meals habit is enabled
+    const mealsEnabled = habits.find(h => h.id === 'meals')?.enabled;
+    if (mealsEnabled) {
+      setWeightGoal(weightGoal);
+    }
+    
     console.log('[Onboarding] Habits selected:', selectedHabits);
+    console.log('[Onboarding] Weight goal:', mealsEnabled ? weightGoal : 'N/A');
     console.log('[Onboarding] Complete! Navigating to main app...');
     
     // Navigate to main app with tabs
     router.replace('/(tabs)');
   };
+
+  // Check if meals habit is enabled
+  const isMealsEnabled = habits.find(h => h.id === 'meals')?.enabled || false;
 
   return (
     <ImageBackground
@@ -160,6 +176,67 @@ export default function HabitSetupScreen() {
             </View>
           ))}
         </View>
+
+        {/* Weight Goal Selection - Only show when meals habit is enabled */}
+        {isMealsEnabled && (
+          <View style={styles.weightGoalCard}>
+            <Text style={styles.weightGoalTitle}>🍽️ Your Weight Goal</Text>
+            <Text style={styles.weightGoalSubtitle}>(Affects meal portion sizes)</Text>
+            
+            <View style={styles.weightGoalContainer}>
+              <TouchableOpacity
+                style={[styles.goalButton, weightGoal === 'lose' && styles.goalButtonSelected]}
+                onPress={() => setWeightGoalState('lose')}
+              >
+                <View style={styles.goalButtonContent}>
+                  <Text style={[styles.goalButtonText, weightGoal === 'lose' && styles.goalButtonTextSelected]}>
+                    📉 Lose Weight
+                  </Text>
+                  <Text style={[styles.goalSubtext, weightGoal === 'lose' && styles.goalSubtextSelected]}>
+                    3 small meals/day
+                  </Text>
+                </View>
+                {weightGoal === 'lose' && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.goalButton, weightGoal === 'maintain' && styles.goalButtonSelected]}
+                onPress={() => setWeightGoalState('maintain')}
+              >
+                <View style={styles.goalButtonContent}>
+                  <Text style={[styles.goalButtonText, weightGoal === 'maintain' && styles.goalButtonTextSelected]}>
+                    ⚖️ Maintain
+                  </Text>
+                  <Text style={[styles.goalSubtext, weightGoal === 'maintain' && styles.goalSubtextSelected]}>
+                    3 normal meals/day
+                  </Text>
+                </View>
+                {weightGoal === 'maintain' && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.goalButton, weightGoal === 'gain' && styles.goalButtonSelected]}
+                onPress={() => setWeightGoalState('gain')}
+              >
+                <View style={styles.goalButtonContent}>
+                  <Text style={[styles.goalButtonText, weightGoal === 'gain' && styles.goalButtonTextSelected]}>
+                    📈 Gain Weight
+                  </Text>
+                  <Text style={[styles.goalSubtext, weightGoal === 'gain' && styles.goalSubtextSelected]}>
+                    3 large meals/day
+                  </Text>
+                </View>
+                {weightGoal === 'gain' && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Note */}
         <Text style={styles.note}>
@@ -300,5 +377,77 @@ const styles = StyleSheet.create({
     fontFamily: 'ChakraPetch_600SemiBold',
     color: '#FFF',
     fontSize: SCREEN_WIDTH * 0.05,
+  },
+  // Weight Goal Styles
+  weightGoalCard: {
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    borderRadius: 16,
+    padding: SCREEN_WIDTH * 0.04,
+    marginBottom: SCREEN_HEIGHT * 0.025,
+    borderWidth: 2,
+    borderColor: '#FF9800',
+  },
+  weightGoalTitle: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: SCREEN_WIDTH * 0.045,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.005,
+  },
+  weightGoalSubtitle: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: SCREEN_WIDTH * 0.032,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: SCREEN_HEIGHT * 0.02,
+  },
+  weightGoalContainer: {
+    flexDirection: 'row',
+    gap: SCREEN_WIDTH * 0.02,
+  },
+  goalButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#DDD',
+    borderRadius: 12,
+    padding: SCREEN_WIDTH * 0.03,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  goalButtonSelected: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#4CAF50',
+  },
+  goalButtonContent: {
+    alignItems: 'center',
+  },
+  goalButtonText: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  goalButtonTextSelected: {
+    color: '#2E7D32',
+  },
+  goalSubtext: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: SCREEN_WIDTH * 0.025,
+    color: '#999',
+    textAlign: 'center',
+  },
+  goalSubtextSelected: {
+    color: '#4CAF50',
+  },
+  checkmark: {
+    position: 'absolute',
+    top: SCREEN_WIDTH * 0.01,
+    right: SCREEN_WIDTH * 0.01,
+    fontSize: SCREEN_WIDTH * 0.04,
+    color: '#4CAF50',
+    fontWeight: 'bold',
   },
 });

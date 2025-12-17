@@ -7,8 +7,10 @@ import HamsterCharacter from '../components/HamsterCharacter';
 import SpeechBubble from '../components/SpeechBubble';
 import WaterButton from '../components/WaterButton';
 import SleepButton from '../components/SleepButton';
+import MealButton from '../components/MealButton';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
+import { useMealTracking } from '../hooks/useMealTracking';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -25,6 +27,7 @@ export default function HomeScreen() {
     handleDrinkWater,
     waterAnimation,
     waterMessage,
+    waterMessageTimestamp,
   } = useWaterTracking(buddyName);
   
   const {
@@ -35,11 +38,37 @@ export default function HomeScreen() {
     handleWakeUpButton,
     sleepAnimation,
     sleepMessage,
+    sleepMessageTimestamp,
   } = useSleepTracking(buddyName);
+
+  const {
+    mealsLogged,
+    weightGoal,
+    portionDescription,
+    handleLogMeal,
+    mealAnimation,
+    mealMessage,
+    mealMessageTimestamp,
+  } = useMealTracking(buddyName);
   
-  // Determine current animation and message
-  const currentAnimation = sleepAnimation !== 'idle' ? sleepAnimation : waterAnimation;
-  const hamsterMessage = sleepMessage || waterMessage || `Hi ${buddyName}! 👋\nLet's have a productive day!`;
+  // Determine current animation based on priority: sleep > meal > water
+  const currentAnimation = sleepAnimation !== 'idle' ? sleepAnimation : (mealAnimation !== 'idle' ? mealAnimation : waterAnimation);
+  
+  // Show the most recent message (highest timestamp)
+  let hamsterMessage = `Hi ${buddyName}! 👋\nLet's have a productive day!`;
+  
+  // Find the most recent message among all features
+  const messages = [
+    { text: waterMessage, timestamp: waterMessageTimestamp },
+    { text: sleepMessage, timestamp: sleepMessageTimestamp },
+    { text: mealMessage, timestamp: mealMessageTimestamp },
+  ].filter(msg => msg.text); // Only messages that exist
+  
+  if (messages.length > 0) {
+    // Sort by timestamp and get the most recent
+    const mostRecent = messages.sort((a, b) => b.timestamp - a.timestamp)[0];
+    hamsterMessage = mostRecent.text;
+  }
   
   // Update energy periodically (just caps it, no drain)
   useEffect(() => {
@@ -80,6 +109,13 @@ export default function HomeScreen() {
                 <WaterButton 
                   waterGlasses={waterGlasses}
                   onPress={handleDrinkWater}
+                />
+                
+                {/* Meal Button - Only when NOT sleeping */}
+                <MealButton 
+                  mealsLogged={mealsLogged}
+                  portionDescription={portionDescription}
+                  onPress={handleLogMeal}
                 />
                 
                 {/* Sleep Button - Only when NOT sleeping */}
@@ -129,10 +165,10 @@ const styles = StyleSheet.create({
   buttonsRow: {
     position: 'absolute',
     left: (SCREEN_WIDTH * 17) / 393,
-    top: (SCREEN_HEIGHT * 750) / 852,
+    top: (SCREEN_HEIGHT * 720) / 852, // Moved up from 750 to 720 to avoid tab bar
     width: (SCREEN_WIDTH * 355) / 393,
     flexDirection: 'row',
-    gap: (SCREEN_WIDTH * 10) / 393,
+    gap: (SCREEN_WIDTH * 6) / 393, // Smaller gap for 3 buttons
     zIndex: 15,
   },
   dimOverlay: {

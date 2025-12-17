@@ -6,6 +6,7 @@ export const useWaterTracking = (buddyName: string) => {
   const { userData, logWater } = useQuillbyStore();
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
   const [message, setMessage] = useState<string>('');
+  const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
 
   const handleDrinkWater = () => {
     const newCount = userData.waterGlasses + 1;
@@ -18,13 +19,17 @@ export const useWaterTracking = (buddyName: string) => {
     logWater();
     
     // Update message with encouraging feedback
+    let newMessage = '';
     if (newCount < 8) {
-      setMessage(`💧 ${8 - newCount} to go! Keep drinking!`);
+      newMessage = `💧 ${8 - newCount} to go! Keep drinking!`;
     } else if (newCount === 8) {
-      setMessage(`🎉 Daily goal reached!\n8/8 glasses • Bonus +20 Energy!`);
+      newMessage = `🎉 Daily goal reached!\n8/8 glasses • Bonus +20 Energy!`;
     } else {
-      setMessage(`Wow! ${newCount} glasses! 🌊\nExtra hydrated! +5 Energy`);
+      newMessage = `Wow! ${newCount} glasses! 🌊\nExtra hydrated! +5 Energy`;
     }
+    
+    setMessage(newMessage);
+    setMessageTimestamp(Date.now());
   };
 
   return {
@@ -32,5 +37,6 @@ export const useWaterTracking = (buddyName: string) => {
     handleDrinkWater,
     waterAnimation: currentAnimation,
     waterMessage: message,
+    waterMessageTimestamp: messageTimestamp,
   };
 };

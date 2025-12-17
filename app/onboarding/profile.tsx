@@ -413,6 +413,8 @@ export default function ProfileScreen() {
             )}
           </View>
 
+
+
         </View>
 
         {/* Next Button */}
@@ -542,6 +544,55 @@ const styles = StyleSheet.create({
     fontFamily: 'ChakraPetch_600SemiBold',
     color: '#FFF',
     fontSize: SCREEN_WIDTH * 0.035,
+  },
+  // Weight Goal Styles
+  weightGoalContainer: {
+    flexDirection: 'row',
+    gap: SCREEN_WIDTH * 0.02,
+  },
+  goalButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#DDD',
+    borderRadius: 12,
+    padding: SCREEN_WIDTH * 0.03,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  goalButtonContent: {
+    alignItems: 'center',
+  },
+  goalButtonSelected: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#4CAF50',
+  },
+  goalButtonText: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  goalButtonTextSelected: {
+    color: '#2E7D32',
+  },
+  goalSubtext: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: SCREEN_WIDTH * 0.025,
+    color: '#999',
+    textAlign: 'center',
+  },
+  goalSubtextSelected: {
+    color: '#4CAF50',
+  },
+  checkmark: {
+    position: 'absolute',
+    top: SCREEN_WIDTH * 0.01,
+    right: SCREEN_WIDTH * 0.01,
+    fontSize: SCREEN_WIDTH * 0.04,
+    color: '#4CAF50',
+    fontWeight: 'bold',
   },
 });
 

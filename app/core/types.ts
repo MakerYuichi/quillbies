@@ -24,6 +24,11 @@ export interface UserData {
   sleepHours: number; // Accumulated sleep hours today
   ateBreakfast: boolean;
   waterGlasses: number;
+  mealsLogged: number; // 0-3 meals per day
+  
+  // Weight management
+  weightGoal?: 'lose' | 'maintain' | 'gain';
+  mealPortionSize?: number; // 0.7 (lose), 1.0 (maintain), 1.3 (gain)
   
   // Streaks
   currentStreak: number;

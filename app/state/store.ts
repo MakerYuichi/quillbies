@@ -35,12 +35,14 @@ interface QuillbyStore {
   logWater: () => void;
   logBreakfast: () => void;
   logSleep: (hours: number) => void;
+  logMeal: () => void;
   skipTask: () => void;
   resetDay: () => void;
   // Onboarding actions
   setCharacter: (character: string) => void;
   setBuddyName: (name: string) => void;
   setProfile: (userName: string, studentLevel: string, country: string, timezone: string) => void;
+  setWeightGoal: (weightGoal: 'lose' | 'maintain' | 'gain') => void;
   setHabits: (habits: string[]) => void;
 }
 
@@ -54,6 +56,9 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     sleepHours: 0, // Accumulated sleep today (starts at 0)
     ateBreakfast: false,
     waterGlasses: 0,
+    mealsLogged: 0, // 0-3 meals per day
+    weightGoal: 'maintain', // Default weight goal
+    mealPortionSize: 1.0, // Default normal portions
     currentStreak: 0,
     lastCheckInDate: new Date().toDateString(),
     lastSleepReset: new Date().toDateString() // Track when sleep was last reset
@@ -75,6 +80,9 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         sleepHours: 0,
         ateBreakfast: false,
         waterGlasses: 0,
+        mealsLogged: 0,
+        weightGoal: 'maintain',
+        mealPortionSize: 1.0,
         currentStreak: 0,
         lastCheckInDate: today,
         lastSleepReset: today
@@ -326,6 +334,56 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
       }
     });
   },
+
+  // Log meal intake - weight-based portions with overeating consequences
+  logMeal: () => {
+    const { userData } = get();
+    const mealCount = userData.mealsLogged + 1;
+    const weightGoal = userData.weightGoal || 'maintain';
+    
+    let energyChange = 0;
+    let coinsGained = 0;
+    
+    // Calculate energy and coins based on meal count and weight goal
+    if (mealCount <= 3) {
+      // Normal meals (1-3)
+      const baseEnergy = 15;
+      const portionMultiplier = userData.mealPortionSize || 1.0;
+      energyChange = Math.round(baseEnergy * portionMultiplier);
+      coinsGained = 8;
+    } else {
+      // Overeating consequences (4+)
+      switch (weightGoal) {
+        case 'lose':
+          if (mealCount === 4) energyChange = -5;
+          else if (mealCount === 5) energyChange = -10;
+          else energyChange = -15; // 6+
+          break;
+        case 'maintain':
+          if (mealCount === 4) energyChange = 0;
+          else if (mealCount === 5) energyChange = -5;
+          else energyChange = -10; // 6+
+          break;
+        case 'gain':
+          if (mealCount === 4) energyChange = 3;
+          else if (mealCount === 5) energyChange = 0;
+          else energyChange = -5; // 6+
+          break;
+      }
+      coinsGained = 0; // No coins for overeating
+    }
+    
+    console.log(`[Meal] Logged meal ${mealCount} (${weightGoal}) - Energy: ${energyChange > 0 ? '+' : ''}${energyChange}`);
+    
+    set({
+      userData: {
+        ...userData,
+        mealsLogged: mealCount,
+        energy: Math.max(0, Math.min(userData.energy + energyChange, userData.maxEnergyCap)),
+        qCoins: userData.qCoins + coinsGained
+      }
+    });
+  },
   
   // Skip a task (adds mess)
   skipTask: () => {
@@ -350,6 +408,7 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         ...userData,
         ateBreakfast: false,
         waterGlasses: 0,
+        mealsLogged: 0, // Reset meals
         sleepHours: 0, // Reset accumulated sleep
         lastSleepReset: today,
         maxEnergyCap: calculateMaxEnergyCap({
@@ -400,6 +459,25 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         studentLevel,
         country,
         timezone
+      }
+    });
+  },
+
+  // Onboarding: Set weight goal (called from habit setup)
+  setWeightGoal: (weightGoal: 'lose' | 'maintain' | 'gain') => {
+    const { userData } = get();
+    console.log(`[Onboarding] Weight goal set: ${weightGoal}`);
+    
+    // Set portion size based on weight goal
+    let portionSize = 1.0; // Default maintain
+    if (weightGoal === 'lose') portionSize = 0.7;
+    if (weightGoal === 'gain') portionSize = 1.3;
+    
+    set({
+      userData: {
+        ...userData,
+        weightGoal,
+        mealPortionSize: portionSize
       }
     });
   },
