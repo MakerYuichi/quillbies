@@ -35,7 +35,7 @@ const MESS_REMOVAL_PER_SESSION = 2; // Mess points removed per completed session
 // ============================================
 
 /**
- * Calculate the maximum energy cap based on daily habits
+ * Calculate the maximum energy cap based on daily habits and room mess
  */
 export function calculateMaxEnergyCap(userData: UserData): number {
   let cap = BASE_MAX_ENERGY;
@@ -53,6 +53,20 @@ export function calculateMaxEnergyCap(userData: UserData): number {
   // Hydration penalty: <5 glasses reduces cap by 15%
   if (userData.waterGlasses < 5) {
     cap -= (BASE_MAX_ENERGY * HYDRATION_PENALTY) / 100;
+  }
+  
+  // Mess penalty: room mess reduces energy cap
+  const messPoints = userData.messPoints || 0;
+  if (messPoints > 5) {
+    let messPenalty = 0;
+    if (messPoints <= 10) messPenalty = 5;
+    else if (messPoints <= 15) messPenalty = 10;
+    else if (messPoints <= 20) messPenalty = 15;
+    else if (messPoints <= 25) messPenalty = 20;
+    else if (messPoints <= 30) messPenalty = 25;
+    else messPenalty = 30; // Maximum penalty
+    
+    cap -= messPenalty;
   }
   
   // Streak bonus: 3+ days adds 10%

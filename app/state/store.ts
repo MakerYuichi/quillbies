@@ -1,7 +1,7 @@
 // Global state management with Zustand
 
 import { create } from 'zustand';
-import { UserData, SessionData } from '../core/types';
+import { UserData, SessionData, CheckpointResult, CheckpointNotification } from '../core/types';
 import {
   calculateMaxEnergyCap,
   calculateEnergyDrain,
@@ -44,7 +44,15 @@ interface QuillbyStore {
   setBuddyName: (name: string) => void;
   setProfile: (userName: string, studentLevel: string, country: string, timezone: string) => void;
   setWeightGoal: (weightGoal: 'lose' | 'maintain' | 'gain') => void;
+  setStudyGoal: (hours: number, checkpoints: string[]) => void;
   setHabits: (habits: string[]) => void;
+  checkStudyCheckpoints: () => CheckpointResult;
+  addMissedCheckpoint: (missingHours?: number) => void;
+  checkAndProcessCheckpoints: () => CheckpointNotification;
+  getMessEnergyCapPenalty: () => number;
+  cleanRoom: (messPointsReduced: number) => void;
+  applyDailyMessDecay: () => void;
+  generateDailySummary: () => string;
 }
 
 export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
@@ -64,7 +72,10 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     lastCheckInDate: new Date().toDateString(),
     lastSleepReset: new Date().toDateString(), // Track when sleep was last reset
     exerciseMinutes: 0, // Accumulated exercise minutes today
-    lastExerciseReset: new Date().toDateString() // Track when exercise was last reset
+    lastExerciseReset: new Date().toDateString(), // Track when exercise was last reset
+    studyMinutesToday: 0, // Accumulated study minutes today
+    lastStudyReset: new Date().toDateString(), // Track when study was last reset
+    missedCheckpoints: 0 // Count of missed checkpoints today
   },
   
   session: null,
@@ -90,7 +101,10 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         lastCheckInDate: today,
         lastSleepReset: today,
         exerciseMinutes: 0,
-        lastExerciseReset: today
+        lastExerciseReset: today,
+        studyMinutesToday: 0,
+        lastStudyReset: today,
+        missedCheckpoints: 0
       }
     });
   },
@@ -155,12 +169,36 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     const rewards = calculateSessionRewards(session.focusScore);
     const newMessPoints = removeMessAfterSession(userData.messPoints, rewards.messPointsRemoved);
     
+    // Calculate session duration in minutes for study tracking
+    const sessionDurationMinutes = Math.floor(session.duration / 60);
+    
+    // If study habit is enabled, log this focus session as study time
+    const studyEnabled = userData.enabledHabits?.includes('study');
+    let updatedUserData = {
+      ...userData,
+      qCoins: userData.qCoins + rewards.qCoinsEarned,
+      messPoints: newMessPoints
+    };
+    
+    if (studyEnabled && sessionDurationMinutes > 0) {
+      // Check if it's a new day - reset study if so
+      const today = new Date().toDateString();
+      const isNewDay = userData.lastStudyReset !== today;
+      
+      // Calculate accumulated study (reset if new day)
+      const accumulatedMinutes = isNewDay ? sessionDurationMinutes : (userData.studyMinutesToday || 0) + sessionDurationMinutes;
+      
+      console.log(`[Focus→Study] Adding ${sessionDurationMinutes}min → Total today: ${accumulatedMinutes}min`);
+      
+      updatedUserData = {
+        ...updatedUserData,
+        studyMinutesToday: accumulatedMinutes,
+        lastStudyReset: today
+      };
+    }
+    
     set({
-      userData: {
-        ...userData,
-        qCoins: userData.qCoins + rewards.qCoinsEarned,
-        messPoints: newMessPoints
-      },
+      userData: updatedUserData,
       session: null
     });
   },
@@ -439,21 +477,30 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
   
   // Reset daily values (for testing or new day)
   resetDay: () => {
-    const { userData } = get();
+    const { userData, applyDailyMessDecay } = get();
     const today = new Date().toDateString();
+    
+    // Apply mess decay before reset
+    applyDailyMessDecay();
+    
+    // Get updated mess after decay
+    const updatedUserData = get().userData;
     
     set({
       userData: {
-        ...userData,
+        ...updatedUserData,
         ateBreakfast: false,
         waterGlasses: 0,
         mealsLogged: 0, // Reset meals
         sleepHours: 0, // Reset accumulated sleep
         exerciseMinutes: 0, // Reset exercise
+        studyMinutesToday: 0, // Reset study
+        missedCheckpoints: 0, // Reset missed checkpoints
         lastSleepReset: today,
         lastExerciseReset: today,
+        lastStudyReset: today,
         maxEnergyCap: calculateMaxEnergyCap({
-          ...userData,
+          ...updatedUserData,
           ateBreakfast: false,
           waterGlasses: 0,
           sleepHours: 0
@@ -534,5 +581,232 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         enabledHabits: habits
       }
     });
+  },
+
+  // Onboarding: Set study goal and checkpoints
+  setStudyGoal: (hours: number, checkpoints: string[]) => {
+    const { userData } = get();
+    console.log(`[Onboarding] Study goal set: ${hours}h/day, checkpoints: ${checkpoints.join(', ')}`);
+    
+    set({
+      userData: {
+        ...userData,
+        studyGoalHours: hours,
+        studyCheckpoints: checkpoints
+      }
+    });
+  },
+
+
+
+  // Check study progress at checkpoints with proper time-based formula
+  checkStudyCheckpoints: () => {
+    const { userData } = get();
+    
+    if (!userData.studyGoalHours || !userData.studyCheckpoints) return { isBehind: false };
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeDecimal = currentHour + (currentMinute / 60); // e.g., 9:30 AM = 9.5
+    
+    const studyHours = (userData.studyMinutesToday || 0) / 60; // Convert to hours
+    const goalHours = userData.studyGoalHours;
+    
+    // Checkpoint time mapping
+    const checkpointTimes = {
+      '9 AM': 9,
+      '12 PM': 12,
+      '3 PM': 15,
+      '6 PM': 18,
+      '9 PM': 21
+    };
+    
+    // Find current checkpoint (most recent passed checkpoint)
+    let currentCheckpoint = null;
+    let checkpointHour = 0;
+    
+    for (const checkpoint of userData.studyCheckpoints) {
+      const hour = checkpointTimes[checkpoint as keyof typeof checkpointTimes];
+      if (currentTimeDecimal >= hour && hour > checkpointHour) {
+        currentCheckpoint = checkpoint;
+        checkpointHour = hour;
+      }
+    }
+    
+    if (!currentCheckpoint) return { isBehind: false }; // No checkpoint reached yet
+    
+    // Calculate expected progress using time-based formula
+    // Expected hours = Goal × (Checkpoint time / 24)
+    const expectedHours = goalHours * (checkpointHour / 24);
+    const actualHours = studyHours;
+    
+    // Check if behind schedule
+    if (actualHours < expectedHours) {
+      const missingHours = expectedHours - actualHours;
+      
+      console.log(`[Study] Checkpoint ${currentCheckpoint}: Expected ${expectedHours.toFixed(1)}h, Actual ${actualHours.toFixed(1)}h, Missing ${missingHours.toFixed(1)}h`);
+      
+      return {
+        isBehind: true,
+        checkpoint: currentCheckpoint,
+        checkpointHour,
+        expected: expectedHours,
+        actual: actualHours,
+        missing: missingHours
+      };
+    }
+    
+    return { isBehind: false };
+  },
+
+  // Add missed checkpoint with mess points based on missing hours
+  addMissedCheckpoint: (missingHours: number = 1) => {
+    const { userData } = get();
+    const newMissedCount = (userData.missedCheckpoints || 0) + 1;
+    
+    // Mess points = missing hours (1 hour behind = 1 mess point)
+    const messPointsIncrease = Math.max(0.5, missingHours); // Minimum 0.5 mess points
+    const newMessPoints = userData.messPoints + messPointsIncrease;
+    
+    console.log(`[Study] Missed checkpoint ${newMissedCount} - ${missingHours.toFixed(1)}h behind = +${messPointsIncrease.toFixed(1)} mess (${userData.messPoints.toFixed(1)} → ${newMessPoints.toFixed(1)})`);
+    
+    // Recalculate max energy cap based on new mess points
+    const newMaxCap = calculateMaxEnergyCap({
+      ...userData,
+      messPoints: newMessPoints
+    });
+    
+    set({
+      userData: {
+        ...userData,
+        missedCheckpoints: newMissedCount,
+        messPoints: newMessPoints,
+        maxEnergyCap: newMaxCap,
+        energy: Math.min(userData.energy, newMaxCap) // Cap current energy if needed
+      }
+    });
+  },
+
+  // Check and process checkpoints (call this periodically)
+  checkAndProcessCheckpoints: () => {
+    const { checkStudyCheckpoints, addMissedCheckpoint } = get();
+    
+    const checkResult = checkStudyCheckpoints();
+    
+    if (checkResult.isBehind) {
+      // Add mess points based on missing hours
+      addMissedCheckpoint(checkResult.missing);
+      
+      // Return notification data for UI
+      return {
+        shouldNotify: true,
+        checkpoint: checkResult.checkpoint,
+        expected: checkResult.expected,
+        actual: checkResult.actual,
+        missing: checkResult.missing,
+        message: `Study Checkpoint: ${checkResult.checkpoint}\n` +
+                `Expected: ${checkResult.expected.toFixed(1)}h, Actual: ${checkResult.actual.toFixed(1)}h\n` +
+                `Missing: ${checkResult.missing.toFixed(1)}h added to mess`
+      };
+    }
+    
+    return { shouldNotify: false };
+  },
+
+  // Get energy cap penalty from mess points
+  getMessEnergyCapPenalty: () => {
+    const { userData } = get();
+    const mess = userData.messPoints;
+    
+    if (mess <= 5) return 0;   // No penalty for clean room
+    if (mess <= 10) return 5;  // -5 energy cap for light mess
+    if (mess <= 15) return 10; // -10 energy cap for medium mess
+    if (mess <= 20) return 15; // -15 energy cap for heavy mess
+    if (mess <= 25) return 20; // -20 energy cap for very messy
+    if (mess <= 30) return 25; // -25 energy cap for extremely messy
+    return 30; // -30 energy cap maximum penalty
+  },
+
+  // Clean room (reduces mess points with efficiency-based rewards)
+  cleanRoom: (messPointsReduced: number) => {
+    const { userData } = get();
+    const newMessPoints = Math.max(0, userData.messPoints - messPointsReduced);
+    
+    console.log(`[Cleaning] Reduced mess by ${messPointsReduced.toFixed(1)} points (${userData.messPoints.toFixed(1)} → ${newMessPoints.toFixed(1)})`);
+    
+    // Recalculate max energy cap based on reduced mess
+    const newMaxCap = calculateMaxEnergyCap({
+      ...userData,
+      messPoints: newMessPoints
+    });
+    
+    // Energy reward scales with mess reduction (5 energy per mess point)
+    const energyReward = Math.floor(messPointsReduced * 5);
+    const coinReward = Math.floor(messPointsReduced * 3);
+    
+    set({
+      userData: {
+        ...userData,
+        messPoints: newMessPoints,
+        maxEnergyCap: newMaxCap,
+        energy: Math.min(userData.energy + energyReward, newMaxCap),
+        qCoins: userData.qCoins + coinReward
+      }
+    });
+  },
+
+  // Apply daily mess decay (20% automatic cleaning each day)
+  applyDailyMessDecay: () => {
+    const { userData } = get();
+    const currentMess = userData.messPoints;
+    const newMess = currentMess * 0.8; // 20% decay
+    
+    console.log(`[Daily] Mess decay: ${currentMess.toFixed(1)} → ${newMess.toFixed(1)} (-20%)`);
+    
+    // Recalculate energy cap with reduced mess
+    const newMaxCap = calculateMaxEnergyCap({
+      ...userData,
+      messPoints: newMess
+    });
+    
+    set({
+      userData: {
+        ...userData,
+        messPoints: newMess,
+        maxEnergyCap: newMaxCap,
+        energy: Math.min(userData.energy, newMaxCap)
+      }
+    });
+  },
+
+  // Generate end-of-day summary
+  generateDailySummary: () => {
+    const { userData } = get();
+    
+    if (!userData.studyGoalHours) return '';
+    
+    const studyHours = (userData.studyMinutesToday || 0) / 60;
+    const goalHours = userData.studyGoalHours;
+    const progressPercent = Math.round((studyHours / goalHours) * 100);
+    const missingHours = Math.max(0, goalHours - studyHours);
+    
+    // Determine room state
+    const mess = userData.messPoints;
+    let roomState = 'Clean';
+    if (mess > 30) roomState = 'Messy 3+';
+    else if (mess > 20) roomState = 'Messy 3';
+    else if (mess > 10) roomState = 'Messy 2';
+    else if (mess > 5) roomState = 'Messy 1';
+    
+    const summary = `Daily Summary:
+Goal: ${goalHours} hours
+Studied: ${studyHours.toFixed(1)} hours (${progressPercent}%)
+${missingHours > 0 ? `Missing: ${missingHours.toFixed(1)} hours` : 'Goal achieved! 🎉'}
+${missingHours > 0 ? `Mess added: +${missingHours.toFixed(1)}` : 'No mess added'}
+Total mess: ${mess.toFixed(1)}
+Room: ${roomState}`;
+    
+    return summary;
   }
 }));

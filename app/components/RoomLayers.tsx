@@ -6,23 +6,57 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface RoomLayersProps {
   pointerEvents?: 'none' | 'auto' | 'box-none' | 'box-only';
+  messPoints?: number; // Add mess points to determine room state
 }
 
-export default function RoomLayers({ pointerEvents = 'auto' }: RoomLayersProps) {
+export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0 }: RoomLayersProps) {
+  // Determine which room wall to show based on mess points
+  const getRoomWall = () => {
+    if (messPoints <= 5) {
+      // Clean room (0-5 mess points)
+      return require('../../assets/rooms/walls.png');
+    } else if (messPoints <= 10) {
+      // Light mess (6-10 mess points)
+      return require('../../assets/rooms/mess/walls-messy1.png');
+    } else if (messPoints <= 20) {
+      // Medium mess (11-20 mess points)
+      return require('../../assets/rooms/mess/walls-messy2.png');
+    } else {
+      // Heavy mess (21+ mess points)
+      return require('../../assets/rooms/mess/walls-messy3.png');
+    }
+  };
+
+  // Determine which room floor to show based on mess points
+  const getRoomFloor = () => {
+    if (messPoints <= 5) {
+      // Clean room (0-5 mess points)
+      return require('../../assets/rooms/floor.png');
+    } else if (messPoints <= 10) {
+      // Light mess (6-10 mess points)
+      return require('../../assets/rooms/mess/floor-messy1.png');
+    } else if (messPoints <= 20) {
+      // Medium mess (11-20 mess points)
+      return require('../../assets/rooms/mess/floor-messy2.png');
+    } else {
+      // Heavy mess (21+ mess points)
+      return require('../../assets/rooms/mess/floor-messy3.png');
+    }
+  };
   return (
     <View pointerEvents={pointerEvents}>
-      {/* LAYER 1: Wall Background */}
+      {/* LAYER 1: Wall Background - Changes based on mess points */}
       <Image 
-        source={require('../../assets/rooms/walls.png')}
+        source={getRoomWall()}
         style={styles.wallLayer}
         resizeMode="cover"
       />
       
-      {/* LAYER 2: Floor */}
+      {/* LAYER 2: Floor - Changes based on mess points */}
       <View style={styles.floorLayer} />
       
       <Image 
-        source={require('../../assets/rooms/floor.png')}
+        source={getRoomFloor()}
         style={styles.floorLayer}
         resizeMode="cover"
       />
