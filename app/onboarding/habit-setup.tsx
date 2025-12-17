@@ -59,10 +59,8 @@ const HABIT_OPTIONS = [
 
 export default function HabitSetupScreen() {
   const router = useRouter();
-  const { setHabits, setWeightGoal } = useQuillbyStore((state) => ({ 
-    setHabits: state.setHabits, 
-    setWeightGoal: state.setWeightGoal 
-  }));
+  const setHabits = useQuillbyStore((state) => state.setHabits);
+  const setWeightGoal = useQuillbyStore((state) => state.setWeightGoal);
 
   // Initialize all habits with their default states
   const [habits, setHabitsState] = useState(

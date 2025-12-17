@@ -1,16 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Dimensions, ImageBackground } from 'react-native';
+
 import { useQuillbyStore } from '../state/store';
 import EnergyBar from '../components/EnergyBar';
 import RoomLayers from '../components/RoomLayers';
+import ExerciseEnvironment from '../components/ExerciseEnvironment';
 import HamsterCharacter from '../components/HamsterCharacter';
 import SpeechBubble from '../components/SpeechBubble';
 import WaterButton from '../components/WaterButton';
 import SleepButton from '../components/SleepButton';
 import MealButton from '../components/MealButton';
+import ExerciseButton from '../components/ExerciseButton';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
 import { useMealTracking } from '../hooks/useMealTracking';
+import { useExerciseTracking } from '../hooks/useExerciseTracking';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -32,7 +36,6 @@ export default function HomeScreen() {
   
   const {
     isSleeping,
-    sleepHours,
     sleepDisplay,
     handleSleepButton,
     handleWakeUpButton,
@@ -43,16 +46,27 @@ export default function HomeScreen() {
 
   const {
     mealsLogged,
-    weightGoal,
     portionDescription,
     handleLogMeal,
     mealAnimation,
     mealMessage,
     mealMessageTimestamp,
   } = useMealTracking(buddyName);
+
+  const {
+    isExercising,
+    exerciseDisplay,
+    handleStartExercise,
+    handleFinishExercise,
+    exerciseAnimation,
+    exerciseMessage,
+    exerciseMessageTimestamp,
+  } = useExerciseTracking(buddyName);
   
-  // Determine current animation based on priority: sleep > meal > water
-  const currentAnimation = sleepAnimation !== 'idle' ? sleepAnimation : (mealAnimation !== 'idle' ? mealAnimation : waterAnimation);
+  // Determine current animation based on priority: sleep > exercise > meal > water
+  const currentAnimation = sleepAnimation !== 'idle' ? sleepAnimation : 
+                          (exerciseAnimation !== 'idle' ? exerciseAnimation : 
+                          (mealAnimation !== 'idle' ? mealAnimation : waterAnimation));
   
   // Show the most recent message (highest timestamp)
   let hamsterMessage = `Hi ${buddyName}! 👋\nLet's have a productive day!`;
@@ -62,6 +76,7 @@ export default function HomeScreen() {
     { text: waterMessage, timestamp: waterMessageTimestamp },
     { text: sleepMessage, timestamp: sleepMessageTimestamp },
     { text: mealMessage, timestamp: mealMessageTimestamp },
+    { text: exerciseMessage, timestamp: exerciseMessageTimestamp },
   ].filter(msg => msg.text); // Only messages that exist
   
   if (messages.length > 0) {
@@ -80,45 +95,67 @@ export default function HomeScreen() {
   }, [updateEnergy]);
   
   return (
-    <View style={styles.container}>
-      {/* Room background layers */}
-      <RoomLayers />
+    <ImageBackground
+      source={require('../../assets/backgrounds/orange-theme.png')}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      {/* FIXED BACKGROUND LAYERS - Switch between room and exercise environment */}
+      {isExercising ? (
+        <ExerciseEnvironment pointerEvents="none" />
+      ) : (
+        <RoomLayers pointerEvents="none" />
+      )}
       
-      {/* Hamster character */}
+      {/* FIXED HAMSTER */}
       <HamsterCharacter 
         selectedCharacter={selectedCharacter}
         currentAnimation={currentAnimation}
         isSleeping={isSleeping}
+        pointerEvents="none"
       />
       
-      {/* Energy Bar */}
-      <View style={styles.energyBarContainer} pointerEvents="none">
-        <EnergyBar current={userData.energy} max={userData.maxEnergyCap} />
+      {/* SPEECH BUBBLE - Now in top area where energy bar was */}
+      <View style={styles.speechBubbleContainer} pointerEvents="none">
+        <SpeechBubble message={hamsterMessage} />
       </View>
       
-      {/* Speech Bubble */}
-      <SpeechBubble message={hamsterMessage} />
-      
-      {/* Water and Sleep Buttons (Only for Casual character) */}
-      {selectedCharacter === 'casual' && (
-        <>
+      {/* BOTTOM CONTROLS AREA - Relative to container */}
+      <View style={styles.bottomControlsArea}>
+        {/* ENERGY BAR */}
+        <View style={styles.energyBarContainer}>
+          <EnergyBar current={userData.energy} max={userData.maxEnergyCap} />
+        </View>
+        
+        {/* BUTTONS ROW */}
+        {selectedCharacter === 'casual' && (
           <View style={styles.buttonsRow}>
-            {!isSleeping ? (
+            {!isSleeping && !isExercising ? (
               <>
-                {/* Water Button - Only when NOT sleeping */}
+                {/* Water Button - Only when NOT sleeping or exercising */}
                 <WaterButton 
                   waterGlasses={waterGlasses}
                   onPress={handleDrinkWater}
                 />
                 
-                {/* Meal Button - Only when NOT sleeping */}
+                {/* Meal Button - Only when NOT sleeping or exercising */}
                 <MealButton 
                   mealsLogged={mealsLogged}
                   portionDescription={portionDescription}
                   onPress={handleLogMeal}
                 />
                 
-                {/* Sleep Button - Only when NOT sleeping */}
+                {/* Exercise Button - Only when exercise habit is enabled */}
+                {userData.enabledHabits?.includes('exercise') && (
+                  <ExerciseButton 
+                    isExercising={false}
+                    exerciseDisplay={exerciseDisplay}
+                    onStartExercise={() => handleStartExercise('walk')}
+                    onFinishExercise={handleFinishExercise}
+                  />
+                )}
+                
+                {/* Sleep Button - Only when NOT sleeping or exercising */}
                 <SleepButton 
                   isSleeping={false}
                   sleepDisplay={sleepDisplay}
@@ -126,7 +163,7 @@ export default function HomeScreen() {
                   onWakeUp={handleWakeUpButton}
                 />
               </>
-            ) : (
+            ) : isSleeping ? (
               <>
                 {/* Wake Button - Full width when sleeping */}
                 <SleepButton 
@@ -136,40 +173,65 @@ export default function HomeScreen() {
                   onWakeUp={handleWakeUpButton}
                 />
               </>
-            )}
+            ) : isExercising ? (
+              <>
+                {/* Exercise Button - Full width when exercising */}
+                <ExerciseButton 
+                  isExercising={true}
+                  exerciseDisplay={exerciseDisplay}
+                  onStartExercise={() => handleStartExercise('walk')}
+                  onFinishExercise={handleFinishExercise}
+                />
+              </>
+            ) : null}
           </View>
-          
-          {/* Dim Overlay when sleeping */}
-          {isSleeping && (
-            <View style={styles.dimOverlay} pointerEvents="none" />
-          )}
-        </>
+        )}
+      </View>
+      
+      {/* Dim Overlay when sleeping */}
+      {isSleeping && (
+        <View style={styles.dimOverlay} pointerEvents="none" />
       )}
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E8F5E9', // Fallback color
+    position: 'relative',
   },
+  // Speech bubble container - now in top area (where energy bar was)
+  speechBubbleContainer: {
+    position: 'absolute',
+    top: (SCREEN_HEIGHT * 450) / 852, // Slightly higher than energy bar was
+    left: (SCREEN_WIDTH * 17) / 393,  // Align with original speech bubble positioning
+    width: (SCREEN_WIDTH * 355) / 393, // Match speech bubble width
+    zIndex: 20,
+  },
+  // Bottom controls area - relative positioning at bottom of container
+  bottomControlsArea: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: 30, // Space from bottom edge
+    paddingHorizontal: (SCREEN_WIDTH * 17) / 393,
+    flexDirection: 'column', // Buttons at bottom, energy bar above
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  // Energy bar container - relative within bottom area
   energyBarContainer: {
-    position: 'absolute',
-    top: (SCREEN_HEIGHT * 473) / 852,
-    left: (SCREEN_WIDTH * 67) / 393,
-    width: (SCREEN_WIDTH * 251) / 393,
+    width: (SCREEN_WIDTH * 251) / 280,
     height: (SCREEN_HEIGHT * 25) / 852,
-    zIndex: 5,
+    marginBottom: 70, // Space between buttons and energy bar (since we're using column-reverse)
   },
+  // Buttons row - relative within bottom area
   buttonsRow: {
-    position: 'absolute',
-    left: (SCREEN_WIDTH * 17) / 393,
-    top: (SCREEN_HEIGHT * 720) / 852, // Moved up from 750 to 720 to avoid tab bar
     width: (SCREEN_WIDTH * 355) / 393,
     flexDirection: 'row',
-    gap: (SCREEN_WIDTH * 6) / 393, // Smaller gap for 3 buttons
-    zIndex: 15,
+    gap: (SCREEN_WIDTH * 6) / 393, // Same gap as original
   },
   dimOverlay: {
     position: 'absolute',

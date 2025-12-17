@@ -1,0 +1,137 @@
+// Exercise tracking hook with timer functionality like sleep
+import { useState, useEffect } from 'react';
+import { useQuillbyStore } from '../state/store';
+
+export const useExerciseTracking = (buddyName: string) => {
+  const { userData, logExercise, resetDay } = useQuillbyStore();
+  const [isExercising, setIsExercising] = useState(false);
+  const [exerciseStartTime, setExerciseStartTime] = useState<number | null>(null);
+  const [exerciseType, setExerciseType] = useState<'walk' | 'stretch' | 'cardio' | 'energizer'>('walk');
+  const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
+  const [message, setMessage] = useState<string>('');
+  const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
+  
+  // Track accumulated minutes separately
+  const [accumulatedMinutes, setAccumulatedMinutes] = useState<number>(0);
+
+  // Check if it's a new day and reset exercise if needed
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const lastReset = userData.lastExerciseReset || userData.lastCheckInDate;
+    if (lastReset !== today) {
+      console.log('[Exercise] New day detected - resetting exercise counter');
+      setAccumulatedMinutes(0);
+      resetDay();
+    }
+  }, [userData.lastExerciseReset, userData.lastCheckInDate, resetDay]);
+
+  const handleStartExercise = (type: 'walk' | 'stretch' | 'cardio' | 'energizer' = 'walk') => {
+    // Start exercising
+    setIsExercising(true);
+    setExerciseType(type);
+    setExerciseStartTime(Date.now());
+    setCurrentAnimation('exercising');
+    
+    const exerciseNames = {
+      walk: 'Walking',
+      stretch: 'Stretching', 
+      cardio: 'Cardio',
+      energizer: 'Energizing'
+    };
+    
+    const newMessage = `🏃 ${buddyName} is ${exerciseNames[type].toLowerCase()}...\nTap "Finish" when done!`;
+    setMessage(newMessage);
+    setMessageTimestamp(Date.now());
+  };
+
+  const handleFinishExercise = () => {
+    if (!exerciseStartTime) return;
+    
+    // Calculate exercise duration for this session
+    const exerciseEndTime = Date.now();
+    const durationMs = exerciseEndTime - exerciseStartTime;
+    const sessionMinutes = Math.floor(durationMs / (1000 * 60));
+    const sessionHours = Math.floor(sessionMinutes / 60);
+    const sessionMins = sessionMinutes % 60;
+    const minutesInt = Math.max(1, sessionMinutes); // Minimum 1 minute
+    
+    // Format duration string for this session
+    const durationText = sessionHours > 0 
+      ? `${sessionHours}h ${sessionMins}m` 
+      : `${sessionMinutes}m`;
+    
+    // Calculate new accumulated minutes
+    const newAccumulatedMinutes = accumulatedMinutes + sessionMinutes;
+    setAccumulatedMinutes(newAccumulatedMinutes);
+    
+    // Calculate total hours and minutes from accumulated minutes
+    const totalHours = Math.floor(newAccumulatedMinutes / 60);
+    const totalMins = newAccumulatedMinutes % 60;
+    
+    // Format total with minutes
+    const totalText = totalMins > 0 
+      ? `${totalHours}h ${totalMins}m` 
+      : `${totalHours}h`;
+    
+    // Show completion animation
+    setCurrentAnimation('exercise-complete');
+    setTimeout(() => setCurrentAnimation('idle'), 3000); // Back to idle after 3s
+    
+    // End exercising state
+    setIsExercising(false);
+    setExerciseStartTime(null);
+    
+    // Log exercise in store
+    logExercise(minutesInt);
+    
+    // Calculate rewards based on duration
+    const baseReward = Math.min(sessionMinutes * 2, 30); // 2 energy per minute, max 30
+    const coinReward = Math.min(sessionMinutes, 20); // 1 coin per minute, max 20
+    
+    // Update message based on exercise duration and type
+    const exerciseNames = {
+      walk: 'Walking',
+      stretch: 'Stretching', 
+      cardio: 'Cardio workout',
+      energizer: 'Energy boost'
+    };
+    
+    let newMessage = '';
+    if (sessionMinutes < 5) {
+      newMessage = `💪 ${exerciseNames[exerciseType]} ${durationText} (${totalText} today)\nQuick session! +${baseReward} Energy`;
+    } else if (sessionMinutes >= 5 && sessionMinutes < 15) {
+      newMessage = `🎯 ${exerciseNames[exerciseType]} ${durationText} (${totalText} today)\nGood workout! +${baseReward} Energy, +${coinReward} Coins`;
+    } else if (sessionMinutes >= 15) {
+      newMessage = `⭐ ${exerciseNames[exerciseType]} ${durationText} (${totalText} today)\nAmazing! Bonus +10 Energy! Total: +${baseReward + 10} Energy`;
+    }
+    
+    setMessage(newMessage);
+    setMessageTimestamp(Date.now());
+  };
+
+  // Format accumulated exercise for display (with minutes)
+  const formatAccumulatedExercise = () => {
+    if (accumulatedMinutes === 0) return '0m today';
+    
+    const hours = Math.floor(accumulatedMinutes / 60);
+    const mins = accumulatedMinutes % 60;
+    
+    if (hours > 0 && mins > 0) {
+      return `${hours}h ${mins}m today`;
+    } else if (hours > 0) {
+      return `${hours}h today`;
+    }
+    return `${mins}m today`;
+  };
+
+  return {
+    isExercising,
+    exerciseType,
+    exerciseDisplay: formatAccumulatedExercise(),
+    handleStartExercise,
+    handleFinishExercise,
+    exerciseAnimation: currentAnimation,
+    exerciseMessage: message,
+    exerciseMessageTimestamp: messageTimestamp,
+  };
+};

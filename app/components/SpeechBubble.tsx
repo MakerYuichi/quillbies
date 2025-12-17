@@ -29,11 +29,8 @@ export default function SpeechBubble({ message }: SpeechBubbleProps) {
 
 const styles = StyleSheet.create({
   speechBubble: {
-    position: 'absolute',
     width: (SCREEN_WIDTH * 355) / 393,
-    height: (SCREEN_HEIGHT * 87) / 852,
-    left: (SCREEN_WIDTH * 17) / 393,
-    top: (SCREEN_HEIGHT * 620) / 852, // Moved up to accommodate buttons
+    minHeight: (SCREEN_HEIGHT * 87) / 852,
     backgroundColor: '#FFFBFB',
     borderWidth: 1,
     borderColor: '#000000',
@@ -45,7 +42,8 @@ const styles = StyleSheet.create({
     elevation: 4,
     padding: (SCREEN_WIDTH * 20) / 450,
     justifyContent: 'center',
-    zIndex: 15,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
   speechText: {
     fontFamily: 'Chakra Petch',

@@ -36,6 +36,7 @@ interface QuillbyStore {
   logBreakfast: () => void;
   logSleep: (hours: number) => void;
   logMeal: () => void;
+  logExercise: (minutes: number) => void;
   skipTask: () => void;
   resetDay: () => void;
   // Onboarding actions
@@ -61,7 +62,9 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     mealPortionSize: 1.0, // Default normal portions
     currentStreak: 0,
     lastCheckInDate: new Date().toDateString(),
-    lastSleepReset: new Date().toDateString() // Track when sleep was last reset
+    lastSleepReset: new Date().toDateString(), // Track when sleep was last reset
+    exerciseMinutes: 0, // Accumulated exercise minutes today
+    lastExerciseReset: new Date().toDateString() // Track when exercise was last reset
   },
   
   session: null,
@@ -85,7 +88,9 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         mealPortionSize: 1.0,
         currentStreak: 0,
         lastCheckInDate: today,
-        lastSleepReset: today
+        lastSleepReset: today,
+        exerciseMinutes: 0,
+        lastExerciseReset: today
       }
     });
   },
@@ -384,6 +389,40 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
       }
     });
   },
+
+  // Log exercise minutes - accumulates throughout the day
+  logExercise: (minutes: number) => {
+    const { userData } = get();
+    
+    // Check if it's a new day - reset exercise if so
+    const today = new Date().toDateString();
+    const isNewDay = userData.lastExerciseReset !== today;
+    
+    // Calculate accumulated exercise (reset if new day)
+    const accumulatedMinutes = isNewDay ? minutes : userData.exerciseMinutes + minutes;
+    
+    console.log(`[Exercise] Adding ${minutes}min → Total today: ${accumulatedMinutes}min (was ${userData.exerciseMinutes}min)`);
+    
+    // Calculate rewards based on session duration
+    const baseEnergy = Math.min(minutes * 2, 30); // 2 energy per minute, max 30
+    const coinReward = Math.min(minutes, 20); // 1 coin per minute, max 20
+    
+    // Bonus for longer sessions (15+ minutes)
+    const bonusEnergy = minutes >= 15 ? 10 : 0;
+    const finalEnergyGain = baseEnergy + bonusEnergy;
+    
+    console.log(`[Exercise] Rewards: +${finalEnergyGain} Energy, +${coinReward} Coins`);
+    
+    set({
+      userData: {
+        ...userData,
+        exerciseMinutes: accumulatedMinutes,
+        energy: Math.min(userData.energy + finalEnergyGain, userData.maxEnergyCap),
+        qCoins: userData.qCoins + coinReward,
+        lastExerciseReset: today
+      }
+    });
+  },
   
   // Skip a task (adds mess)
   skipTask: () => {
@@ -410,7 +449,9 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
         waterGlasses: 0,
         mealsLogged: 0, // Reset meals
         sleepHours: 0, // Reset accumulated sleep
+        exerciseMinutes: 0, // Reset exercise
         lastSleepReset: today,
+        lastExerciseReset: today,
         maxEnergyCap: calculateMaxEnergyCap({
           ...userData,
           ateBreakfast: false,

@@ -4,9 +4,13 @@ import { View, Image, StyleSheet, Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export default function RoomLayers() {
+interface RoomLayersProps {
+  pointerEvents?: 'none' | 'auto' | 'box-none' | 'box-only';
+}
+
+export default function RoomLayers({ pointerEvents = 'auto' }: RoomLayersProps) {
   return (
-    <>
+    <View pointerEvents={pointerEvents}>
       {/* LAYER 1: Wall Background */}
       <Image 
         source={require('../../assets/rooms/walls.png')}
@@ -43,7 +47,7 @@ export default function RoomLayers() {
         style={styles.clockDecor}
         resizeMode="contain"
       />
-    </>
+    </View>
   );
 }
 

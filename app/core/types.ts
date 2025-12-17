@@ -25,6 +25,7 @@ export interface UserData {
   ateBreakfast: boolean;
   waterGlasses: number;
   mealsLogged: number; // 0-3 meals per day
+  exerciseMinutes: number; // Accumulated exercise minutes today
   
   // Weight management
   weightGoal?: 'lose' | 'maintain' | 'gain';
@@ -34,6 +35,7 @@ export interface UserData {
   currentStreak: number;
   lastCheckInDate: string;
   lastSleepReset?: string; // Date when sleep was last reset (for daily accumulation)
+  lastExerciseReset?: string; // Date when exercise was last reset (for daily accumulation)
 }
 
 export interface SessionData {

@@ -8,9 +8,10 @@ interface HamsterCharacterProps {
   selectedCharacter: string;
   currentAnimation: string;
   isSleeping: boolean;
+  pointerEvents?: 'none' | 'auto' | 'box-none' | 'box-only';
 }
 
-export default function HamsterCharacter({ selectedCharacter, currentAnimation, isSleeping }: HamsterCharacterProps) {
+export default function HamsterCharacter({ selectedCharacter, currentAnimation, isSleeping, pointerEvents = 'auto' }: HamsterCharacterProps) {
   // Get the correct hamster image/GIF based on selected character and animation
   const getCharacterImage = () => {
     // For casual character, check if we have the animation
@@ -72,6 +73,14 @@ export default function HamsterCharacter({ selectedCharacter, currentAnimation, 
           return require('../../assets/hamsters/casual/idle-sit.png');
         }
       }
+      // Exercise animations - using jumping GIF for all exercise types
+      if (currentAnimation === 'exercising' || currentAnimation === 'exercise-complete') {
+        try {
+          return require('../../assets/hamsters/casual/jumping.gif');
+        } catch {
+          return require('../../assets/hamsters/casual/idle-sit.png');
+        }
+      }
       return require('../../assets/hamsters/casual/idle-sit.png');
     }
     
@@ -87,7 +96,7 @@ export default function HamsterCharacter({ selectedCharacter, currentAnimation, 
   };
 
   return (
-    <>
+    <View pointerEvents={pointerEvents}>
       {/* Small white background for hamster belly */}
       <View style={styles.hamsterBellyBg} pointerEvents="none" />
       
@@ -98,7 +107,7 @@ export default function HamsterCharacter({ selectedCharacter, currentAnimation, 
           resizeMode="contain"
         />
       </View>
-    </>
+    </View>
   );
 }
 
