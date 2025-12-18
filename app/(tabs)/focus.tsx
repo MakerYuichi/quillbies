@@ -1,24 +1,140 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ImageBackground } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store';
+import { DeadlineFormData, Deadline } from '../core/types';
+import CreateDeadlineModal from '../components/CreateDeadlineModal';
+import DeadlineDetailModal from '../components/DeadlineDetailModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function FocusScreen() {
   const router = useRouter();
-  const { userData, startFocusSession } = useQuillbyStore();
+  const { 
+    userData, 
+    startFocusSession, 
+    createDeadline,
+    updateDeadline,
+    deleteDeadline,
+    getUrgentDeadlines,
+    getUpcomingDeadlines,
+    getCompletedDeadlines,
+    createSampleDeadlines
+  } = useQuillbyStore();
   
   const buddyName = userData.buddyName || 'Quillby';
-  const userName = userData.userName || 'Friend';
 
-  const handleStartSession = () => {
-    const success = startFocusSession();
+  // Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
+  const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
+
+  // Get deadline lists
+  const urgentDeadlines = getUrgentDeadlines();
+  const upcomingDeadlines = getUpcomingDeadlines();
+  const completedDeadlines = getCompletedDeadlines();
+
+  const handleStartSession = (deadlineId?: string) => {
+    const success = startFocusSession(deadlineId);
     if (success) {
       router.push('/study-session');
     } else {
       alert('Not enough energy! Quillby needs at least 20 energy to focus.');
     }
+  };
+
+  const handleCreateOrEditDeadline = (formData: DeadlineFormData, deadlineId?: string) => {
+    if (deadlineId) {
+      // Edit existing deadline
+      updateDeadline(deadlineId, {
+        title: formData.title,
+        dueDate: formData.dueDate,
+        dueTime: formData.dueTime || undefined,
+        priority: formData.priority,
+        estimatedHours: parseFloat(formData.estimatedHours),
+        category: formData.category,
+      });
+    } else {
+      // Create new deadline
+      createDeadline(formData);
+    }
+    setShowCreateModal(false);
+    setEditingDeadline(null);
+  };
+
+  const handleDeadlinePress = (deadline: Deadline) => {
+    setSelectedDeadline(deadline);
+    setShowDetailModal(true);
+  };
+
+  const handleEditDeadline = (deadline: Deadline) => {
+    setEditingDeadline(deadline);
+    setShowDetailModal(false);
+    setShowCreateModal(true);
+  };
+  
+  const handleDeleteDeadline = (deadlineId: string) => {
+    // Remove deadline from store and clear local selection if needed
+    deleteDeadline(deadlineId);
+    if (selectedDeadline?.id === deadlineId) {
+      setSelectedDeadline(null);
+      setShowDetailModal(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+
+    // Compare at the calendar-day level (ignore time of day)
+    const startOfDue = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffTime = startOfDue.getTime() - startOfToday.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    const formattedDate = date.toLocaleDateString('en-US', options);
+
+    if (diffDays === 0) return `${formattedDate} (Today)`;
+    if (diffDays === 1) return `${formattedDate} (Tomorrow)`;
+    if (diffDays > 1) return `${formattedDate} (${diffDays} days)`;
+    return `${formattedDate} (Overdue)`;
+  };
+
+  const getPriorityEmoji = (priority: string) => {
+    switch (priority) {
+      case 'high': return '🔴';
+      case 'medium': return '🟡';
+      case 'low': return '🟢';
+      default: return '⚪';
+    }
+  };
+
+  // Simple dev helper: send a test OS notification after 3 seconds
+  const handleTestNotification = async () => {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      alert('Notifications are disabled. Please enable them in system settings to test.');
+      return;
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🔔 Quillby Test Notification',
+        body: 'If you see this, mobile notifications are working!',
+      },
+      // Using null trigger shows it immediately; easier for testing
+      trigger: null,
+    });
+
+    alert('Test notification scheduled for 3 seconds from now.');
   };
 
   return (
@@ -28,61 +144,203 @@ export default function FocusScreen() {
       resizeMode="cover"
     >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Focus Session</Text>
-        <Text style={styles.subtitle}>{buddyName} is ready to study with you!</Text>
-      </View>
-
-      {/* Energy Status */}
-      <View style={styles.energyCard}>
-        <Text style={styles.energyLabel}>Current Energy</Text>
-        <Text style={styles.energyValue}>⚡ {Math.round(userData.energy)} / {userData.maxEnergyCap}</Text>
-        <View style={styles.energyBar}>
-          <View 
-            style={[
-              styles.energyFill, 
-              { width: `${(userData.energy / userData.maxEnergyCap) * 100}%` }
-            ]} 
-          />
+        {/* Header with Energy Icon */}
+        <View style={styles.header}>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Focus Session</Text>
+            <Text style={styles.subtitle}>{buddyName} is ready to study with you!</Text>
+          </View>
+          
+          {/* Small Energy Icon (like Q-coins on home screen) */}
+          <View style={styles.energyIcon}>
+            <Text style={styles.energyIconEmoji}>⚡</Text>
+            <Text style={styles.energyIconText}>{Math.round(userData.energy)}</Text>
+          </View>
         </View>
-      </View>
 
-      {/* Start Session Button */}
-      <TouchableOpacity
-        style={[styles.startButton, userData.energy < 20 && styles.startButtonDisabled]}
-        onPress={handleStartSession}
-        disabled={userData.energy < 20}
-      >
-        <Text style={styles.startButtonText}>
-          {userData.energy >= 20 ? '📚 Start Focus Session' : '😴 Too Tired to Focus'}
-        </Text>
-        <Text style={styles.startButtonSubtext}>
-          {userData.energy >= 20 
-            ? 'Begin a Pomodoro session' 
-            : 'Need at least 20 energy'}
-        </Text>
-      </TouchableOpacity>
+        {/* Start Session Button */}
+        <TouchableOpacity
+          style={[styles.startButton, userData.energy < 20 && styles.startButtonDisabled]}
+          onPress={() => handleStartSession()}
+          disabled={userData.energy < 20}
+        >
+          <Text style={styles.startButtonText}>
+            {userData.energy >= 20 ? '📚 Start Focus Session' : '😴 Too Tired to Focus'}
+          </Text>
+          <Text style={styles.startButtonSubtext}>
+            {userData.energy >= 20 
+              ? 'Begin a Pomodoro session' 
+              : 'Need at least 20 energy'}
+          </Text>
+        </TouchableOpacity>
 
-      {/* Session Info */}
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>How Focus Sessions Work</Text>
-        <Text style={styles.infoText}>• 25-minute focused study periods</Text>
-        <Text style={styles.infoText}>• 5-minute breaks between sessions</Text>
-        <Text style={styles.infoText}>• Earn Q-Coins for completing sessions</Text>
-        <Text style={styles.infoText}>• Stay in the app to maintain focus</Text>
-        <Text style={styles.infoText}>• {buddyName} will track your progress!</Text>
-      </View>
+        {/* Deadlines List */}
+        <View style={styles.deadlinesList}>
+          <View style={styles.deadlinesHeader}>
+            <Text style={styles.deadlinesTitle}>📋 MY DEADLINES</Text>
+          </View>
 
-      {/* Coming Soon */}
-      <View style={styles.comingSoonCard}>
-        <Text style={styles.comingSoonTitle}>🚀 Coming Soon</Text>
-        <Text style={styles.comingSoonText}>• Custom session lengths</Text>
-        <Text style={styles.comingSoonText}>• Study goals and targets</Text>
-        <Text style={styles.comingSoonText}>• Focus streaks</Text>
-        <Text style={styles.comingSoonText}>• Study statistics</Text>
-      </View>
+          {/* Urgent Section */}
+          {urgentDeadlines.length > 0 && (
+          <View style={styles.deadlineSection}>
+            <Text style={styles.sectionTitle}>🔴 URGENT (Due Soon)</Text>
+            {urgentDeadlines.map(deadline => (
+              <TouchableOpacity 
+                key={deadline.id} 
+                style={styles.deadlineCard}
+                onPress={() => handleDeadlinePress(deadline)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.deadlineTitle}>
+                  {getPriorityEmoji(deadline.priority)} {deadline.title}
+                </Text>
+                <Text style={styles.deadlineDate}>
+                  {formatDate(deadline.dueDate)}
+                  {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
+                </Text>
+                <Text style={styles.deadlineProgress}>
+                  {deadline.workCompleted.toFixed(1)}h / {deadline.estimatedHours}h completed
+                </Text>
+                <View style={styles.deadlineActions}>
+                  <TouchableOpacity 
+                    style={styles.focusForDeadlineButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleStartSession(deadline.id);
+                    }}
+                    disabled={userData.energy < 20}
+                  >
+                    <Text style={styles.focusForDeadlineText}>
+                      {userData.energy >= 20 ? '🎯 Focus on This' : '😴 Need Energy'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+          )}
+
+          {/* Upcoming Section */}
+          {upcomingDeadlines.length > 0 && (
+          <View style={styles.deadlineSection}>
+            <Text style={styles.sectionTitle}>🟡 UPCOMING</Text>
+            {upcomingDeadlines.map(deadline => (
+              <TouchableOpacity 
+                key={deadline.id} 
+                style={styles.deadlineCard}
+                onPress={() => handleDeadlinePress(deadline)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.deadlineTitle}>
+                  {getPriorityEmoji(deadline.priority)} {deadline.title}
+                </Text>
+                <Text style={styles.deadlineDate}>
+                  {formatDate(deadline.dueDate)}
+                  {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
+                </Text>
+                <Text style={styles.deadlineProgress}>
+                  {deadline.workCompleted.toFixed(1)}h / {deadline.estimatedHours}h completed
+                </Text>
+                <View style={styles.deadlineActions}>
+                  <TouchableOpacity 
+                    style={styles.focusForDeadlineButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleStartSession(deadline.id);
+                    }}
+                    disabled={userData.energy < 20}
+                  >
+                    <Text style={styles.focusForDeadlineText}>
+                      {userData.energy >= 20 ? '🎯 Focus on This' : '😴 Need Energy'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+          )}
+
+          {/* Completed Section */}
+          {completedDeadlines.length > 0 && (
+          <View style={styles.deadlineSection}>
+            <Text style={styles.sectionTitle}>✅ COMPLETED</Text>
+            {completedDeadlines.map(deadline => (
+              <TouchableOpacity 
+                key={deadline.id} 
+                style={styles.deadlineCard}
+                onPress={() => handleDeadlinePress(deadline)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.deadlineTitle}>{deadline.title}</Text>
+                <Text style={styles.deadlineCompleted}>✓ Submitted</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          )}
+
+          {/* Empty State */}
+          {urgentDeadlines.length === 0 && upcomingDeadlines.length === 0 && completedDeadlines.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>📝 No deadlines yet</Text>
+              <Text style={styles.emptyStateSubtext}>Create your first deadline to get started!</Text>
+              <TouchableOpacity 
+                style={styles.sampleButton}
+                onPress={createSampleDeadlines}
+              >
+                <Text style={styles.sampleButtonText}>🎯 Add Sample Deadlines</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Create New Deadline Button */}
+        <TouchableOpacity 
+          style={styles.createDeadlineButton}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Text style={styles.createDeadlineText}>➕ CREATE NEW DEADLINE</Text>
+        </TouchableOpacity>
+
+        {/* Coming Soon */}
+        <View style={styles.comingSoonCard}>
+          <Text style={styles.comingSoonTitle}>🚀 Coming Soon</Text>
+          <Text style={styles.comingSoonText}>• Custom session lengths</Text>
+          <Text style={styles.comingSoonText}>• Study goals and targets</Text>
+          <Text style={styles.comingSoonText}>• Focus streaks</Text>
+          <Text style={styles.comingSoonText}>• Study statistics</Text>
+        </View>
+
+        {/* Dev: Test Notification Button */}
+        <TouchableOpacity 
+          style={styles.testNotificationButton}
+          onPress={handleTestNotification}
+        >
+          <Text style={styles.testNotificationText}>🔔 SEND TEST NOTIFICATION</Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      {/* Create / Edit Deadline Modal */}
+      <CreateDeadlineModal
+        visible={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditingDeadline(null);
+        }}
+        onSubmit={handleCreateOrEditDeadline}
+        mode={editingDeadline ? 'edit' : 'create'}
+        initialData={editingDeadline}
+        deadlineId={editingDeadline?.id}
+      />
+
+      {/* Deadline Detail Modal */}
+      <DeadlineDetailModal
+        visible={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        deadline={selectedDeadline}
+        onStartFocus={handleStartSession}
+        onEdit={handleEditDeadline}
+        onDelete={handleDeleteDeadline}
+      />
     </ImageBackground>
   );
 }
@@ -101,7 +359,13 @@ const styles = StyleSheet.create({
     paddingTop: SCREEN_HEIGHT * 0.06,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: SCREEN_HEIGHT * 0.03,
+  },
+  titleSection: {
+    flex: 1,
   },
   title: {
     fontSize: SCREEN_WIDTH * 0.08,
@@ -113,35 +377,28 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.04,
     color: '#666',
   },
-  energyCard: {
+  // Small Energy Icon (like Q-coins on home screen)
+  energyIcon: {
+    alignItems: 'center',
     backgroundColor: '#FFF',
-    padding: SCREEN_WIDTH * 0.05,
-    borderRadius: 16,
-    marginBottom: SCREEN_HEIGHT * 0.02,
+    borderRadius: 20,
+    padding: SCREEN_WIDTH * 0.02,
     borderWidth: 2,
     borderColor: '#FFB300',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  energyLabel: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    marginBottom: SCREEN_HEIGHT * 0.005,
-  },
-  energyValue: {
+  energyIconEmoji: {
     fontSize: SCREEN_WIDTH * 0.06,
+  },
+  energyIconText: {
+    fontSize: SCREEN_WIDTH * 0.03,
     fontWeight: '700',
     color: '#FF9800',
-    marginBottom: SCREEN_HEIGHT * 0.01,
-  },
-  energyBar: {
-    height: 10,
-    backgroundColor: '#FFECB3',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  energyFill: {
-    height: '100%',
-    backgroundColor: '#FFB300',
-    borderRadius: 5,
+    marginTop: 2,
   },
   startButton: {
     backgroundColor: '#6200EA',
@@ -169,23 +426,125 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.035,
     opacity: 0.9,
   },
-  infoCard: {
+  // Deadlines List
+  deadlinesList: {
     backgroundColor: '#FFF',
     padding: SCREEN_WIDTH * 0.05,
     borderRadius: 16,
     marginBottom: SCREEN_HEIGHT * 0.02,
   },
-  infoTitle: {
+  deadlinesHeader: {
+    marginBottom: SCREEN_HEIGHT * 0.02,
+  },
+  deadlinesTitle: {
     fontSize: SCREEN_WIDTH * 0.045,
     fontWeight: '700',
     color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.015,
   },
-  infoText: {
+  // Deadline Sections
+  deadlineSection: {
+    marginBottom: SCREEN_HEIGHT * 0.02,
+  },
+  sectionTitle: {
+    fontSize: SCREEN_WIDTH * 0.04,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: SCREEN_HEIGHT * 0.01,
+  },
+  deadlineCard: {
+    backgroundColor: '#F9F9F9',
+    padding: SCREEN_WIDTH * 0.04,
+    borderRadius: 12,
+    marginBottom: SCREEN_HEIGHT * 0.01,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  deadlineTitle: {
+    fontSize: SCREEN_WIDTH * 0.04,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: SCREEN_HEIGHT * 0.005,
+  },
+  deadlineDate: {
     fontSize: SCREEN_WIDTH * 0.035,
     color: '#666',
-    marginVertical: SCREEN_HEIGHT * 0.005,
-    lineHeight: SCREEN_WIDTH * 0.05,
+    marginBottom: SCREEN_HEIGHT * 0.005,
+  },
+  deadlineProgress: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: '#2196F3',
+    marginBottom: SCREEN_HEIGHT * 0.005,
+  },
+  deadlineCompleted: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  deadlineActions: {
+    marginTop: SCREEN_HEIGHT * 0.01,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  focusForDeadlineButton: {
+    backgroundColor: '#6200EA',
+    paddingHorizontal: SCREEN_WIDTH * 0.03,
+    paddingVertical: SCREEN_WIDTH * 0.02,
+    borderRadius: 8,
+  },
+  focusForDeadlineText: {
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.03,
+    fontWeight: '600',
+  },
+  emptyState: {
+    backgroundColor: '#F9F9F9',
+    padding: SCREEN_WIDTH * 0.08,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginVertical: SCREEN_HEIGHT * 0.02,
+  },
+  emptyStateText: {
+    fontSize: SCREEN_WIDTH * 0.045,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: SCREEN_HEIGHT * 0.01,
+  },
+  emptyStateSubtext: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#999',
+    textAlign: 'center',
+  },
+  sampleButton: {
+    backgroundColor: '#FF9800',
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    paddingVertical: SCREEN_WIDTH * 0.03,
+    borderRadius: 8,
+    marginTop: SCREEN_HEIGHT * 0.02,
+  },
+  sampleButtonText: {
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontWeight: '600',
+  },
+  // Create New Deadline Button (at bottom)
+  createDeadlineButton: {
+    backgroundColor: '#4CAF50',
+    padding: SCREEN_WIDTH * 0.05,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    borderWidth: 2,
+    borderColor: '#388E3C',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  createDeadlineText: {
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.045,
+    fontWeight: '700',
   },
   comingSoonCard: {
     backgroundColor: '#E3F2FD',
@@ -203,5 +562,17 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.035,
     color: '#1976D2',
     marginVertical: SCREEN_HEIGHT * 0.005,
+  },
+  testNotificationButton: {
+    backgroundColor: '#1976D2',
+    padding: SCREEN_WIDTH * 0.04,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.04,
+  },
+  testNotificationText: {
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.04,
+    fontWeight: '700',
   },
 });

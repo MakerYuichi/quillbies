@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { UserData, SessionData, CheckpointResult, CheckpointNotification } from '../core/types';
+import { UserData, SessionData, CheckpointResult, CheckpointNotification, Deadline, DeadlineFormData } from '../core/types';
 
 // Temporary fallback storage for development (until AsyncStorage is properly linked)
 const tempStorage = {
@@ -50,10 +50,14 @@ interface QuillbyStore {
   // Session state
   session: SessionData | null;
   
+  // Deadline state
+  deadlines: Deadline[];
+  selectedDeadlineId: string | null; // For tracking which deadline a focus session is for
+  
   // Actions
   initializeUser: () => void;
   updateEnergy: () => void;
-  startFocusSession: () => boolean;
+  startFocusSession: (deadlineId?: string) => boolean;
   endFocusSession: () => void;
   updateFocusDuringSession: () => void;
   handleDistraction: () => void;
@@ -78,6 +82,16 @@ interface QuillbyStore {
   cleanRoom: (messPointsReduced: number) => void;
   applyDailyMessDecay: () => void;
   generateDailySummary: () => string;
+  // Deadline actions
+  createDeadline: (formData: DeadlineFormData) => void;
+  updateDeadline: (id: string, updates: Partial<Deadline>) => void;
+  deleteDeadline: (id: string) => void;
+  markDeadlineComplete: (id: string) => void;
+  addWorkToDeadline: (id: string, hours: number) => void;
+  getUpcomingDeadlines: () => Deadline[];
+  getUrgentDeadlines: () => Deadline[];
+  getCompletedDeadlines: () => Deadline[];
+  createSampleDeadlines: () => void;
 }
 
 export const useQuillbyStore = create<QuillbyStore>()(
@@ -106,6 +120,9 @@ export const useQuillbyStore = create<QuillbyStore>()(
   },
   
   session: null,
+  
+  deadlines: [],
+  selectedDeadlineId: null,
   
   // Initialize user with default values
   initializeUser: () => {
@@ -156,7 +173,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
   },
   
   // Start a focus session
-  startFocusSession: () => {
+  startFocusSession: (deadlineId?: string) => {
     const { userData } = get();
     
     if (!canStartSession(userData.energy)) {
@@ -165,13 +182,14 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     const newEnergy = startSessionEnergyCost(userData.energy);
     
-    console.log('[Session] Starting new focus session');
+    console.log('[Session] Starting new focus session', deadlineId ? `for deadline: ${deadlineId}` : '');
     
     set({
       userData: {
         ...userData,
         energy: newEnergy
       },
+      selectedDeadlineId: deadlineId || null,
       session: {
         focusScore: 0,
         startTime: Date.now(),
@@ -189,15 +207,22 @@ export const useQuillbyStore = create<QuillbyStore>()(
   
   // End focus session and calculate rewards
   endFocusSession: () => {
-    const { userData, session } = get();
+    const { userData, session, selectedDeadlineId, addWorkToDeadline } = get();
     
     if (!session) return;
     
     const rewards = calculateSessionRewards(session.focusScore);
     const newMessPoints = removeMessAfterSession(userData.messPoints, rewards.messPointsRemoved);
     
-    // Calculate session duration in minutes for study tracking
+    // Calculate session duration in minutes/hours for tracking
     const sessionDurationMinutes = Math.floor(session.duration / 60);
+    const sessionDurationHours = session.duration / 3600;
+    
+    // If this session was for a deadline, log the work
+    if (selectedDeadlineId && sessionDurationHours > 0) {
+      console.log(`[Focus→Deadline] Adding ${sessionDurationHours.toFixed(2)}h to deadline ${selectedDeadlineId}`);
+      addWorkToDeadline(selectedDeadlineId, sessionDurationHours);
+    }
     
     // If study habit is enabled, log this focus session as study time
     const studyEnabled = userData.enabledHabits?.includes('study');
@@ -226,7 +251,8 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     set({
       userData: updatedUserData,
-      session: null
+      session: null,
+      selectedDeadlineId: null
     });
   },
   
@@ -835,6 +861,198 @@ Total mess: ${mess.toFixed(1)}
 Room: ${roomState}`;
     
     return summary;
+  },
+
+  // Create new deadline
+  createDeadline: (formData: DeadlineFormData) => {
+    const { deadlines } = get();
+    // Normalize due date: if it's a plain YYYY-MM-DD, convert to end-of-day ISO
+    let normalizedDueDate = formData.dueDate;
+    if (normalizedDueDate && !normalizedDueDate.includes('T')) {
+      const date = new Date(normalizedDueDate);
+      // Set to end of the selected day so it counts as "today" until midnight
+      date.setHours(23, 59, 59, 999);
+      normalizedDueDate = date.toISOString();
+    }
+
+    const newDeadline: Deadline = {
+      id: Date.now().toString(),
+      title: formData.title,
+      dueDate: normalizedDueDate,
+      dueTime: formData.dueTime || undefined,
+      priority: formData.priority,
+      estimatedHours: parseFloat(formData.estimatedHours),
+      category: formData.category,
+      workCompleted: 0,
+      isCompleted: false,
+      createdAt: new Date().toISOString(),
+      reminders: {
+        oneDayBefore: true,
+        threeDaysBefore: true,
+      }
+    };
+    
+    console.log('[Deadline] Created:', newDeadline.title);
+    
+    set({
+      deadlines: [...deadlines, newDeadline]
+    });
+  },
+
+  // Update existing deadline
+  updateDeadline: (id: string, updates: Partial<Deadline>) => {
+    const { deadlines } = get();
+    let normalizedUpdates = { ...updates };
+
+    // If dueDate is being updated and provided as YYYY-MM-DD, normalize it
+    if (normalizedUpdates.dueDate && !normalizedUpdates.dueDate.includes('T')) {
+      const date = new Date(normalizedUpdates.dueDate);
+      date.setHours(23, 59, 59, 999);
+      normalizedUpdates.dueDate = date.toISOString();
+    }
+
+    set({
+      deadlines: deadlines.map(deadline => 
+        deadline.id === id ? { ...deadline, ...normalizedUpdates } : deadline
+      )
+    });
+  },
+
+  // Delete deadline
+  deleteDeadline: (id: string) => {
+    const { deadlines } = get();
+    
+    set({
+      deadlines: deadlines.filter(deadline => deadline.id !== id)
+    });
+  },
+
+  // Mark deadline as complete
+  markDeadlineComplete: (id: string) => {
+    const { updateDeadline } = get();
+    updateDeadline(id, { isCompleted: true });
+  },
+
+  // Add work hours to deadline
+  addWorkToDeadline: (id: string, hours: number) => {
+    const { deadlines } = get();
+    const deadline = deadlines.find(d => d.id === id);
+    
+    if (deadline) {
+      const newWorkCompleted = Math.min(
+        deadline.workCompleted + hours,
+        deadline.estimatedHours
+      );
+      
+      // Auto-complete if all work is done
+      const isCompleted = newWorkCompleted >= deadline.estimatedHours;
+      
+      set({
+        deadlines: deadlines.map(d => 
+          d.id === id 
+            ? { ...d, workCompleted: newWorkCompleted, isCompleted }
+            : d
+        )
+      });
+    }
+  },
+
+  // Get upcoming deadlines (not urgent, not completed)
+  getUpcomingDeadlines: () => {
+    const { deadlines } = get();
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
+    
+    return deadlines
+      .filter(deadline => {
+        if (deadline.isCompleted) return false;
+        const dueDate = new Date(deadline.dueDate);
+        return dueDate > threeDaysFromNow;
+      })
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  },
+
+  // Get urgent deadlines (due within 3 days)
+  getUrgentDeadlines: () => {
+    const { deadlines } = get();
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
+    
+    return deadlines
+      .filter(deadline => {
+        if (deadline.isCompleted) return false;
+        const dueDate = new Date(deadline.dueDate);
+        return dueDate <= threeDaysFromNow && dueDate >= now;
+      })
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  },
+
+  // Get completed deadlines
+  getCompletedDeadlines: () => {
+    const { deadlines } = get();
+    
+    return deadlines
+      .filter(deadline => deadline.isCompleted)
+      .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
+  },
+
+  // Create sample deadlines for testing
+  createSampleDeadlines: () => {
+    const now = new Date();
+    const sampleDeadlines: Deadline[] = [
+      {
+        id: 'sample-1',
+        title: 'Math Final Exam',
+        dueDate: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days
+        dueTime: '14:00',
+        priority: 'high',
+        estimatedHours: 8,
+        category: 'study',
+        workCompleted: 2.5,
+        isCompleted: false,
+        createdAt: new Date().toISOString(),
+        reminders: { oneDayBefore: true, threeDaysBefore: true }
+      },
+      {
+        id: 'sample-2',
+        title: 'History Essay',
+        dueDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days
+        priority: 'medium',
+        estimatedHours: 6,
+        category: 'study',
+        workCompleted: 1,
+        isCompleted: false,
+        createdAt: new Date().toISOString(),
+        reminders: { oneDayBefore: true, threeDaysBefore: true }
+      },
+      {
+        id: 'sample-3',
+        title: 'Chemistry Lab Report',
+        dueDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days
+        priority: 'low',
+        estimatedHours: 4,
+        category: 'study',
+        workCompleted: 0,
+        isCompleted: false,
+        createdAt: new Date().toISOString(),
+        reminders: { oneDayBefore: true, threeDaysBefore: false }
+      },
+      {
+        id: 'sample-4',
+        title: 'Biology Quiz',
+        dueDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Completed
+        priority: 'medium',
+        estimatedHours: 3,
+        category: 'study',
+        workCompleted: 3,
+        isCompleted: true,
+        createdAt: new Date().toISOString(),
+        reminders: { oneDayBefore: true, threeDaysBefore: true }
+      }
+    ];
+    
+    set({ deadlines: sampleDeadlines });
+    console.log('[Deadlines] Sample deadlines created');
   }
 }),
 {
@@ -844,7 +1062,8 @@ Room: ${roomState}`;
   // Only persist essential user data, not temporary session data
   partialize: (state) => ({
     userData: state.userData,
-    // Don't persist session data - it should reset on app restart
+    deadlines: state.deadlines,
+    // Don't persist session data or selectedDeadlineId - they should reset on app restart
   }),
   
   // Handle data migration for future updates

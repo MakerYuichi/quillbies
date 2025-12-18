@@ -1,7 +1,17 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 import { useQuillbyStore } from './state/store';
+
+// Ensure notifications show alerts while app is foregrounded
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function RootLayout() {
   const initializeUser = useQuillbyStore((state) => state.initializeUser);

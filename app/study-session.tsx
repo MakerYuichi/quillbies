@@ -7,7 +7,7 @@ import QuillbyPet from './components/QuillbyPet';
 
 export default function StudySessionScreen() {
   const router = useRouter();
-  const { userData, session, updateFocusDuringSession, endFocusSession, handleDistraction } = useQuillbyStore();
+  const { userData, session, selectedDeadlineId, deadlines, updateFocusDuringSession, endFocusSession, handleDistraction } = useQuillbyStore();
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
   
   // Update focus score every second
@@ -61,6 +61,11 @@ export default function StudySessionScreen() {
   
   const estimatedCoins = Math.round(session.focusScore * 0.5);
   
+  // Find the deadline being worked on
+  const currentDeadline = selectedDeadlineId 
+    ? deadlines.find(d => d.id === selectedDeadlineId)
+    : null;
+  
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Quillby studying */}
@@ -71,6 +76,16 @@ export default function StudySessionScreen() {
           messPoints={userData.messPoints}
         />
         <Text style={styles.studyingText}>📖 Studying together...</Text>
+        {currentDeadline && (
+          <View style={styles.deadlineInfo}>
+            <Text style={styles.deadlineInfoText}>
+              🎯 Working on: {currentDeadline.title}
+            </Text>
+            <Text style={styles.deadlineProgress}>
+              Progress: {currentDeadline.workCompleted.toFixed(1)}h / {currentDeadline.estimatedHours}h
+            </Text>
+          </View>
+        )}
       </View>
       
       {/* Focus Meter */}
@@ -81,6 +96,11 @@ export default function StudySessionScreen() {
         <Text style={styles.rewardsTitle}>Estimated Rewards</Text>
         <Text style={styles.rewardsText}>🪙 {estimatedCoins} Q-Coins</Text>
         <Text style={styles.rewardsText}>✨ {Math.round(session.focusScore)} XP</Text>
+        {currentDeadline && (
+          <Text style={styles.rewardsText}>
+            📚 +{(session.duration / 3600).toFixed(2)}h to {currentDeadline.title}
+          </Text>
+        )}
       </View>
       
       {/* Grace Period Indicator */}
@@ -168,6 +188,23 @@ const styles = StyleSheet.create({
     color: '#FFF',
     marginTop: 10,
     fontStyle: 'italic',
+  },
+  deadlineInfo: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  deadlineInfoText: {
+    fontSize: 14,
+    color: '#FFD54F',
+    fontWeight: '600',
+    marginBottom: 5,
+  },
+  deadlineProgress: {
+    fontSize: 12,
+    color: '#E1BEE7',
   },
   rewardsPreview: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

@@ -100,3 +100,29 @@ export interface SessionRewards {
   xpEarned: number;
   messPointsRemoved: number;
 }
+
+export interface Deadline {
+  id: string;
+  title: string;
+  dueDate: string; // ISO date string
+  dueTime?: string; // HH:MM format
+  priority: 'high' | 'medium' | 'low';
+  estimatedHours: number;
+  category?: 'study' | 'work' | 'project' | 'other';
+  workCompleted: number; // Hours completed
+  isCompleted: boolean;
+  createdAt: string; // ISO date string
+  reminders: {
+    oneDayBefore: boolean;
+    threeDaysBefore: boolean;
+  };
+}
+
+export interface DeadlineFormData {
+  title: string;
+  dueDate: string;
+  dueTime: string;
+  priority: 'high' | 'medium' | 'low';
+  estimatedHours: string;
+  category: 'study' | 'work' | 'project' | 'other';
+}
