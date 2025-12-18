@@ -1,9 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useQuillbyStore } from '../state/store';
 import { CheckpointResult } from '../core/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function StudyProgress() {
   const { userData, checkStudyCheckpoints } = useQuillbyStore();
@@ -101,10 +99,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 12,
     padding: 12,
-    marginHorizontal: 20,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+    flex: 1, // Take available space in side-by-side layout
   },
   header: {
     flexDirection: 'row',

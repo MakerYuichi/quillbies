@@ -1,11 +1,38 @@
-// Global state management with Zustand
+// Global state management with Zustand + Data Persistence
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { UserData, SessionData, CheckpointResult, CheckpointNotification } from '../core/types';
+
+// Temporary fallback storage for development (until AsyncStorage is properly linked)
+const tempStorage = {
+  data: {} as Record<string, string>,
+  getItem: async (key: string) => {
+    console.log('[TempStorage] Getting:', key);
+    return tempStorage.data[key] || null;
+  },
+  setItem: async (key: string, value: string) => {
+    console.log('[TempStorage] Setting:', key, 'Size:', value.length);
+    tempStorage.data[key] = value;
+  },
+  removeItem: async (key: string) => {
+    console.log('[TempStorage] Removing:', key);
+    delete tempStorage.data[key];
+  },
+};
+
+// Try to use AsyncStorage, fallback to tempStorage if not available
+let storage;
+try {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  storage = AsyncStorage;
+  console.log('[Storage] Using AsyncStorage');
+} catch (error) {
+  storage = tempStorage;
+  console.log('[Storage] Using temporary fallback storage');
+}
 import {
   calculateMaxEnergyCap,
-  calculateEnergyDrain,
-  rechargeEnergy,
   canStartSession,
   startSessionEnergyCost,
   updateFocusScore,
@@ -13,9 +40,7 @@ import {
   calculateSessionRewards,
   addMessForSkippedTask,
   removeMessAfterSession,
-  getMinutesElapsed,
-  getSecondsElapsed,
-  getMessEnergyPenalty
+  getSecondsElapsed
 } from '../core/engine';
 
 interface QuillbyStore {
@@ -55,7 +80,9 @@ interface QuillbyStore {
   generateDailySummary: () => string;
 }
 
-export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
+export const useQuillbyStore = create<QuillbyStore>()(
+  persist(
+    (set, get) => ({
   userData: {
     energy: 100,
     maxEnergyCap: 100,
@@ -694,7 +721,7 @@ export const useQuillbyStore = create<QuillbyStore>((set, get) => ({
     
     const checkResult = checkStudyCheckpoints();
     
-    if (checkResult.isBehind) {
+    if (checkResult.isBehind && checkResult.missing && checkResult.expected && checkResult.actual && checkResult.checkpoint) {
       // Add mess points based on missing hours
       addMissedCheckpoint(checkResult.missing);
       
@@ -809,4 +836,44 @@ Room: ${roomState}`;
     
     return summary;
   }
-}));
+}),
+{
+  name: 'quillby-storage', // Storage key
+  storage: createJSONStorage(() => storage),
+  
+  // Only persist essential user data, not temporary session data
+  partialize: (state) => ({
+    userData: state.userData,
+    // Don't persist session data - it should reset on app restart
+  }),
+  
+  // Handle data migration for future updates
+  version: 1,
+  migrate: (persistedState: any, version: number) => {
+    console.log(`[Storage] Migrating from version ${version}`);
+    
+    // Future migration logic will go here
+    if (version === 0) {
+      // Example: Add new fields with defaults
+      // persistedState.userData.newField = defaultValue;
+    }
+    
+    return persistedState;
+  },
+  
+  // Handle storage errors gracefully
+  onRehydrateStorage: () => {
+    console.log('[Storage] Starting data rehydration...');
+    return (state, error) => {
+      if (error) {
+        console.error('[Storage] Rehydration failed:', error);
+        // Could show user notification about data loss
+      } else {
+        console.log('[Storage] Data rehydrated successfully');
+        console.log('[Storage] User data loaded:', state?.userData?.buddyName || 'No buddy name');
+      }
+    };
+  },
+}
+)
+);

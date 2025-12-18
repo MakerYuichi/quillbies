@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions, ImageBackground, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, ImageBackground, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { CleaningPlan, CleaningStage } from '../core/types';
 import { useRouter } from 'expo-router';
 
@@ -159,13 +159,8 @@ export default function HomeScreen() {
 
   // Apply cleaning results with efficiency-based rewards
   const applyCleaningResults = (messReduced: number, efficiency: number) => {
-    // Mess reduction
-    const newMessPoints = Math.max(0, userData.messPoints - messReduced);
-    
     // Energy restoration (max 30% based on efficiency)
     const energyRestored = Math.floor(efficiency * 30);
-    const currentMaxCap = userData.maxEnergyCap;
-    const newMaxCap = Math.min(100, currentMaxCap + energyRestored);
     
     // Coins earned (max 20 based on efficiency)
     const coinsEarned = Math.floor(efficiency * 20);
@@ -303,7 +298,7 @@ export default function HomeScreen() {
       {isExercising ? (
         <ExerciseEnvironment pointerEvents="none" />
       ) : (
-        <RoomLayers pointerEvents="none" messPoints={userData.messPoints} />
+        <RoomLayers pointerEvents="none" messPoints={userData.messPoints} isSleeping={isSleeping} qCoins={userData.qCoins} />
       )}
       
       {/* FIXED HAMSTER */}
@@ -403,41 +398,21 @@ export default function HomeScreen() {
         </Text>
       </TouchableOpacity>
       
-      {/* BOTTOM CONTROLS AREA - Relative to container */}
-      <View style={styles.bottomControlsArea}>
-        {/* STUDY PROGRESS - Only when study habit enabled */}
-        <StudyProgress />
-        
-        {/* FOCUS SESSION BUTTON - Main study action */}
-        {userData.enabledHabits?.includes('study') && !isCleaning && !isSleeping && !isExercising && (
-          <TouchableOpacity
-            style={[
-              styles.focusSessionButton,
-              userData.energy < 20 && styles.focusSessionButtonDisabled
-            ]}
-            onPress={handleStartFocusSession}
-            disabled={userData.energy < 20}
-          >
-            <Text style={[
-              styles.focusSessionButtonText,
-              userData.energy < 20 && styles.focusSessionButtonTextDisabled
-            ]}>
-              {userData.energy >= 20 ? '📚 Start Focus Session' : '😴 Too Tired to Focus'}
-            </Text>
-            <Text style={styles.focusSessionButtonSubtext}>
-              {userData.energy >= 20 ? 'Costs 20 energy' : `Need ${20 - userData.energy} more energy`}
-            </Text>
-          </TouchableOpacity>
-        )}
-        
-        {/* ENERGY BAR */}
-        <View style={styles.energyBarContainer}>
+      {/* SCROLLABLE CONTENT AREA - Inside orange theme background */}
+      <ScrollView 
+        style={styles.scrollableContent}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* ENERGY BAR - First in scrollable area (status bar) */}
+        <View style={styles.scrollableEnergyBarContainer}>
           <EnergyBar current={userData.energy} max={userData.maxEnergyCap} />
         </View>
-        
-        {/* BUTTONS ROW */}
+
+        {/* BUTTONS ROW - Second in scrollable area */}
         {selectedCharacter === 'casual' && (
-          <View style={styles.buttonsRow}>
+          <View style={styles.scrollableButtonsRow}>
             {!isSleeping && !isExercising && !isCleaning ? (
               <>
                 {/* Water Button - Only when NOT in any active mode */}
@@ -512,7 +487,42 @@ export default function HomeScreen() {
             ) : null}
           </View>
         )}
-      </View>
+
+        {/* STUDY SECTION - Focus Button and Progress side by side BELOW buttons */}
+        {userData.enabledHabits?.includes('study') && (
+          <View style={styles.studySection}>
+            {/* FOCUS SESSION BUTTON - Left side */}
+            {!isCleaning && !isSleeping && !isExercising && (
+              <TouchableOpacity
+                style={[
+                  styles.focusSessionButton,
+                  userData.energy < 20 && styles.focusSessionButtonDisabled
+                ]}
+                onPress={handleStartFocusSession}
+                disabled={userData.energy < 20}
+              >
+                <Text style={[
+                  styles.focusSessionButtonText,
+                  userData.energy < 20 && styles.focusSessionButtonTextDisabled
+                ]}>
+                  {userData.energy >= 20 ? '📚 Focus' : '😴 Tired'}
+                </Text>
+                <Text style={styles.focusSessionButtonSubtext}>
+                  {userData.energy >= 20 ? '20 energy' : `Need ${20 - userData.energy}`}
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* STUDY PROGRESS - Right side */}
+            <View style={styles.studyProgressContainer}>
+              <StudyProgress />
+            </View>
+          </View>
+        )}
+        
+        {/* SPACER - Allow more scrolling space */}
+        <View style={styles.contentSpacer} />
+      </ScrollView>
       
       {/* Dim Overlay when sleeping */}
       {isSleeping && (
@@ -537,29 +547,44 @@ const styles = StyleSheet.create({
     width: (SCREEN_WIDTH * 355) / 393, // Match speech bubble width
     zIndex: 20,
   },
-  // Bottom controls area - relative positioning at bottom of container
-  bottomControlsArea: {
+  // Scrollable content area - inside orange theme background, below floor
+  scrollableContent: {
     position: 'absolute',
-    bottom: 0,
+    top: (SCREEN_HEIGHT * 580) / 852, // Start below floor.png (floor ends at ~575)
     left: 0,
     right: 0,
-    paddingBottom: 30, // Space from bottom edge
-    paddingHorizontal: (SCREEN_WIDTH * 17) / 393,
-    flexDirection: 'column', // Buttons at bottom, energy bar above
-    alignItems: 'center',
-    zIndex: 20,
+    bottom: 30, // Small padding from bottom edge
+    zIndex: 15,
   },
-  // Energy bar container - relative within bottom area
-  energyBarContainer: {
+  scrollContentContainer: {
+    paddingHorizontal: (SCREEN_WIDTH * 17) / 393,
+    paddingBottom: 20,
+    flexGrow: 1,
+  },
+  contentSpacer: {
+    flex: 1, // Pushes study section to top, allows scrolling
+    minHeight: 50, // Minimum space for scrolling
+  },
+  // Scrollable energy bar container - first in scroll area
+  scrollableEnergyBarContainer: {
     width: (SCREEN_WIDTH * 251) / 280,
     height: (SCREEN_HEIGHT * 25) / 852,
-    marginBottom: 70, // Space between buttons and energy bar (since we're using column-reverse)
+    marginBottom: 70, // Reduced space before buttons
+    alignSelf: 'center',
   },
   // Buttons row - relative within bottom area
   buttonsRow: {
     width: (SCREEN_WIDTH * 355) / 393,
     flexDirection: 'row',
     gap: (SCREEN_WIDTH * 6) / 393, // Same gap as original
+  },
+  // Scrollable buttons row - inside scroll area
+  scrollableButtonsRow: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: (SCREEN_WIDTH * 6) / 393,
+    marginBottom: 20, // Space before study section
+    alignSelf: 'center',
   },
   dimOverlay: {
     position: 'absolute',
@@ -681,17 +706,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: (SCREEN_WIDTH * 16) / 393,
   },
-  // Focus session button
+  // Study section - side by side layout in scrollable area
+  studySection: {
+    flexDirection: 'row',
+    width: '100%', // Full width within scroll container
+    marginBottom: 15,
+    gap: (SCREEN_WIDTH * 10) / 393, // Space between button and progress
+    alignItems: 'stretch', // Make both components same height
+    alignSelf: 'center', // Center within scroll container
+  },
+  studyProgressContainer: {
+    flex: 1, // Equal space with button
+  },
+  // Focus session button - equal size with progress
   focusSessionButton: {
     backgroundColor: '#1976D2',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingVertical: (SCREEN_WIDTH * 12) / 393,
+    paddingHorizontal: (SCREEN_WIDTH * 16) / 393,
+    borderRadius: (SCREEN_WIDTH * 12) / 393,
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 15,
+    justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#0D47A1',
+    flex: 0.5, // Equal space with progress container
   },
   focusSessionButtonDisabled: {
     backgroundColor: '#BDBDBD',
@@ -699,17 +736,17 @@ const styles = StyleSheet.create({
   },
   focusSessionButtonText: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 16,
+    fontSize: (SCREEN_WIDTH * 14) / 393, // Slightly smaller for compact layout
     color: '#FFF',
     textAlign: 'center',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   focusSessionButtonTextDisabled: {
     color: '#757575',
   },
   focusSessionButtonSubtext: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 12,
+    fontSize: (SCREEN_WIDTH * 10) / 393, // Smaller subtext for compact layout
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },

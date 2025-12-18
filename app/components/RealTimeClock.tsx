@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useQuillbyStore } from '../state/store';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -7,14 +7,29 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function RealTimeClock() {
   const { userData } = useQuillbyStore();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [fadeAnim] = useState(new Animated.Value(1));
 
   useEffect(() => {
     const timer = setInterval(() => {
+      // Subtle fade animation on time update
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 0.7,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      
       setCurrentTime(new Date());
     }, 1000); // Update every second
 
     return () => clearInterval(timer);
-  }, []);
+  }, [fadeAnim]);
 
   const formatTime = () => {
     const timezone = userData.timezone || 'UTC';
@@ -24,7 +39,7 @@ export default function RealTimeClock() {
       const timeString = currentTime.toLocaleTimeString('en-US', {
         timeZone: timezone,
         hour12: true,
-        hour: '2-digit',
+        hour: 'numeric', // Remove leading zero for single digits
         minute: '2-digit'
       });
       
@@ -34,7 +49,7 @@ export default function RealTimeClock() {
       console.warn('[Clock] Invalid timezone:', timezone, 'Using local time');
       return currentTime.toLocaleTimeString('en-US', {
         hour12: true,
-        hour: '2-digit',
+        hour: 'numeric',
         minute: '2-digit'
       });
     }
@@ -44,17 +59,42 @@ export default function RealTimeClock() {
     return userData.buddyName || 'Hammy';
   };
 
+  const getTimeBasedEmoji = () => {
+    const timezone = userData.timezone || 'UTC';
+    let hour;
+    
+    try {
+      // Get hour in user's timezone
+      const timeInTimezone = new Date().toLocaleString('en-US', {
+        timeZone: timezone,
+        hour12: false,
+        hour: '2-digit'
+      });
+      hour = parseInt(timeInTimezone);
+    } catch (error) {
+      hour = currentTime.getHours();
+    }
+    
+    // Return appropriate emoji based on time of day
+    if (hour >= 6 && hour < 12) return '🌅'; // Morning
+    if (hour >= 12 && hour < 17) return '☀️'; // Afternoon  
+    if (hour >= 17 && hour < 20) return '🌆'; // Evening
+    if (hour >= 20 || hour < 6) return '🌙'; // Night
+    return '🐹'; // Default
+  };
+
   const getClockText = () => {
     const time = formatTime();
     const buddyName = getBuddyName();
-    return `${time} 🐹 ${buddyName}'s Room`;
+    const timeEmoji = getTimeBasedEmoji();
+    return `${time} ${timeEmoji} ${buddyName}'s Room`;
   };
 
   return (
     <View style={styles.container} pointerEvents="none">
-      <Text style={styles.clockText}>
+      <Animated.Text style={[styles.clockText, { opacity: fadeAnim }]}>
         {getClockText()}
-      </Text>
+      </Animated.Text>
     </View>
   );
 }

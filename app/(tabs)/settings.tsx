@@ -90,6 +90,36 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* Data Persistence Test */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🗃️ Data Persistence Test</Text>
+        <View style={styles.infoCard}>
+          <Text style={styles.persistenceInfo}>
+            📊 Current Status: Persistence logic implemented with fallback storage
+          </Text>
+          <Text style={styles.persistenceStep}>✅ Data saves automatically on every change</Text>
+          <Text style={styles.persistenceStep}>✅ Intelligent storage fallback system</Text>
+          <Text style={styles.persistenceStep}>🔄 AsyncStorage native linking in progress</Text>
+          <Text style={styles.persistenceStep}>💡 Test: Add data below and check it persists during session</Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={[styles.button, styles.testButton]} 
+          onPress={() => {
+            const { logWater, setBuddyName } = useQuillbyStore.getState();
+            logWater(); // +5 coins
+            setBuddyName('TestPersistence');
+            Alert.alert(
+              'Test Data Added!',
+              `Added 5 Q-coins and changed buddy name to "TestPersistence".\n\nNow close the app completely and reopen to test persistence!`,
+              [{ text: 'OK' }]
+            );
+          }}
+        >
+          <Text style={styles.buttonText}>🧪 Test Persistence Logic (+5 coins)</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Testing Controls */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Testing Controls</Text>
@@ -210,5 +240,19 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.035,
     color: '#1976D2',
     marginVertical: SCREEN_HEIGHT * 0.005,
+  },
+  testButton: {
+    backgroundColor: '#4CAF50',
+  },
+  persistenceInfo: {
+    fontSize: SCREEN_WIDTH * 0.04,
+    color: '#333',
+    marginBottom: SCREEN_HEIGHT * 0.01,
+    fontWeight: '600',
+  },
+  persistenceStep: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#666',
+    marginVertical: SCREEN_HEIGHT * 0.003,
   },
 });
