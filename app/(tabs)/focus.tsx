@@ -4,8 +4,10 @@ import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store';
 import { DeadlineFormData, Deadline } from '../core/types';
+import { calculateFocusEnergyCost } from '../core/engine';
 import CreateDeadlineModal from '../components/CreateDeadlineModal';
 import DeadlineDetailModal from '../components/DeadlineDetailModal';
+import SessionCustomizationModal, { SessionConfig } from '../components/SessionCustomizationModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -28,8 +30,10 @@ export default function FocusScreen() {
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
   const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
   const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
+  const [pendingDeadlineId, setPendingDeadlineId] = useState<string | undefined>(undefined);
 
   // Get deadline lists
   const urgentDeadlines = getUrgentDeadlines();
@@ -37,12 +41,24 @@ export default function FocusScreen() {
   const completedDeadlines = getCompletedDeadlines();
 
   const handleStartSession = (deadlineId?: string) => {
-    const success = startFocusSession(deadlineId);
-    if (success) {
-      router.push('/study-session');
-    } else {
-      alert('Not enough energy! Quillby needs at least 20 energy to focus.');
+    const energyNeeded = calculateFocusEnergyCost(userData);
+    if (userData.energy < energyNeeded) {
+      alert(`Not enough energy! Need ${energyNeeded} energy to focus (have ${Math.round(userData.energy)})`);
+      return;
     }
+    
+    // Show customization modal
+    setPendingDeadlineId(deadlineId);
+    setShowSessionModal(true);
+  };
+
+  const handleSessionStart = (config: SessionConfig) => {
+    const success = startFocusSession(pendingDeadlineId);
+    if (success) {
+      // Store session config in session data if needed
+      router.push('/study-session');
+    }
+    setPendingDeadlineId(undefined);
   };
 
   const handleCreateOrEditDeadline = (formData: DeadlineFormData, deadlineId?: string) => {
@@ -160,17 +176,17 @@ export default function FocusScreen() {
 
         {/* Start Session Button */}
         <TouchableOpacity
-          style={[styles.startButton, userData.energy < 20 && styles.startButtonDisabled]}
+          style={[styles.startButton, userData.energy < calculateFocusEnergyCost(userData) && styles.startButtonDisabled]}
           onPress={() => handleStartSession()}
-          disabled={userData.energy < 20}
+          disabled={userData.energy < calculateFocusEnergyCost(userData)}
         >
           <Text style={styles.startButtonText}>
-            {userData.energy >= 20 ? '📚 Start Focus Session' : '😴 Too Tired to Focus'}
+            {userData.energy >= calculateFocusEnergyCost(userData) ? '📚 Start Focus Session' : '😴 Too Tired to Focus'}
           </Text>
           <Text style={styles.startButtonSubtext}>
-            {userData.energy >= 20 
-              ? 'Begin a Pomodoro session' 
-              : 'Need at least 20 energy'}
+            {userData.energy >= calculateFocusEnergyCost(userData)
+              ? `Costs ${calculateFocusEnergyCost(userData)} energy (${userData.energy >= calculateFocusEnergyCost(userData) ? 'Ready!' : 'Need more'})`
+              : `Need ${calculateFocusEnergyCost(userData)} energy (have ${Math.round(userData.energy)})`}
           </Text>
         </TouchableOpacity>
 
@@ -208,10 +224,10 @@ export default function FocusScreen() {
                       e.stopPropagation();
                       handleStartSession(deadline.id);
                     }}
-                    disabled={userData.energy < 20}
+                    disabled={userData.energy < calculateFocusEnergyCost(userData)}
                   >
                     <Text style={styles.focusForDeadlineText}>
-                      {userData.energy >= 20 ? '🎯 Focus on This' : '😴 Need Energy'}
+                      {userData.energy >= calculateFocusEnergyCost(userData) ? '🎯 Focus on This' : '😴 Need Energy'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -248,10 +264,10 @@ export default function FocusScreen() {
                       e.stopPropagation();
                       handleStartSession(deadline.id);
                     }}
-                    disabled={userData.energy < 20}
+                    disabled={userData.energy < calculateFocusEnergyCost(userData)}
                   >
                     <Text style={styles.focusForDeadlineText}>
-                      {userData.energy >= 20 ? '🎯 Focus on This' : '😴 Need Energy'}
+                      {userData.energy >= calculateFocusEnergyCost(userData) ? '🎯 Focus on This' : '😴 Need Energy'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -340,6 +356,16 @@ export default function FocusScreen() {
         onStartFocus={handleStartSession}
         onEdit={handleEditDeadline}
         onDelete={handleDeleteDeadline}
+      />
+
+      {/* Session Customization Modal */}
+      <SessionCustomizationModal
+        visible={showSessionModal}
+        onClose={() => {
+          setShowSessionModal(false);
+          setPendingDeadlineId(undefined);
+        }}
+        onStartSession={handleSessionStart}
       />
     </ImageBackground>
   );

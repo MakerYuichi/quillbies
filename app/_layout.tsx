@@ -62,11 +62,7 @@ export default function RootLayout() {
         options={{ 
           title: 'Focus Session',
           presentation: 'modal',
-          headerShown: true,
-          headerStyle: {
-            backgroundColor: '#FF9800',
-          },
-          headerTintColor: '#fff',
+          headerShown: false,
         }} 
       />
       </Stack>

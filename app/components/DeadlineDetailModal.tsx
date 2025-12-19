@@ -12,6 +12,7 @@ import {
   Alert
 } from 'react-native';
 import { Deadline } from '../core/types';
+import { useQuillbyStore } from '../state/store';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -32,9 +33,11 @@ export default function DeadlineDetailModal({
   onEdit, 
   onDelete 
 }: DeadlineDetailModalProps) {
-  // Reminder states
-  const [reminder1Day, setReminder1Day] = useState(true); // Default to enabled
-  const [reminder3Day, setReminder3Day] = useState(true); // Default to enabled
+  const { updateReminders } = useQuillbyStore();
+  
+  // Reminder states - initialize from deadline
+  const [reminder1Day, setReminder1Day] = useState(deadline?.reminders?.oneDayBefore ?? true);
+  const [reminder3Day, setReminder3Day] = useState(deadline?.reminders?.threeDaysBefore ?? true);
 
   if (!deadline) return null;
 
@@ -259,7 +262,14 @@ export default function DeadlineDetailModal({
                   styles.reminderButton,
                   reminder1Day && styles.reminderButtonActive
                 ]}
-                onPress={() => setReminder1Day(!reminder1Day)}
+                onPress={() => {
+                  const newState = !reminder1Day;
+                  setReminder1Day(newState);
+                  updateReminders(deadline.id, {
+                    oneDayBefore: newState,
+                    threeDaysBefore: reminder3Day
+                  });
+                }}
               >
                 <Text style={[
                   styles.reminderButtonText,
@@ -273,7 +283,14 @@ export default function DeadlineDetailModal({
                   styles.reminderButton,
                   reminder3Day && styles.reminderButtonActive
                 ]}
-                onPress={() => setReminder3Day(!reminder3Day)}
+                onPress={() => {
+                  const newState = !reminder3Day;
+                  setReminder3Day(newState);
+                  updateReminders(deadline.id, {
+                    oneDayBefore: reminder1Day,
+                    threeDaysBefore: newState
+                  });
+                }}
               >
                 <Text style={[
                   styles.reminderButtonText,

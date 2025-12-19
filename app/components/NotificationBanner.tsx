@@ -5,7 +5,14 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface NotificationData {
   id: string;
-  type: 'checkpoint-reminder' | 'checkpoint-reached' | 'daily-summary';
+  type: 
+    | 'checkpoint-reminder'
+    | 'checkpoint-reached'
+    | 'daily-summary'
+    | 'deadline-approaching'
+    | 'deadline-checkpoint'
+    | 'deadline-overdue'
+    | 'deadline-complete';
   title: string;
   message: string;
   timestamp: number;
@@ -36,6 +43,30 @@ export default function NotificationBanner({ notification, onDismiss }: Notifica
           backgroundColor: '#9C27B0',
           borderColor: '#7B1FA2',
           icon: '📊'
+        };
+      case 'deadline-approaching':
+        return {
+          backgroundColor: '#FF9800',
+          borderColor: '#F57C00',
+          icon: '📝'
+        };
+      case 'deadline-checkpoint':
+        return {
+          backgroundColor: '#FF6F00',
+          borderColor: '#E65100',
+          icon: '⚠️'
+        };
+      case 'deadline-overdue':
+        return {
+          backgroundColor: '#F44336',
+          borderColor: '#D32F2F',
+          icon: '🚨'
+        };
+      case 'deadline-complete':
+        return {
+          backgroundColor: '#4CAF50',
+          borderColor: '#388E3C',
+          icon: '🎉'
         };
       default:
         return {

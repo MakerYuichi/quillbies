@@ -4,6 +4,7 @@ import { CleaningPlan, CleaningStage } from '../core/types';
 import { useRouter } from 'expo-router';
 
 import { useQuillbyStore } from '../state/store';
+import { calculateFocusEnergyCost } from '../core/engine';
 import EnergyBar from '../components/EnergyBar';
 import RoomLayers from '../components/RoomLayers';
 import ExerciseEnvironment from '../components/ExerciseEnvironment';
@@ -17,6 +18,7 @@ import CleanButton from '../components/CleanButton';
 import StudyProgress from '../components/StudyProgress';
 import NotificationBanner from '../components/NotificationBanner';
 import RealTimeClock from '../components/RealTimeClock';
+import SessionCustomizationModal, { SessionConfig } from '../components/SessionCustomizationModal';
 import { useNotifications } from '../hooks/useNotifications';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
@@ -35,6 +37,7 @@ export default function HomeScreen() {
   const [totalStages, setTotalStages] = React.useState(1);
   const [cleaningPlan, setCleaningPlan] = React.useState<CleaningPlan | null>(null);
   const [lastCheckpointCheck, setLastCheckpointCheck] = React.useState(Date.now());
+  const [showSessionModal, setShowSessionModal] = React.useState(false);
   
   // Notification system
   const { notifications, dismissNotification } = useNotifications();
@@ -204,6 +207,17 @@ export default function HomeScreen() {
 
   // Handle focus session start
   const handleStartFocusSession = () => {
+    const energyNeeded = calculateFocusEnergyCost(userData);
+    if (userData.energy < energyNeeded) {
+      alert(`Not enough energy! Need ${energyNeeded} energy to focus (have ${Math.round(userData.energy)})`);
+      return;
+    }
+    
+    // Show customization modal
+    setShowSessionModal(true);
+  };
+
+  const handleSessionStart = (config: SessionConfig) => {
     const success = startFocusSession();
     if (success) {
       router.push('/study-session');
@@ -496,16 +510,16 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={[
                   styles.focusSessionButton,
-                  userData.energy < 20 && styles.focusSessionButtonDisabled
+                  userData.energy < calculateFocusEnergyCost(userData) && styles.focusSessionButtonDisabled
                 ]}
                 onPress={handleStartFocusSession}
-                disabled={userData.energy < 20}
+                disabled={userData.energy < calculateFocusEnergyCost(userData)}
               >
                 <Text style={[
                   styles.focusSessionButtonText,
-                  userData.energy < 20 && styles.focusSessionButtonTextDisabled
+                  userData.energy < calculateFocusEnergyCost(userData) && styles.focusSessionButtonTextDisabled
                 ]}>
-                  {userData.energy >= 20 ? '📚 Focus' : '😴 Tired'}
+                  {userData.energy >= calculateFocusEnergyCost(userData) ? '📚 Focus' : '😴 Tired'}
                 </Text>
                 <Text style={styles.focusSessionButtonSubtext}>
                   {userData.energy >= 20 ? '20 energy' : `Need ${20 - userData.energy}`}
@@ -529,6 +543,12 @@ export default function HomeScreen() {
         <View style={styles.dimOverlay} pointerEvents="none" />
       )}
       
+      {/* Session Customization Modal */}
+      <SessionCustomizationModal
+        visible={showSessionModal}
+        onClose={() => setShowSessionModal(false)}
+        onStartSession={handleSessionStart}
+      />
 
     </ImageBackground>
   );

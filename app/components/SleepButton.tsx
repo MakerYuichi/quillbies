@@ -1,45 +1,37 @@
-// Sleep/Wake button component
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface SleepButtonProps {
   isSleeping: boolean;
-  sleepDisplay: string; // e.g., "7h today"
+  sleepDisplay: string; // "7h today" format from useSleepTracking
   onSleep: () => void;
   onWakeUp: () => void;
 }
 
 export default function SleepButton({ isSleeping, sleepDisplay, onSleep, onWakeUp }: SleepButtonProps) {
-  if (isSleeping) {
-    // Wake button - full width
-    return (
-      <TouchableOpacity 
-        style={[styles.sleepButton, styles.wakeButton, styles.fullWidthButton]}
-        onPress={onWakeUp}
-      >
-        <Text style={styles.sleepButtonText}>
-          ☀️ Woke Up
-        </Text>
-        <Text style={styles.sleepButtonSubtext}>
-          Tap when you wake up
-        </Text>
-      </TouchableOpacity>
-    );
-  }
+  const handlePress = () => {
+    if (isSleeping) {
+      onWakeUp();
+    } else {
+      onSleep();
+    }
+  };
 
-  // Sleep button - half width
   return (
     <TouchableOpacity 
-      style={styles.sleepButton}
-      onPress={onSleep}
+      style={[
+        styles.sleepButton,
+        isSleeping && styles.sleepButtonActive
+      ]} 
+      onPress={handlePress}
     >
-      <Text style={styles.sleepButtonText}>
-        😴 Sleep
+      <Text style={styles.sleepTitle}>
+        {isSleeping ? '😴 Wake Up' : '🛏️ Sleep'}
       </Text>
-      <Text style={styles.sleepButtonSubtext}>
-        {sleepDisplay}
+      <Text style={styles.sleepSubtitle}>
+        {isSleeping ? 'Tap when awake' : sleepDisplay}
       </Text>
     </TouchableOpacity>
   );
@@ -48,35 +40,37 @@ export default function SleepButton({ isSleeping, sleepDisplay, onSleep, onWakeU
 const styles = StyleSheet.create({
   sleepButton: {
     flex: 1,
-    backgroundColor: '#9C27B0',
-    padding: (SCREEN_WIDTH * 12) / 393,
+    backgroundColor: '#6A5ACD', // Purple for sleep
+    paddingVertical: (SCREEN_HEIGHT * 12) / 852,
+    paddingHorizontal: (SCREEN_WIDTH * 8) / 393,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#6A1B9A',
+    justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#483D8B',
   },
-  sleepButtonText: {
+  sleepButtonActive: {
+    backgroundColor: '#FF6B35', // Orange when sleeping (like exercise active)
+    borderColor: '#E55100',
+  },
+
+  sleepTitle: {
+    fontFamily: 'Chakra Petch',
+    fontSize: (SCREEN_WIDTH * 14) / 393,
+    fontWeight: '600',
     color: '#FFFFFF',
-    fontSize: (SCREEN_WIDTH * 16) / 393,
-    fontWeight: '700',
-    marginBottom: 3,
+    textAlign: 'center',
+    marginBottom: 2,
   },
-  sleepButtonSubtext: {
-    color: '#FFFFFF',
-    fontSize: (SCREEN_WIDTH * 11) / 393,
-    opacity: 0.9,
-  },
-  wakeButton: {
-    backgroundColor: '#FF9800',
-    borderColor: '#F57C00',
-  },
-  fullWidthButton: {
-    flex: 1,
-    width: '100%',
+  sleepSubtitle: {
+    fontFamily: 'Chakra Petch',
+    fontSize: (SCREEN_WIDTH * 10) / 393,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
   },
 });

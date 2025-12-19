@@ -59,7 +59,8 @@ export interface UserData {
   missedCheckpoints?: number; // Count of missed checkpoints today
   
   // Daily habit tracking
-  sleepHours: number; // Accumulated sleep hours today
+  sleepSessions: SleepSession[]; // Array of sleep sessions
+  activeSleepSession?: Partial<SleepSession>; // Currently active sleep session
   ateBreakfast: boolean;
   waterGlasses: number;
   mealsLogged: number; // 0-3 meals per day
@@ -93,6 +94,14 @@ export interface EnergyModifiers {
   breakfastPenalty: number;
   hydrationPenalty: number;
   streakBonus: number;
+}
+
+export interface SleepSession {
+  id: string;
+  start: string; // ISO timestamp when sleep started
+  end: string; // ISO timestamp when sleep ended
+  duration: number; // Duration in hours (calculated)
+  date: string; // Date string (YYYY-MM-DD) for the day this sleep counts toward
 }
 
 export interface SessionRewards {

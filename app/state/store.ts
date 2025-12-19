@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { UserData, SessionData, CheckpointResult, CheckpointNotification, Deadline, DeadlineFormData } from '../core/types';
+import { UserData, SessionData, CheckpointResult, CheckpointNotification, Deadline, DeadlineFormData, SleepSession } from '../core/types';
 
 // Temporary fallback storage for development (until AsyncStorage is properly linked)
 const tempStorage = {
@@ -40,7 +40,12 @@ import {
   calculateSessionRewards,
   addMessForSkippedTask,
   removeMessAfterSession,
-  getSecondsElapsed
+  getSecondsElapsed,
+  getTodaysSleepHours,
+  calculateFocusEnergyCost,
+  calculateDistractionDrain,
+  calculateBreakRecovery,
+  calculateMorningEnergy
 } from '../core/engine';
 
 interface QuillbyStore {
@@ -63,7 +68,9 @@ interface QuillbyStore {
   handleDistraction: () => void;
   logWater: () => void;
   logBreakfast: () => void;
-  logSleep: (hours: number) => void;
+  startSleep: () => string; // Returns session ID
+  endSleep: (sessionId: string) => void;
+  getTodaysSleepHours: () => number;
   logMeal: () => void;
   logExercise: (minutes: number) => void;
   skipTask: () => void;
@@ -88,6 +95,7 @@ interface QuillbyStore {
   deleteDeadline: (id: string) => void;
   markDeadlineComplete: (id: string) => void;
   addWorkToDeadline: (id: string, hours: number) => void;
+  updateReminders: (id: string, reminders: { oneDayBefore: boolean; threeDaysBefore: boolean }) => void;
   getUpcomingDeadlines: () => Deadline[];
   getUrgentDeadlines: () => Deadline[];
   getCompletedDeadlines: () => Deadline[];
@@ -98,12 +106,12 @@ export const useQuillbyStore = create<QuillbyStore>()(
   persist(
     (set, get) => ({
   userData: {
-    energy: 100,
-    maxEnergyCap: 100,
+    energy: 100, // Start with full energy
+    maxEnergyCap: 100, // Always 100 in simplified system
     qCoins: 0,
     messPoints: 0,
     lastActiveTimestamp: Date.now(),
-    sleepHours: 0, // Accumulated sleep today (starts at 0)
+    sleepSessions: [], // Array of sleep sessions
     ateBreakfast: false,
     waterGlasses: 0,
     mealsLogged: 0, // 0-3 meals per day
@@ -124,18 +132,18 @@ export const useQuillbyStore = create<QuillbyStore>()(
   deadlines: [],
   selectedDeadlineId: null,
   
-  // Initialize user with default values
+  // Initialize user with default values - SIMPLIFIED SYSTEM
   initializeUser: () => {
     const now = Date.now();
     const today = new Date().toDateString();
     set({
       userData: {
-        energy: 100,
-        maxEnergyCap: 100,
+        energy: 100, // Start with full energy
+        maxEnergyCap: 100, // Always 100 in simplified system
         qCoins: 0,
         messPoints: 0,
         lastActiveTimestamp: now,
-        sleepHours: 0,
+        sleepSessions: [],
         ateBreakfast: false,
         waterGlasses: 0,
         mealsLogged: 0,
@@ -153,36 +161,38 @@ export const useQuillbyStore = create<QuillbyStore>()(
     });
   },
   
-  // Update energy - SIMPLE: Just ensure energy doesn't exceed max cap
+  // Update energy - SIMPLIFIED: No automatic drains, just cap at 100
   updateEnergy: () => {
     const { userData } = get();
     
-    // No automatic drain on home screen
-    // Energy only drains during study sessions when distracted
-    const cappedEnergy = Math.min(userData.energy, userData.maxEnergyCap);
+    // Simply ensure energy doesn't exceed 100
+    const cappedEnergy = Math.min(userData.energy, 100);
     
     if (cappedEnergy !== userData.energy) {
-      console.log(`[Energy] Capped at ${cappedEnergy}/${userData.maxEnergyCap}`);
       set({
         userData: {
           ...userData,
           energy: cappedEnergy,
+          maxEnergyCap: 100 // Always 100
         }
       });
     }
   },
   
-  // Start a focus session
+  // Start a focus session - SMART ENERGY SYSTEM
   startFocusSession: (deadlineId?: string) => {
     const { userData } = get();
     
-    if (!canStartSession(userData.energy)) {
+    if (!canStartSession(userData.energy, userData)) {
+      const energyNeeded = calculateFocusEnergyCost(userData);
+      console.log(`[Session] Not enough energy: Need ${energyNeeded}, Have ${userData.energy}`);
       return false; // Not enough energy
     }
     
-    const newEnergy = startSessionEnergyCost(userData.energy);
+    const newEnergy = startSessionEnergyCost(userData.energy, userData);
+    const energyCost = calculateFocusEnergyCost(userData);
     
-    console.log('[Session] Starting new focus session', deadlineId ? `for deadline: ${deadlineId}` : '');
+    console.log(`[Session] Starting focus session - Cost: ${energyCost} energy (${userData.energy} → ${newEnergy})`);
     
     set({
       userData: {
@@ -351,137 +361,160 @@ export const useQuillbyStore = create<QuillbyStore>()(
     }
   },
   
-  // Log water intake
+  // Log water intake - SIMPLIFIED: +5 energy per glass, max 8 glasses
   logWater: () => {
     const { userData } = get();
+    
+    if (userData.waterGlasses >= 8) {
+      console.log('[Water] Already at daily limit (8 glasses)');
+      return;
+    }
+    
     const newCount = userData.waterGlasses + 1;
+    const energyGain = 5; // +5 energy per glass
     
-    // Base rewards
-    const energyGain = 5;
-    const coinGain = 5;
-    
-    // Bonus for reaching exactly 8 glasses (daily goal)
-    const bonusEnergy = newCount === 8 ? 20 : 0;
-    const bonusCoins = newCount === 8 ? 10 : 0;
+    console.log(`[Water] Glass ${newCount}/8 logged: +${energyGain} energy`);
     
     set({
       userData: {
         ...userData,
         waterGlasses: newCount,
-        energy: Math.min(
-          userData.energy + energyGain + bonusEnergy,
-          userData.maxEnergyCap
-        ),
-        qCoins: userData.qCoins + coinGain + bonusCoins
+        energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
+        qCoins: userData.qCoins + 5 // +5 coins per glass
       }
     });
   },
   
-  // Log breakfast
+  // Log breakfast - SIMPLIFIED: +10 energy, enables focus bonus
   logBreakfast: () => {
     const { userData } = get();
-    const newMaxCap = calculateMaxEnergyCap({ ...userData, ateBreakfast: true });
+    
+    if (userData.ateBreakfast) {
+      console.log('[Breakfast] Already logged today');
+      return;
+    }
+    
+    const energyGain = 10;
+    console.log(`[Breakfast] Logged: +${energyGain} energy + focus bonus enabled`);
     
     set({
       userData: {
         ...userData,
         ateBreakfast: true,
-        maxEnergyCap: newMaxCap,
-        energy: Math.min(userData.energy, newMaxCap) // Cap current energy if needed
+        energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
+        qCoins: userData.qCoins + 10, // +10 coins for breakfast
+        maxEnergyCap: 100 // Always 100
       }
     });
   },
   
-  // Log sleep hours - ACCUMULATES throughout the day
-  logSleep: (hours: number) => {
+  // Start a new sleep session
+  startSleep: () => {
     const { userData } = get();
+    const now = new Date();
+    const sessionId = `sleep-${Date.now()}`;
     
-    // Check if it's a new day - reset sleep if so
-    const today = new Date().toDateString();
-    const isNewDay = userData.lastSleepReset !== today;
+    // Create a new sleep session (will be completed when endSleep is called)
+    const newSession: Partial<SleepSession> = {
+      id: sessionId,
+      start: now.toISOString(),
+      // end and duration will be set when endSleep is called
+    };
     
-    // 1. Calculate accumulated sleep (reset if new day)
-    const accumulatedSleep = isNewDay ? hours : userData.sleepHours + hours;
+    console.log(`[Sleep] Started sleep session: ${sessionId} at ${now.toLocaleTimeString()}`);
     
-    console.log(`[Sleep] Adding ${hours}h → Total today: ${accumulatedSleep}h (was ${userData.sleepHours}h)`);
+    // Store the active session (we'll complete it later)
+    set({
+      userData: {
+        ...userData,
+        activeSleepSession: newSession as Partial<SleepSession>
+      }
+    });
     
-    // 2. Create temp data with accumulated sleep hours
-    const tempData = { ...userData, sleepHours: accumulatedSleep };
+    return sessionId;
+  },
+
+  // End a sleep session and calculate duration - SIMPLIFIED: Sets next morning energy
+  endSleep: (sessionId: string) => {
+    const { userData } = get();
+    const now = new Date();
     
-    // 3. Calculate NEW max cap based on total sleep
-    const newMaxCap = calculateMaxEnergyCap(tempData);
+    // Find the active session
+    const activeSession = (userData as any).activeSleepSession;
+    if (!activeSession || activeSession.id !== sessionId) {
+      console.warn(`[Sleep] No active session found for ID: ${sessionId}`);
+      return;
+    }
     
-    console.log(`[Sleep] New max cap: ${newMaxCap} (was ${userData.maxEnergyCap})`);
+    const startTime = new Date(activeSession.start);
+    const duration = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60); // Hours
     
-    // 4. CAP current energy to new max (if it's higher)
-    const newEnergy = Math.min(userData.energy, newMaxCap);
+    // Determine which date this sleep counts toward
+    // If sleep started before 6 AM, it counts toward the previous day
+    const sleepDate = startTime.getHours() < 6 
+      ? new Date(startTime.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      : startTime.toISOString().split('T')[0];
     
-    // 5. Add bonus energy for good sleep (if total >= 8h)
-    const bonusEnergy = accumulatedSleep >= 8 ? 10 : 0;
-    const finalEnergy = Math.min(newEnergy + bonusEnergy, newMaxCap);
+    const completedSession: SleepSession = {
+      id: sessionId,
+      start: activeSession.start,
+      end: now.toISOString(),
+      duration: Math.round(duration * 10) / 10, // Round to 1 decimal
+      date: sleepDate
+    };
+    
+    const updatedSessions = [...(userData.sleepSessions || []), completedSession];
+    
+    // Calculate today's total sleep
+    const todaysSleep = getTodaysSleepHours(updatedSessions);
+    
+    // SIMPLIFIED: Calculate morning energy based on sleep quality
+    const morningEnergy = calculateMorningEnergy(todaysSleep);
+    
+    console.log(`[Sleep] Completed: ${duration.toFixed(1)}h → Total today: ${todaysSleep.toFixed(1)}h → Morning energy: ${morningEnergy}/100`);
     
     set({
       userData: {
         ...userData,
-        sleepHours: accumulatedSleep, // ACCUMULATE, don't replace
-        maxEnergyCap: newMaxCap,
-        energy: finalEnergy,
-        lastSleepReset: today // Update reset date
+        sleepSessions: updatedSessions,
+        maxEnergyCap: 100, // Always 100
+        energy: morningEnergy, // Set energy based on sleep quality
+        activeSleepSession: undefined // Clear active session
       }
     });
   },
 
-  // Log meal intake - weight-based portions with overeating consequences
+  // Get today's total sleep hours
+  getTodaysSleepHours: () => {
+    const { userData } = get();
+    return getTodaysSleepHours(userData.sleepSessions || []);
+  },
+
+  // Log meal intake - SIMPLIFIED: +10 energy per meal (breakfast, lunch, dinner)
   logMeal: () => {
     const { userData } = get();
-    const mealCount = userData.mealsLogged + 1;
-    const weightGoal = userData.weightGoal || 'maintain';
     
-    let energyChange = 0;
-    let coinsGained = 0;
-    
-    // Calculate energy and coins based on meal count and weight goal
-    if (mealCount <= 3) {
-      // Normal meals (1-3)
-      const baseEnergy = 15;
-      const portionMultiplier = userData.mealPortionSize || 1.0;
-      energyChange = Math.round(baseEnergy * portionMultiplier);
-      coinsGained = 8;
-    } else {
-      // Overeating consequences (4+)
-      switch (weightGoal) {
-        case 'lose':
-          if (mealCount === 4) energyChange = -5;
-          else if (mealCount === 5) energyChange = -10;
-          else energyChange = -15; // 6+
-          break;
-        case 'maintain':
-          if (mealCount === 4) energyChange = 0;
-          else if (mealCount === 5) energyChange = -5;
-          else energyChange = -10; // 6+
-          break;
-        case 'gain':
-          if (mealCount === 4) energyChange = 3;
-          else if (mealCount === 5) energyChange = 0;
-          else energyChange = -5; // 6+
-          break;
-      }
-      coinsGained = 0; // No coins for overeating
+    if (userData.mealsLogged >= 3) {
+      console.log('[Meal] Already logged 3 meals today');
+      return;
     }
     
-    console.log(`[Meal] Logged meal ${mealCount} (${weightGoal}) - Energy: ${energyChange > 0 ? '+' : ''}${energyChange}`);
+    const mealCount = userData.mealsLogged + 1;
+    const energyGain = 10; // +10 energy per meal
+    
+    console.log(`[Meal] Meal ${mealCount}/3 logged: +${energyGain} energy`);
     
     set({
       userData: {
         ...userData,
         mealsLogged: mealCount,
-        energy: Math.max(0, Math.min(userData.energy + energyChange, userData.maxEnergyCap)),
-        qCoins: userData.qCoins + coinsGained
+        energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
+        qCoins: userData.qCoins + 10 // +10 coins per meal
       }
     });
   },
 
-  // Log exercise minutes - accumulates throughout the day
+  // Log exercise minutes - SIMPLIFIED: +15 energy per session, enables focus bonus
   logExercise: (minutes: number) => {
     const { userData } = get();
     
@@ -492,24 +525,16 @@ export const useQuillbyStore = create<QuillbyStore>()(
     // Calculate accumulated exercise (reset if new day)
     const accumulatedMinutes = isNewDay ? minutes : userData.exerciseMinutes + minutes;
     
-    console.log(`[Exercise] Adding ${minutes}min → Total today: ${accumulatedMinutes}min (was ${userData.exerciseMinutes}min)`);
+    const energyGain = 15; // +15 energy per exercise session
     
-    // Calculate rewards based on session duration
-    const baseEnergy = Math.min(minutes * 2, 30); // 2 energy per minute, max 30
-    const coinReward = Math.min(minutes, 20); // 1 coin per minute, max 20
-    
-    // Bonus for longer sessions (15+ minutes)
-    const bonusEnergy = minutes >= 15 ? 10 : 0;
-    const finalEnergyGain = baseEnergy + bonusEnergy;
-    
-    console.log(`[Exercise] Rewards: +${finalEnergyGain} Energy, +${coinReward} Coins`);
+    console.log(`[Exercise] ${minutes}min session: +${energyGain} energy + focus bonus enabled`);
     
     set({
       userData: {
         ...userData,
         exerciseMinutes: accumulatedMinutes,
-        energy: Math.min(userData.energy + finalEnergyGain, userData.maxEnergyCap),
-        qCoins: userData.qCoins + coinReward,
+        energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
+        qCoins: userData.qCoins + Math.min(minutes, 30), // 1 coin per minute, max 30
         lastExerciseReset: today
       }
     });
@@ -528,7 +553,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
     });
   },
   
-  // Reset daily values (for testing or new day)
+  // Reset daily values (for testing or new day) - SIMPLIFIED
   resetDay: () => {
     const { userData, applyDailyMessDecay } = get();
     const today = new Date().toDateString();
@@ -539,25 +564,27 @@ export const useQuillbyStore = create<QuillbyStore>()(
     // Get updated mess after decay
     const updatedUserData = get().userData;
     
+    // Calculate morning energy based on yesterday's sleep
+    const todaysSleep = getTodaysSleepHours(updatedUserData.sleepSessions || []);
+    const morningEnergy = calculateMorningEnergy(todaysSleep);
+    
+    console.log(`[Daily Reset] Sleep: ${todaysSleep.toFixed(1)}h → Morning energy: ${morningEnergy}/100`);
+    
     set({
       userData: {
         ...updatedUserData,
+        energy: morningEnergy, // Set based on sleep quality
         ateBreakfast: false,
         waterGlasses: 0,
         mealsLogged: 0, // Reset meals
-        sleepHours: 0, // Reset accumulated sleep
+        // Note: sleepSessions are kept (they have dates), no need to reset
         exerciseMinutes: 0, // Reset exercise
         studyMinutesToday: 0, // Reset study
         missedCheckpoints: 0, // Reset missed checkpoints
         lastSleepReset: today,
         lastExerciseReset: today,
         lastStudyReset: today,
-        maxEnergyCap: calculateMaxEnergyCap({
-          ...updatedUserData,
-          ateBreakfast: false,
-          waterGlasses: 0,
-          sleepHours: 0
-        })
+        maxEnergyCap: 100 // Always 100
       }
     });
   },
@@ -713,7 +740,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
     return { isBehind: false };
   },
 
-  // Add missed checkpoint with mess points based on missing hours
+  // Add missed checkpoint with mess points based on missing hours - SIMPLIFIED
   addMissedCheckpoint: (missingHours: number = 1) => {
     const { userData } = get();
     const newMissedCount = (userData.missedCheckpoints || 0) + 1;
@@ -724,19 +751,13 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     console.log(`[Study] Missed checkpoint ${newMissedCount} - ${missingHours.toFixed(1)}h behind = +${messPointsIncrease.toFixed(1)} mess (${userData.messPoints.toFixed(1)} → ${newMessPoints.toFixed(1)})`);
     
-    // Recalculate max energy cap based on new mess points
-    const newMaxCap = calculateMaxEnergyCap({
-      ...userData,
-      messPoints: newMessPoints
-    });
-    
     set({
       userData: {
         ...userData,
         missedCheckpoints: newMissedCount,
         messPoints: newMessPoints,
-        maxEnergyCap: newMaxCap,
-        energy: Math.min(userData.energy, newMaxCap) // Cap current energy if needed
+        maxEnergyCap: 100, // Always 100
+        energy: Math.min(userData.energy, 100) // Cap at 100
       }
     });
   },
@@ -781,18 +802,12 @@ export const useQuillbyStore = create<QuillbyStore>()(
     return 30; // -30 energy cap maximum penalty
   },
 
-  // Clean room (reduces mess points with efficiency-based rewards)
+  // Clean room (reduces mess points with efficiency-based rewards) - SIMPLIFIED
   cleanRoom: (messPointsReduced: number) => {
     const { userData } = get();
     const newMessPoints = Math.max(0, userData.messPoints - messPointsReduced);
     
     console.log(`[Cleaning] Reduced mess by ${messPointsReduced.toFixed(1)} points (${userData.messPoints.toFixed(1)} → ${newMessPoints.toFixed(1)})`);
-    
-    // Recalculate max energy cap based on reduced mess
-    const newMaxCap = calculateMaxEnergyCap({
-      ...userData,
-      messPoints: newMessPoints
-    });
     
     // Energy reward scales with mess reduction (5 energy per mess point)
     const energyReward = Math.floor(messPointsReduced * 5);
@@ -802,14 +817,14 @@ export const useQuillbyStore = create<QuillbyStore>()(
       userData: {
         ...userData,
         messPoints: newMessPoints,
-        maxEnergyCap: newMaxCap,
-        energy: Math.min(userData.energy + energyReward, newMaxCap),
+        maxEnergyCap: 100, // Always 100
+        energy: Math.min(userData.energy + energyReward, 100), // Cap at 100
         qCoins: userData.qCoins + coinReward
       }
     });
   },
 
-  // Apply daily mess decay (20% automatic cleaning each day)
+  // Apply daily mess decay (20% automatic cleaning each day) - SIMPLIFIED
   applyDailyMessDecay: () => {
     const { userData } = get();
     const currentMess = userData.messPoints;
@@ -817,18 +832,12 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     console.log(`[Daily] Mess decay: ${currentMess.toFixed(1)} → ${newMess.toFixed(1)} (-20%)`);
     
-    // Recalculate energy cap with reduced mess
-    const newMaxCap = calculateMaxEnergyCap({
-      ...userData,
-      messPoints: newMess
-    });
-    
     set({
       userData: {
         ...userData,
         messPoints: newMess,
-        maxEnergyCap: newMaxCap,
-        energy: Math.min(userData.energy, newMaxCap)
+        maxEnergyCap: 100, // Always 100
+        energy: Math.min(userData.energy, 100) // Cap at 100
       }
     });
   },
@@ -955,6 +964,19 @@ Room: ${roomState}`;
         )
       });
     }
+  },
+
+  // Update reminder settings for a deadline
+  updateReminders: (id: string, reminders: { oneDayBefore: boolean; threeDaysBefore: boolean }) => {
+    const { deadlines } = get();
+    
+    set({
+      deadlines: deadlines.map(d => 
+        d.id === id 
+          ? { ...d, reminders }
+          : d
+      )
+    });
   },
 
   // Get upcoming deadlines (not urgent, not completed)

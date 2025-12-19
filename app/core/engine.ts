@@ -1,6 +1,6 @@
 // The Core Math Engine - All formulas and game logic
 
-import { UserData, SessionRewards } from './types';
+import { UserData, SessionRewards, SleepSession } from './types';
 
 // ============================================
 // ENERGY SYSTEM CONSTANTS
@@ -35,88 +35,143 @@ const MESS_REMOVAL_PER_SESSION = 2; // Mess points removed per completed session
 // ============================================
 
 /**
- * Calculate the maximum energy cap based on daily habits and room mess
+ * Calculate total sleep hours for today from sleep sessions
+ */
+export function getTodaysSleepHours(sleepSessions: SleepSession[]): number {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  return sleepSessions
+    .filter(session => session.date === today)
+    .reduce((total, session) => total + session.duration, 0);
+}
+
+/**
+ * Calculate the maximum energy cap - SIMPLIFIED VERSION: ALWAYS 100
  */
 export function calculateMaxEnergyCap(userData: UserData): number {
-  let cap = BASE_MAX_ENERGY;
-  
-  // Sleep penalty: <6 hours reduces cap by 30%
-  if (userData.sleepHours < 6) {
-    cap -= (BASE_MAX_ENERGY * SLEEP_PENALTY) / 100;
-  }
-  
-  // Breakfast penalty: skipping reduces cap by 20%
-  if (!userData.ateBreakfast) {
-    cap -= (BASE_MAX_ENERGY * BREAKFAST_PENALTY) / 100;
-  }
-  
-  // Hydration penalty: <5 glasses reduces cap by 15%
-  if (userData.waterGlasses < 5) {
-    cap -= (BASE_MAX_ENERGY * HYDRATION_PENALTY) / 100;
-  }
-  
-  // Mess penalty: room mess reduces energy cap
-  const messPoints = userData.messPoints || 0;
-  if (messPoints > 5) {
-    let messPenalty = 0;
-    if (messPoints <= 10) messPenalty = 5;
-    else if (messPoints <= 15) messPenalty = 10;
-    else if (messPoints <= 20) messPenalty = 15;
-    else if (messPoints <= 25) messPenalty = 20;
-    else if (messPoints <= 30) messPenalty = 25;
-    else messPenalty = 30; // Maximum penalty
-    
-    cap -= messPenalty;
-  }
-  
-  // Streak bonus: 3+ days adds 10%
-  if (userData.currentStreak >= 3) {
-    cap += (BASE_MAX_ENERGY * STREAK_BONUS) / 100;
-  }
-  
-  return Math.max(20, Math.round(cap)); // Minimum 20 energy
+  // SIMPLIFIED: Energy cap is ALWAYS 100, never changes
+  return BASE_MAX_ENERGY; // Always 100
 }
 
 /**
- * Calculate energy drain when user is inactive
- * @param minutesInactive - How many minutes since last activity
+ * Calculate energy drain during focus sessions when distracted
+ * @param minutesDistracted - How many minutes user was distracted
+ * @param userData - User data for preparation bonuses
  */
-export function calculateEnergyDrain(
-  currentEnergy: number,
-  minutesInactive: number,
-  isAppActive: boolean = false
+export function calculateDistractionDrain(
+  minutesDistracted: number,
+  userData: UserData
 ): number {
-  const drainRate = isAppActive ? ENERGY_DRAIN_ACTIVE_DISTRACTED : ENERGY_DRAIN_INACTIVE;
-  const totalDrain = drainRate * minutesInactive;
+  // Calculate preparation level for drain rate
+  let drainRate = 2; // Poor prep: -2 energy/min
   
-  return Math.max(0, currentEnergy - totalDrain);
+  const todaysSleepHours = getTodaysSleepHours(userData.sleepSessions || []);
+  let prepCount = 0;
+  
+  if (userData.ateBreakfast) prepCount++;
+  if (userData.exerciseMinutes > 0) prepCount++;
+  if (userData.waterGlasses >= 4) prepCount++;
+  if (todaysSleepHours >= 7) prepCount++;
+  
+  // Better prep = slower drain
+  if (prepCount === 4) drainRate = 0.5; // Perfect prep: -0.5/min
+  else if (prepCount === 3) drainRate = 1;   // Good prep: -1/min
+  else if (prepCount === 2) drainRate = 1.5; // Okay prep: -1.5/min
+  // else drainRate = 2 (poor prep)
+  
+  return drainRate * minutesDistracted;
 }
 
 /**
- * Recharge energy when user returns
- * @param secondsActive - How many seconds user has been active
+ * Calculate energy recovery during breaks based on preparation
+ * @param minutesOnBreak - How many minutes user took a break
+ * @param userData - User data for preparation bonuses
  */
-export function rechargeEnergy(
-  currentEnergy: number,
-  maxCap: number,
-  secondsActive: number
+export function calculateBreakRecovery(
+  minutesOnBreak: number,
+  userData: UserData
 ): number {
-  const recharge = ENERGY_RECHARGE_RATE * secondsActive;
-  return Math.min(maxCap, currentEnergy + recharge);
+  // Calculate preparation level for recovery rate
+  let recoveryRate = 2; // Poor prep: +2 energy/min
+  
+  const todaysSleepHours = getTodaysSleepHours(userData.sleepSessions || []);
+  let prepCount = 0;
+  
+  if (userData.ateBreakfast) prepCount++;
+  if (userData.exerciseMinutes > 0) prepCount++;
+  if (userData.waterGlasses >= 4) prepCount++;
+  if (todaysSleepHours >= 7) prepCount++;
+  
+  // Better prep = faster recovery
+  if (prepCount === 4) recoveryRate = 5;   // Perfect prep: +5/min
+  else if (prepCount === 3) recoveryRate = 4;   // Good prep: +4/min
+  else if (prepCount === 2) recoveryRate = 3;   // Okay prep: +3/min
+  // else recoveryRate = 2 (poor prep)
+  
+  return recoveryRate * minutesOnBreak;
+}
+
+/**
+ * Calculate morning starting energy based on sleep quality
+ */
+export function calculateMorningEnergy(sleepHours: number): number {
+  if (sleepHours >= 7) return 100;  // Good sleep: Start at 100
+  if (sleepHours >= 5) return 85;   // Okay sleep: Start at 85  
+  if (sleepHours >= 4) return 50;   // Poor sleep: Start at 50
+  return 30; // Very poor sleep: Start at 30
+}
+
+/**
+ * Check if daily drains should be applied (only once per condition per day)
+ */
+export function shouldApplyDailyDrains(userData: UserData): { shouldApply: boolean; drainAmount: number; drainType: string } {
+  const now = new Date();
+  const today = now.toDateString();
+  
+  // Check if breakfast drain should be applied (only once at noon)
+  if (!userData.ateBreakfast && now.getHours() >= 12) {
+    const lastBreakfastDrain = (userData as any).lastBreakfastDrain;
+    if (lastBreakfastDrain !== today) {
+      return { shouldApply: true, drainAmount: 20, drainType: 'breakfast' };
+    }
+  }
+  
+  // No drains needed - the simplified system should not have ongoing drains
+  // Hydration and mess penalties are removed to prevent constant energy loss
+  return { shouldApply: false, drainAmount: 0, drainType: 'none' };
+}
+
+/**
+ * Calculate energy needed to start focus session based on preparation
+ */
+export function calculateFocusEnergyCost(userData: UserData): number {
+  let energyCost = FOCUS_START_COST; // Base 20 energy
+  
+  // Preparation bonuses (reduce energy needed)
+  const todaysSleepHours = getTodaysSleepHours(userData.sleepSessions || []);
+  
+  if (userData.ateBreakfast) energyCost -= 5;           // Breakfast bonus
+  if (userData.exerciseMinutes > 0) energyCost -= 5;   // Exercise bonus  
+  if (userData.waterGlasses >= 4) energyCost -= 5;     // Hydration bonus
+  if (todaysSleepHours >= 7) energyCost -= 5;          // Sleep bonus
+  
+  return Math.max(0, energyCost); // Can go to 0 with perfect prep
 }
 
 /**
  * Check if user has enough energy to start a focus session
  */
-export function canStartSession(currentEnergy: number): boolean {
-  return currentEnergy >= FOCUS_START_COST;
+export function canStartSession(currentEnergy: number, userData: UserData): boolean {
+  const energyNeeded = calculateFocusEnergyCost(userData);
+  return currentEnergy >= energyNeeded;
 }
 
 /**
  * Deduct energy cost to start a session
  */
-export function startSessionEnergyCost(currentEnergy: number): number {
-  return Math.max(0, currentEnergy - FOCUS_START_COST);
+export function startSessionEnergyCost(currentEnergy: number, userData: UserData): number {
+  const energyNeeded = calculateFocusEnergyCost(userData);
+  return Math.max(0, currentEnergy - energyNeeded);
 }
 
 // ============================================

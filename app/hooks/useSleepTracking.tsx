@@ -3,65 +3,39 @@ import { useState, useEffect } from 'react';
 import { useQuillbyStore } from '../state/store';
 
 export const useSleepTracking = (buddyName: string) => {
-  const { userData, logSleep, resetDay } = useQuillbyStore();
+  const { userData, startSleep, endSleep, getTodaysSleepHours } = useQuillbyStore();
   const [isSleeping, setIsSleeping] = useState(false);
-  const [sleepStartTime, setSleepStartTime] = useState<number | null>(null);
+  const [activeSleepSessionId, setActiveSleepSessionId] = useState<string | null>(null);
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
-  
-  // Track accumulated minutes separately (since store only tracks hours)
-  const [accumulatedMinutes, setAccumulatedMinutes] = useState<number>(0);
 
-  // Check if it's a new day and reset sleep if needed
+  // Check if there's an active sleep session on mount
   useEffect(() => {
-    const today = new Date().toDateString();
-    const lastReset = userData.lastSleepReset || userData.lastCheckInDate;
-    if (lastReset !== today) {
-      console.log('[Sleep] New day detected - resetting sleep counter');
-      setAccumulatedMinutes(0); // Reset minutes too
-      resetDay();
+    const activeSession = userData.activeSleepSession;
+    if (activeSession && activeSession.id) {
+      setIsSleeping(true);
+      setActiveSleepSessionId(activeSession.id);
+      setCurrentAnimation('sleeping');
     }
-  }, [userData.lastSleepReset, userData.lastCheckInDate, resetDay]);
+  }, [userData.activeSleepSession]);
 
   const handleSleepButton = () => {
-    // Start sleeping
+    // Start sleeping session
+    const sessionId = startSleep();
     setIsSleeping(true);
-    setSleepStartTime(Date.now());
+    setActiveSleepSessionId(sessionId);
     setCurrentAnimation('sleeping');
-    const newMessage = `💤 ${buddyName} is sleeping...\nGoodnight! Tap "Woke Up" when you wake.`;
+    const newMessage = `💤 ${buddyName} is sleeping...\nGoodnight! Tap "Wake Up" when you wake.`;
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
   };
 
   const handleWakeUpButton = () => {
-    if (!sleepStartTime) return;
+    if (!activeSleepSessionId) return;
     
-    // Calculate sleep duration for this session
-    const sleepEndTime = Date.now();
-    const durationMs = sleepEndTime - sleepStartTime;
-    const sessionMinutes = Math.floor(durationMs / (1000 * 60));
-    const sessionHours = Math.floor(sessionMinutes / 60);
-    const sessionMins = sessionMinutes % 60;
-    const hoursInt = Math.round(durationMs / (1000 * 60 * 60)); // For logging (hours only)
-    
-    // Format duration string for this session
-    const durationText = sessionHours > 0 
-      ? `${sessionHours}h ${sessionMins}m` 
-      : `${sessionMins}m`;
-    
-    // Calculate new accumulated minutes
-    const newAccumulatedMinutes = accumulatedMinutes + sessionMinutes;
-    setAccumulatedMinutes(newAccumulatedMinutes);
-    
-    // Calculate total hours and minutes from accumulated minutes
-    const totalHours = Math.floor(newAccumulatedMinutes / 60);
-    const totalMins = newAccumulatedMinutes % 60;
-    
-    // Format total with minutes
-    const totalText = totalMins > 0 
-      ? `${totalHours}h ${totalMins}m` 
-      : `${totalHours}h`;
+    // End the sleep session
+    endSleep(activeSleepSessionId);
     
     // Show wake-up animation
     setCurrentAnimation('wake-up');
@@ -69,33 +43,42 @@ export const useSleepTracking = (buddyName: string) => {
     
     // End sleeping state
     setIsSleeping(false);
-    setSleepStartTime(null);
+    setActiveSleepSessionId(null);
     
-    // Log sleep in store (will accumulate hours for energy calculation)
-    logSleep(hoursInt);
+    // Get updated sleep total after ending session
+    const totalSleepHours = getTodaysSleepHours();
+    
+    // Format total sleep display
+    const totalHours = Math.floor(totalSleepHours);
+    const totalMins = Math.round((totalSleepHours - totalHours) * 60);
+    const totalText = totalMins > 0 
+      ? `${totalHours}h ${totalMins}m` 
+      : `${totalHours}h`;
     
     // Update message based on TOTAL accumulated sleep
     let newMessage = '';
-    if (totalHours < 6) {
-      newMessage = `😴 Slept ${durationText} (${totalText} total today)\nNeed more sleep! Max energy reduced.`;
-    } else if (totalHours >= 6 && totalHours < 8) {
-      newMessage = `😊 Slept ${durationText} (${totalText} total today)\nGood rest, ${buddyName}!`;
-    } else if (totalHours === 8) {
-      newMessage = `⭐ Slept ${durationText} (${totalText} total today)\nPerfect! Bonus +10 Energy!`;
+    if (totalSleepHours < 6) {
+      newMessage = `😴 Woke up! (${totalText} total today)\nNeed more sleep! Max energy reduced.`;
+    } else if (totalSleepHours >= 6 && totalSleepHours < 8) {
+      newMessage = `😊 Good morning! (${totalText} total today)\nGood rest, ${buddyName}!`;
+    } else if (totalSleepHours >= 8) {
+      newMessage = `⭐ Great sleep! (${totalText} total today)\nPerfect! Bonus +10 Energy!`;
     } else {
-      newMessage = `💤 Slept ${durationText} (${totalText} total today)\nWell rested!`;
+      newMessage = `💤 Well rested! (${totalText} total today)\nFeeling refreshed!`;
     }
     
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
   };
 
-  // Format accumulated sleep for display (with minutes)
-  const formatAccumulatedSleep = () => {
-    if (accumulatedMinutes === 0) return '0h today';
+  // Format sleep display for button
+  const formatSleepDisplay = () => {
+    const totalSleepHours = getTodaysSleepHours();
     
-    const hours = Math.floor(accumulatedMinutes / 60);
-    const mins = accumulatedMinutes % 60;
+    if (totalSleepHours === 0) return '0h today';
+    
+    const hours = Math.floor(totalSleepHours);
+    const mins = Math.round((totalSleepHours - hours) * 60);
     
     if (mins > 0) {
       return `${hours}h ${mins}m today`;
@@ -105,8 +88,8 @@ export const useSleepTracking = (buddyName: string) => {
 
   return {
     isSleeping,
-    sleepHours: userData.sleepHours,
-    sleepDisplay: formatAccumulatedSleep(),
+    sleepHours: getTodaysSleepHours(),
+    sleepDisplay: formatSleepDisplay(),
     handleSleepButton,
     handleWakeUpButton,
     sleepAnimation: currentAnimation,

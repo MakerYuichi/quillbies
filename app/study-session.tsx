@@ -1,23 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, AppState, AppStateStatus } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, AppState, AppStateStatus, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store';
-import FocusMeter from './components/FocusMeter';
-import QuillbyPet from './components/QuillbyPet';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function StudySessionScreen() {
   const router = useRouter();
-  const { userData, session, selectedDeadlineId, deadlines, updateFocusDuringSession, endFocusSession, handleDistraction } = useQuillbyStore();
+  const { userData, session, selectedDeadlineId, deadlines, updateFocusDuringSession, endFocusSession, handleDistraction, logWater, logMeal, logExercise } = useQuillbyStore();
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
+  const [speechKey, setSpeechKey] = useState(0); // Force re-render of speech bubble
+  const [showReturnMessage, setShowReturnMessage] = useState(false);
+  const [returnMessageTimer, setReturnMessageTimer] = useState<NodeJS.Timeout | null>(null);
   
-  // Update focus score every second
+  // Session control states
+  const [isPaused, setIsPaused] = useState(false);
+  const [isOnBreak, setIsOnBreak] = useState(false);
+  const [breakTimeRemaining, setBreakTimeRemaining] = useState(0);
+  const [breakTimer, setBreakTimer] = useState<NodeJS.Timeout | null>(null);
+  
+  // Update focus score and speech bubble every second
   useEffect(() => {
     const interval = setInterval(() => {
-      updateFocusDuringSession();
+      // Only update focus if not paused and not on break
+      if (!isPaused && !isOnBreak) {
+        updateFocusDuringSession();
+      }
+      setSpeechKey(prev => prev + 1); // Update speech bubble every second
     }, 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [isPaused, isOnBreak]);
   
   // Detect when user leaves the app (distraction)
   useEffect(() => {
@@ -34,6 +47,22 @@ export default function StudySessionScreen() {
         // User returned to app - check grace period
         console.log('[Distraction] User returned to app - checking grace period');
         handleDistraction();
+        
+        // Show return message for 4 seconds
+        setShowReturnMessage(true);
+        
+        // Clear any existing timer
+        if (returnMessageTimer) {
+          clearTimeout(returnMessageTimer);
+        }
+        
+        // Set new timer to hide return message after 4 seconds
+        const timer = setTimeout(() => {
+          setShowReturnMessage(false);
+          setReturnMessageTimer(null);
+        }, 4000);
+        
+        setReturnMessageTimer(timer);
       }
       
       setAppState(nextAppState);
@@ -43,12 +72,75 @@ export default function StudySessionScreen() {
     
     return () => {
       subscription.remove();
+      // Clean up return message timer
+      if (returnMessageTimer) {
+        clearTimeout(returnMessageTimer);
+      }
     };
-  }, [appState]);
+  }, [appState, returnMessageTimer]);
+
+  // Cleanup break timer on unmount
+  useEffect(() => {
+    return () => {
+      if (breakTimer) {
+        clearInterval(breakTimer);
+      }
+    };
+  }, [breakTimer]);
   
+  const handlePauseSession = () => {
+    setIsPaused(!isPaused);
+    setSpeechKey(prev => prev + 1); // Update speech bubble
+  };
+
+  const handleBreakSession = () => {
+    if (isOnBreak) {
+      // Skip break early
+      setIsOnBreak(false);
+      setBreakTimeRemaining(0);
+      if (breakTimer) {
+        clearInterval(breakTimer);
+        setBreakTimer(null);
+      }
+    } else {
+      // Start 5-minute break
+      setIsOnBreak(true);
+      setBreakTimeRemaining(5 * 60); // 5 minutes in seconds
+      
+      const timer = setInterval(() => {
+        setBreakTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Break finished
+            setIsOnBreak(false);
+            clearInterval(timer);
+            setBreakTimer(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      setBreakTimer(timer);
+    }
+    setSpeechKey(prev => prev + 1); // Update speech bubble
+  };
+
   const handleEndSession = () => {
+    // Clean up any active timers
+    if (breakTimer) {
+      clearInterval(breakTimer);
+    }
+    
     endFocusSession();
-    router.back();
+    
+    // Navigate based on session type
+    if (selectedDeadlineId) {
+      // Deadline-focused session - return to focus screen
+      router.push('/(tabs)/focus');
+    } else {
+      // Generic focus session - return to home
+      router.push('/(tabs)/');
+    }
   };
   
   if (!session) {
@@ -59,261 +151,659 @@ export default function StudySessionScreen() {
     );
   }
   
-  const estimatedCoins = Math.round(session.focusScore * 0.5);
-  
   // Find the deadline being worked on
   const currentDeadline = selectedDeadlineId 
     ? deadlines.find(d => d.id === selectedDeadlineId)
     : null;
   
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
+  const getSpeechBubbleMessage = () => {
+    const buddyName = userData.buddyName || 'Hammy';
+    
+    console.log('[Speech] Paused:', isPaused, 'Break:', isOnBreak, 'Grace period:', session.isInGracePeriod, 'Warnings:', session.distractionWarnings);
+    
+    // Break state messages
+    if (isOnBreak) {
+      const minutes = Math.floor(breakTimeRemaining / 60);
+      const seconds = breakTimeRemaining % 60;
+      return `☕ ${buddyName} is recharging! Break time: ${minutes}:${seconds.toString().padStart(2, '0')} ⭐`;
+    }
+    
+    // Paused state message
+    if (isPaused) {
+      return `⏸️ ${buddyName} asks: "Taking a breather? Ready to continue when you are!" 😌`;
+    }
+    
+    // Show return message for 4 seconds after user returns
+    if (showReturnMessage && !session.isInGracePeriod) {
+      if (session.distractionWarnings === 0 && session.distractionCount === 0) {
+        return `🎉 Welcome back ${buddyName}! Great job returning quickly! Let's keep the momentum going! 💪`;
+      } else {
+        return `😊 ${buddyName} is happy you're back! Let's refocus and finish strong together! 🌟`;
+      }
+    }
+    
+    // Grace period active
+    if (session.isInGracePeriod) {
+      return `⏰ ${buddyName} notices you left! Come back within 30 seconds to avoid a warning! 🏃‍♂️`;
+    }
+    
+    // Has warnings but not in grace period
+    if (session.distractionWarnings > 0) {
+      const warningsLeft = 3 - session.distractionWarnings;
+      if (warningsLeft === 0) {
+        return `😰 ${buddyName} is worried! Next distraction will hurt your focus score! Stay strong! 💪`;
+      }
+      return `⚠️ ${buddyName} says: "${warningsLeft} warning${warningsLeft > 1 ? 's' : ''} left before penalty!" Keep focusing! 🎯`;
+    }
+    
+    // Has penalties applied
+    if (session.distractionCount > 0) {
+      return `😔 ${buddyName} lost some focus energy... But we can still finish strong together! 🌟`;
+    }
+    
+    // Different messages based on session progress
+    const progressPercent = (session.duration / (25 * 60)) * 100;
+    
+    if (progressPercent < 25) {
+      return `🚀 ${buddyName} is ready to focus! Let's build momentum together! 💫`;
+    } else if (progressPercent < 50) {
+      return `🔥 ${buddyName} is in the zone! Great progress so far! Keep it up! ⭐`;
+    } else if (progressPercent < 75) {
+      return `💪 ${buddyName} feels the flow! We're more than halfway there! 🎯`;
+    } else if (progressPercent < 90) {
+      return `🏃‍♂️ ${buddyName} says "Almost there!" The finish line is in sight! 🏁`;
+    } else {
+      return `🎉 ${buddyName} is so proud! Just a few more minutes to victory! 🏆`;
+    }
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* Quillby studying */}
-      <View style={styles.petSection}>
-        <QuillbyPet 
-          energy={userData.energy}
-          maxEnergy={userData.maxEnergyCap}
-          messPoints={userData.messPoints}
+    <View style={styles.container}>
+      {/* Blue Background - Sky/Top Decoration */}
+      <ImageBackground
+        source={require('../assets/backgrounds/bluebg.png')}
+        style={styles.blueBgDecor}
+        resizeMode="cover"
+      />
+      
+      {/* Background Walls */}
+      <ImageBackground
+        source={require('../assets/rooms/walls.png')}
+        style={styles.wallsBackground}
+        resizeMode="cover"
+      />
+      
+      {/* Floor */}
+      <ImageBackground
+        source={require('../assets/rooms/floor.png')}
+        style={styles.floorBackground}
+        resizeMode="cover"
+      />
+      
+      {/* Blue Background - Sky/Top Decoration */}
+      <ImageBackground
+        source={require('../assets/backgrounds/bluebg.png')}
+        style={styles.blueBgDecor}
+        resizeMode="cover"
+      />
+
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerText}>
+          {getCurrentTime()} 🐹 {userData.buddyName || 'Hammy'}'s Focus Session
+        </Text>
+      </View>
+
+      {/* Q-Coins Display */}
+      <View style={styles.qCoinsContainer}>
+        <ImageBackground
+          source={require('../assets/overall/qbies.png')}
+          style={styles.qCoinIcon}
+          resizeMode="contain"
         />
-        <Text style={styles.studyingText}>📖 Studying together...</Text>
-        {currentDeadline && (
-          <View style={styles.deadlineInfo}>
-            <Text style={styles.deadlineInfoText}>
-              🎯 Working on: {currentDeadline.title}
-            </Text>
-            <Text style={styles.deadlineProgress}>
-              Progress: {currentDeadline.workCompleted.toFixed(1)}h / {currentDeadline.estimatedHours}h
-            </Text>
+        <Text style={styles.qCoinsText}>{userData.qCoins}</Text>
+      </View>
+
+      {/* Study Room Decorations */}
+      <ImageBackground
+        source={require('../assets/study-session/studyroom-shelf.png')}
+        style={styles.studyShelf}
+        resizeMode="cover"
+      />
+      <ImageBackground
+        source={require('../assets/hamsters/photo-frame2.png')}
+        style={styles.photoFrame1}
+        resizeMode="contain"
+      />
+      <ImageBackground
+        source={require('../assets/hamsters/casual/photo-frame.png')}
+        style={styles.photoFrame2}
+        resizeMode="contain"
+      />
+      
+      {/* Plants */}
+      <ImageBackground
+        source={require('../assets/rooms/plant.png')}
+        style={styles.plant1}
+        resizeMode="contain"
+      />
+      <ImageBackground
+        source={require('../assets/rooms/plant.png')}
+        style={styles.plant2}
+        resizeMode="contain"
+      />
+
+      {/* Status Section */}
+      <View style={styles.statusSection}>
+        <Text style={styles.statusLabel}>🐹 Status:</Text>
+        <Text style={styles.statusText}>
+          {userData.buddyName || 'Hammy'} is in flow. Don't interrupt!
+        </Text>
+        
+        {/* Timer Bar - Countdown from 100% to 0% */}
+        <View style={styles.timerBarContainer}>
+          <View style={styles.timerBarBackground}>
+            <View 
+              style={[
+                styles.timerBar, 
+                { width: `${Math.max(100 - (session.duration / (25 * 60)) * 100, 0)}%` }
+              ]} 
+            />
           </View>
-        )}
-      </View>
-      
-      {/* Focus Meter */}
-      <FocusMeter score={session.focusScore} duration={session.duration} />
-      
-      {/* Rewards Preview */}
-      <View style={styles.rewardsPreview}>
-        <Text style={styles.rewardsTitle}>Estimated Rewards</Text>
-        <Text style={styles.rewardsText}>🪙 {estimatedCoins} Q-Coins</Text>
-        <Text style={styles.rewardsText}>✨ {Math.round(session.focusScore)} XP</Text>
-        {currentDeadline && (
-          <Text style={styles.rewardsText}>
-            📚 +{(session.duration / 3600).toFixed(2)}h to {currentDeadline.title}
-          </Text>
-        )}
-      </View>
-      
-      {/* Grace Period Indicator */}
-      {session.isInGracePeriod && (
-        <View style={styles.gracePeriodIndicator}>
-          <Text style={styles.gracePeriodText}>
-            ⏱️ Grace Period Active
-          </Text>
-          <Text style={styles.gracePeriodSubtext}>
-            Return within 30 seconds to avoid warning
+          <Text style={styles.timerText}>
+            {formatTime(Math.max((25 * 60) - session.duration, 0))} remaining
           </Text>
         </View>
-      )}
-      
-      {/* Warning System */}
-      {session.distractionWarnings > 0 && !session.isInGracePeriod && (
-        <View style={styles.warningContainer}>
-          <Text style={styles.warningText}>
-            ⚠️ Warning {session.distractionWarnings}/3
-          </Text>
-          <Text style={styles.warningSubtext}>
-            {session.distractionWarnings === 3 
-              ? 'Next distraction will drain your focus!' 
-              : `${3 - session.distractionWarnings} warnings left before penalty`}
-          </Text>
-        </View>
-      )}
-      
-      {/* Distraction Counter (Penalties Applied) */}
-      {session.distractionCount > 0 && (
-        <View style={styles.penaltyWarning}>
-          <Text style={styles.penaltyText}>
-            🚨 Penalties Applied: {session.distractionCount}
-          </Text>
-          <Text style={styles.penaltySubtext}>
-            Your focus score was drained due to long distractions
-          </Text>
-        </View>
-      )}
-      
-      {/* Tips */}
-      <View style={styles.tipsContainer}>
-        <Text style={styles.tipsText}>💡 Tip: Keep the app open to maintain focus</Text>
-        <Text style={styles.tipsText}>💡 Leaving the app will drain your focus meter</Text>
+        
+        <Text style={styles.statusSubtext}>
+          (Drains if you leave the app)
+        </Text>
       </View>
-      
-      {/* Action Buttons - NOW SCROLLABLE */}
-      <View style={styles.buttonContainer}>
+
+      {/* Hamster Character */}
+      <View style={styles.hamsterContainer}>
+        <ImageBackground
+          source={require('../assets/hamsters/casual/focus.png')}
+          style={styles.focusHamster}
+          resizeMode="contain"
+        />
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
         <TouchableOpacity 
-          style={styles.endButton}
-          onPress={handleEndSession}
+          style={[styles.pauseButton, isPaused && styles.buttonActive]}
+          onPress={handlePauseSession}
         >
-          <Text style={styles.endButtonText}>✅ End Session & Collect Rewards</Text>
+          <Text style={styles.pauseIcon}>{isPaused ? '▶️' : '⏸️'}</Text>
+          <Text style={styles.buttonLabel}>{isPaused ? 'Resume' : 'Pause'}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.cancelButton}
-          onPress={() => router.back()}
+          style={[styles.breakButton, isOnBreak && styles.buttonActive]}
+          onPress={handleBreakSession}
         >
-          <Text style={styles.cancelButtonText}>← Cancel (No Rewards)</Text>
+          <Text style={styles.breakText}>
+            {isOnBreak ? 'Skip Break' : '5m Break'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.doneButton} onPress={handleEndSession}>
+          <Text style={styles.doneIcon}>✅</Text>
+          <Text style={styles.buttonLabel}>Done</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+
+      {/* Bottom Orange Theme Section */}
+      <ImageBackground
+        source={require('../assets/backgrounds/orange-theme.png')}
+        style={styles.orangeTheme}
+        resizeMode="cover"
+      >
+        {/* Dynamic Speech Bubble */}
+        <View style={styles.speechBubble}>
+          <Text 
+            key={speechKey} 
+            style={styles.speechText}
+            adjustsFontSizeToFit={true}
+            numberOfLines={3}
+            minimumFontScale={0.6}
+          >
+            {getSpeechBubbleMessage()}
+          </Text>
+        </View>
+
+        {/* Habit Buttons */}
+        <View style={styles.habitButtons}>
+          <TouchableOpacity style={styles.habitButton} onPress={() => logExercise(5)}>
+            <ImageBackground
+              source={require('../assets/hamsters/casual/exercising.png')}
+              style={styles.hamsterInteraction}
+              resizeMode="contain"
+            />
+            <Text style={styles.habitReward}>+15</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.habitButton} onPress={logMeal}>
+            <ImageBackground
+              source={require('../assets/hamsters/casual/eating-normal.png')}
+              style={styles.mealTime}
+              resizeMode="contain"
+            />
+            <Text style={styles.habitReward}>+10</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.habitButton} onPress={logWater}>
+            <ImageBackground
+              source={require('../assets/hamsters/casual/drinking.png')}
+              style={styles.coffeeTime}
+              resizeMode="contain"
+            />
+            <Text style={styles.habitReward}>+5</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.bottomText}>
+          {userData.buddyName || 'Hammy'} feels your support! ⭐️
+        </Text>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: '#1A237E',
-    minHeight: '100%',
+    position: 'relative',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    backgroundColor: '#FFFFFF',
   },
-  buttonContainer: {
-    marginTop: 30,
-    marginBottom: 50,
-    width: '100%',
+  
+  // Background Elements
+  blueBgDecor: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 401) / 393, // 401px from CSS
+    height: (SCREEN_HEIGHT * 260) / 852, // 260px from CSS
+    left: (SCREEN_WIDTH * -8) / 393, // -8px from CSS
+    top: (SCREEN_HEIGHT * -190) / 852, // -190px from CSS
+    borderWidth: 1,
+    borderColor: '#000000',
   },
-  petSection: {
-    alignItems: 'center',
-    marginTop: 20,
+  
+  wallsBackground: {
+    position: 'absolute',
+    width: SCREEN_WIDTH,
+    height: (SCREEN_HEIGHT * 590) / 852,
+    left: 0,
+    top: -8,
   },
-  studyingText: {
-    fontSize: 16,
-    color: '#FFF',
-    marginTop: 10,
-    fontStyle: 'italic',
+  
+  floorBackground: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 518) / 393,
+    height: (SCREEN_HEIGHT * 336) / 852,
+    left: -90,
+    top: (SCREEN_HEIGHT * 239) / 852,
+    borderWidth: 1,
+    borderColor: '#000000',
+    shadowColor: 'rgba(21, 255, 0, 0.25)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  deadlineInfo: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 10,
-    alignItems: 'center',
+  
+
+
+  // Header
+  header: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 266) / 393,
+    height: (SCREEN_HEIGHT * 66) / 852,
+    left: 16,
+    top: 9,
   },
-  deadlineInfoText: {
-    fontSize: 14,
-    color: '#FFD54F',
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  deadlineProgress: {
-    fontSize: 12,
-    color: '#E1BEE7',
-  },
-  rewardsPreview: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  rewardsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-    marginBottom: 10,
-  },
-  rewardsText: {
-    fontSize: 18,
-    color: '#FFD54F',
-    marginVertical: 3,
-    fontWeight: '600',
-  },
-  gracePeriodIndicator: {
-    backgroundColor: '#2196F3',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  gracePeriodText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  gracePeriodSubtext: {
-    fontSize: 12,
-    color: '#FFF',
-    marginTop: 5,
-  },
-  warningContainer: {
-    backgroundColor: '#FFC107',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  warningText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
-  },
-  warningSubtext: {
-    fontSize: 12,
-    color: '#000',
-    marginTop: 5,
-  },
-  penaltyWarning: {
-    backgroundColor: '#FF5722',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  penaltyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  penaltySubtext: {
-    fontSize: 12,
-    color: '#FFF',
-    marginTop: 5,
-  },
-  tipsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 15,
-    borderRadius: 12,
-  },
-  tipsText: {
-    fontSize: 12,
-    color: '#E1BEE7',
-    marginVertical: 3,
+  
+  headerText: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 21) / 393,
+    lineHeight: (SCREEN_HEIGHT * 33) / 852,
+    color: '#000000',
   },
 
-  endButton: {
-    backgroundColor: '#4CAF50',
-    padding: 20,
-    borderRadius: 16,
+  // Q-Coins
+  qCoinsContainer: {
+    position: 'absolute',
+    right: 16,
+    top: 3,
     alignItems: 'center',
-    marginBottom: 10,
   },
-  endButtonText: {
-    color: '#FFF',
-    fontSize: 18,
+  
+  qCoinIcon: {
+    width: (SCREEN_WIDTH * 47) / 393,
+    height: (SCREEN_HEIGHT * 47) / 852,
+  },
+  
+  qCoinsText: {
+    fontFamily: 'Chakra Petch',
     fontWeight: '700',
+    fontSize: (SCREEN_WIDTH * 21) / 393,
+    lineHeight: (SCREEN_HEIGHT * 27) / 852,
+    color: '#000000',
+    opacity: 0.7,
+    marginTop: 5,
   },
-  cancelButton: {
-    backgroundColor: 'transparent',
-    padding: 15,
-    borderRadius: 16,
+
+  // Study Room Decorations
+  studyShelf: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 133) / 393,
+    height: (SCREEN_HEIGHT * 93) / 852,
+    left: 240,
+    top: 75,
+  },
+  
+  photoFrame1: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 68) / 393,
+    height: (SCREEN_HEIGHT * 58) / 852,
+    left: 3,
+    top: 76,
+  },
+  
+  photoFrame2: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 64) / 393,
+    height: (SCREEN_HEIGHT * 104) / 852,
+    left: 79,
+    top: 77,
+  },
+
+  // Plants
+  plant1: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 31) / 393,
+    height: (SCREEN_HEIGHT * 50) / 852,
+    left: (SCREEN_WIDTH * 82) / 393,
+    top: (SCREEN_HEIGHT * 201) / 852,
+  },
+  
+  plant2: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 31) / 393,
+    height: (SCREEN_HEIGHT * 50) / 852,
+    left: (SCREEN_WIDTH * 110) / 393,
+    top: (SCREEN_HEIGHT * 201) / 852,
+  },
+
+  // Status Section
+  statusSection: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 343) / 393,
+    height: (SCREEN_HEIGHT * 123) / 852,
+    left: 21,
+    top: 437,
+    backgroundColor: '#E3F2FD', // Placeholder for blue bg image
+    borderWidth: 1,
+    borderColor: '#000000',
+    padding: 10,
+  },
+  
+  statusLabel: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 18) / 393,
+    lineHeight: (SCREEN_HEIGHT * 23) / 852,
+    color: '#000000',
+  },
+  
+  statusText: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 18) / 393,
+    lineHeight: (SCREEN_HEIGHT * 22) / 852,
+    color: '#000000',
+    marginTop: 5,
+  },
+  
+  timerBarContainer: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 251) / 393,
+    height: (SCREEN_HEIGHT * 25) / 852,
+    left: 50,
+    top: 65,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
   },
-  cancelButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+  
+  timerBarBackground: {
+    width: '100%',
+    height: 12,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 6,
+    overflow: 'hidden',
   },
+  
+  timerBar: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 6,
+  },
+  
+  timerText: {
+    fontFamily: 'Chakra Petch',
+    fontSize: (SCREEN_WIDTH * 10) / 393,
+    color: '#000000',
+    marginTop: 2,
+  },
+  
+  statusSubtext: {
+    position: 'absolute',
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 14) / 393,
+    lineHeight: (SCREEN_HEIGHT * 18) / 852,
+    color: '#000000',
+    left: 77,
+    bottom: 10,
+  },
+
+  // Hamster Character - Large studying position
+  hamsterContainer: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 312) / 393,
+    height: (SCREEN_HEIGHT * 234) / 852,
+    left: (SCREEN_WIDTH * 40) / 393, // Centered horizontally
+    top: (SCREEN_HEIGHT * 200) / 852, // Positioned in middle area
+  },
+  
+  focusHamster: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // Action Buttons
+  actionButtons: {
+    position: 'absolute',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: (SCREEN_WIDTH * 269) / 393,
+    left: 60,
+    top: 582,
+  },
+  
+  pauseButton: {
+    width: (SCREEN_WIDTH * 79) / 393,
+    height: (SCREEN_HEIGHT * 48) / 852,
+    backgroundColor: '#FFE797',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  breakButton: {
+    width: (SCREEN_WIDTH * 79) / 393,
+    height: (SCREEN_HEIGHT * 48) / 852,
+    backgroundColor: '#FFE797',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  doneButton: {
+    width: (SCREEN_WIDTH * 79) / 393,
+    height: (SCREEN_HEIGHT * 48) / 852,
+    backgroundColor: '#FFE797',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  buttonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  
+  pauseIcon: {
+    fontSize: (SCREEN_WIDTH * 20) / 393,
+  },
+  
+  doneIcon: {
+    fontSize: (SCREEN_WIDTH * 24) / 393,
+    color: '#000000',
+  },
+  
+  breakText: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 18) / 393,
+    lineHeight: (SCREEN_HEIGHT * 15) / 852,
+    textAlign: 'center',
+    color: '#000000',
+  },
+  
+  buttonLabel: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 18) / 393,
+    lineHeight: (SCREEN_HEIGHT * 15) / 852,
+    textAlign: 'center',
+    color: '#000000',
+    marginTop: 2,
+  },
+
+  // Bottom Orange Theme Section
+  orangeTheme: {
+    position: 'absolute',
+    width: SCREEN_WIDTH,
+    height: (SCREEN_HEIGHT * 332) / 852,
+    left: 0,
+    top: 634,
+    borderRadius: 20,
+    padding: 20,
+  },
+  
+  speechBubble: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 355) / 393,
+    height: (SCREEN_HEIGHT * 87) / 852,
+    left: 17,
+    top: 13,
+    backgroundColor: '#FFFBFB',
+    borderWidth: 1,
+    borderColor: '#000000',
+    shadowColor: 'rgba(0, 0, 0, 0.25)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderRadius: 12,
+    padding: 15,
+    justifyContent: 'center',
+  },
+  
+  speechText: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 20) / 393, // Back to original size
+    lineHeight: (SCREEN_HEIGHT * 26) / 852, // Back to original line height
+    color: '#000000',
+    textAlign: 'center',
+  },
+  
+  habitButtons: {
+    position: 'absolute',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: SCREEN_WIDTH - 40,
+    left: 20,
+    top: 120,
+  },
+  
+  habitButton: {
+    alignItems: 'center',
+  },
+  
+  hamsterInteraction: {
+    width: (SCREEN_WIDTH * 52) / 393,
+    height: (SCREEN_HEIGHT * 54) / 852,
+  },
+  
+  mealTime: {
+    width: (SCREEN_WIDTH * 53) / 393,
+    height: (SCREEN_HEIGHT * 55) / 852,
+  },
+  
+  coffeeTime: {
+    width: (SCREEN_WIDTH * 53) / 393,
+    height: (SCREEN_HEIGHT * 48) / 852,
+  },
+  
+  habitReward: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '700',
+    fontSize: (SCREEN_WIDTH * 14) / 393,
+    lineHeight: (SCREEN_HEIGHT * 18) / 852,
+    color: '#000000',
+    opacity: 0.7,
+    marginTop: 5,
+  },
+  
+  bottomText: {
+    position: 'absolute',
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 14) / 393,
+    lineHeight: (SCREEN_HEIGHT * 18) / 852,
+    color: '#000000',
+    left: 98,
+    bottom: 30,
+  },
+  
   errorText: {
     fontSize: 18,
-    color: '#FFF',
+    color: '#FF0000',
     textAlign: 'center',
+    marginTop: 50,
   },
 });
