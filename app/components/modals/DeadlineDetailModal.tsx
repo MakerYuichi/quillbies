@@ -11,8 +11,8 @@ import {
   ImageBackground,
   Alert
 } from 'react-native';
-import { Deadline } from '../core/types';
-import { useQuillbyStore } from '../state/store';
+import { Deadline } from '../../core/types';
+import { useQuillbyStore } from '../../state/store';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

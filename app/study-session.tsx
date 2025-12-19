@@ -302,14 +302,26 @@ export default function StudySessionScreen() {
         resizeMode="contain"
       />
       
-      {/* Plants */}
+      {/* Customizable Plants */}
       <ImageBackground
-        source={require('../assets/rooms/plant.png')}
+        source={
+          userData.roomCustomization?.plantType === 'succulent-plant' 
+            ? require('../assets/rooms/plant.png') // Using default plant for now
+            : userData.roomCustomization?.plantType === 'swiss-cheese-plant'
+            ? require('../assets/rooms/plant.png') // Using default plant for now
+            : require('../assets/rooms/plant.png')
+        }
         style={styles.plant1}
         resizeMode="contain"
       />
       <ImageBackground
-        source={require('../assets/rooms/plant.png')}
+        source={
+          userData.roomCustomization?.plantType === 'succulent-plant' 
+            ? require('../assets/rooms/plant.png') // Using default plant for now
+            : userData.roomCustomization?.plantType === 'swiss-cheese-plant'
+            ? require('../assets/rooms/plant.png') // Using default plant for now
+            : require('../assets/rooms/plant.png')
+        }
         style={styles.plant2}
         resizeMode="contain"
       />

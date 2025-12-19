@@ -1,6 +1,7 @@
 // Room background layers component
 import React from 'react';
 import { View, Image, StyleSheet, Dimensions, Text } from 'react-native';
+import { useQuillbyStore } from '../../state/store';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -12,6 +13,8 @@ interface RoomLayersProps {
 }
 
 export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, qCoins = 0 }: RoomLayersProps) {
+  const { userData } = useQuillbyStore();
+  const roomCustomization = userData.roomCustomization;
   // Determine which room wall to show based on mess points
   const getRoomWall = () => {
     if (messPoints <= 5) {
@@ -84,31 +87,44 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
         resizeMode="contain"
       />
 
-       {/* LAYER 6: Fairy Lights */}
-      <Image 
-        source={require('../../assets/rooms/fairy-lights.png')}
-        style={styles.fairyLightsDecor}
-        resizeMode="contain"
-      />
-      
-      {/* LAYER 7: Lamp - Hidden when sleeping */}
+      {/* LAYER 6: Customizable Light - Hidden when sleeping */}
       {!isSleeping && (
         <Image 
-          source={require('../../assets/rooms/lamp.png')}
-          style={styles.lampDecor}
+          source={
+            roomCustomization?.lightType === 'colored-fairy-lights' 
+              ? require('../../assets/rooms/fairy-lights.png')
+              : require('../../assets/rooms/lamp.png')
+          }
+          style={
+            roomCustomization?.lightType === 'colored-fairy-lights' 
+              ? styles.fairyLightsDecor 
+              : styles.lampDecor
+          }
           resizeMode="contain"
         />
       )}
       
-      {/* LAYER 8: Plant */}
+      {/* LAYER 7: Customizable Plants */}
       <Image 
-        source={require('../../assets/rooms/plant.png')}
+        source={
+          roomCustomization?.plantType === 'succulent-plant' 
+            ? require('../../assets/rooms/plant.png') // Using default plant for now
+            : roomCustomization?.plantType === 'swiss-cheese-plant'
+            ? require('../../assets/rooms/plant.png') // Using default plant for now
+            : require('../../assets/rooms/plant.png')
+        }
         style={styles.plantDecor}
         resizeMode="contain"
       />
 
       <Image 
-        source={require('../../assets/rooms/plant.png')}
+        source={
+          roomCustomization?.plantType === 'succulent-plant' 
+            ? require('../../assets/rooms/plant.png') // Using default plant for now
+            : roomCustomization?.plantType === 'swiss-cheese-plant'
+            ? require('../../assets/rooms/plant.png') // Using default plant for now
+            : require('../../assets/rooms/plant.png')
+        }
         style={styles.plantDecor2}
         resizeMode="contain"
       />

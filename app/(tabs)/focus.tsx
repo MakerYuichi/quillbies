@@ -5,9 +5,12 @@ import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store';
 import { DeadlineFormData, Deadline } from '../core/types';
 import { calculateFocusEnergyCost } from '../core/engine';
-import CreateDeadlineModal from '../components/CreateDeadlineModal';
-import DeadlineDetailModal from '../components/DeadlineDetailModal';
-import SessionCustomizationModal, { SessionConfig } from '../components/SessionCustomizationModal';
+import { 
+  CreateDeadlineModal, 
+  DeadlineDetailModal, 
+  SessionCustomizationModal 
+} from '../components';
+import { SessionConfig } from '../components/modals/SessionCustomizationModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -21,8 +24,7 @@ export default function FocusScreen() {
     deleteDeadline,
     getUrgentDeadlines,
     getUpcomingDeadlines,
-    getCompletedDeadlines,
-    createSampleDeadlines
+    getCompletedDeadlines
   } = useQuillbyStore();
   
   const buddyName = userData.buddyName || 'Quillby';
@@ -299,12 +301,6 @@ export default function FocusScreen() {
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>📝 No deadlines yet</Text>
               <Text style={styles.emptyStateSubtext}>Create your first deadline to get started!</Text>
-              <TouchableOpacity 
-                style={styles.sampleButton}
-                onPress={createSampleDeadlines}
-              >
-                <Text style={styles.sampleButtonText}>🎯 Add Sample Deadlines</Text>
-              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -317,14 +313,7 @@ export default function FocusScreen() {
           <Text style={styles.createDeadlineText}>➕ CREATE NEW DEADLINE</Text>
         </TouchableOpacity>
 
-        {/* Coming Soon */}
-        <View style={styles.comingSoonCard}>
-          <Text style={styles.comingSoonTitle}>🚀 Coming Soon</Text>
-          <Text style={styles.comingSoonText}>• Custom session lengths</Text>
-          <Text style={styles.comingSoonText}>• Study goals and targets</Text>
-          <Text style={styles.comingSoonText}>• Focus streaks</Text>
-          <Text style={styles.comingSoonText}>• Study statistics</Text>
-        </View>
+
 
         {/* Dev: Test Notification Button */}
         <TouchableOpacity 
@@ -540,18 +529,6 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
-  sampleButton: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: SCREEN_WIDTH * 0.04,
-    paddingVertical: SCREEN_WIDTH * 0.03,
-    borderRadius: 8,
-    marginTop: SCREEN_HEIGHT * 0.02,
-  },
-  sampleButtonText: {
-    color: '#FFF',
-    fontSize: SCREEN_WIDTH * 0.035,
-    fontWeight: '600',
-  },
   // Create New Deadline Button (at bottom)
   createDeadlineButton: {
     backgroundColor: '#4CAF50',
@@ -571,23 +548,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: SCREEN_WIDTH * 0.045,
     fontWeight: '700',
-  },
-  comingSoonCard: {
-    backgroundColor: '#E3F2FD',
-    padding: SCREEN_WIDTH * 0.05,
-    borderRadius: 16,
-    marginBottom: SCREEN_HEIGHT * 0.03,
-  },
-  comingSoonTitle: {
-    fontSize: SCREEN_WIDTH * 0.045,
-    fontWeight: '700',
-    color: '#1976D2',
-    marginBottom: SCREEN_HEIGHT * 0.015,
-  },
-  comingSoonText: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#1976D2',
-    marginVertical: SCREEN_HEIGHT * 0.005,
   },
   testNotificationButton: {
     backgroundColor: '#1976D2',

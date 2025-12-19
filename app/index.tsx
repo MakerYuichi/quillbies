@@ -2,9 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store';
-import QuillbyPet from './components/QuillbyPet';
-import EnergyBar from './components/EnergyBar';
-import RoomBackground from './components/RoomBackground';
+import { QuillbyPet, EnergyBar, RoomBackground } from './components';
 
 export default function HomeScreen() {
   const router = useRouter();

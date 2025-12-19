@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { UserData, SessionData, CheckpointResult, CheckpointNotification, Deadline, DeadlineFormData, SleepSession } from '../core/types';
+import { UserData, SessionData, CheckpointResult, CheckpointNotification, Deadline, DeadlineFormData, SleepSession, ShopItem } from '../core/types';
 
 // Temporary fallback storage for development (until AsyncStorage is properly linked)
 const tempStorage = {
@@ -99,7 +99,10 @@ interface QuillbyStore {
   getUpcomingDeadlines: () => Deadline[];
   getUrgentDeadlines: () => Deadline[];
   getCompletedDeadlines: () => Deadline[];
-  createSampleDeadlines: () => void;
+  // Shop actions
+  purchaseItem: (itemId: string, price: number) => boolean;
+  getShopItems: () => ShopItem[];
+  updateRoomCustomization: (lightType?: string, plantType?: string) => void;
 }
 
 export const useQuillbyStore = create<QuillbyStore>()(
@@ -124,7 +127,12 @@ export const useQuillbyStore = create<QuillbyStore>()(
     lastExerciseReset: new Date().toDateString(), // Track when exercise was last reset
     studyMinutesToday: 0, // Accumulated study minutes today
     lastStudyReset: new Date().toDateString(), // Track when study was last reset
-    missedCheckpoints: 0 // Count of missed checkpoints today
+    missedCheckpoints: 0, // Count of missed checkpoints today
+    roomCustomization: {
+      lightType: 'lamp',
+      plantType: 'plant'
+    },
+    purchasedItems: []
   },
   
   session: null,
@@ -471,7 +479,17 @@ export const useQuillbyStore = create<QuillbyStore>()(
     // SIMPLIFIED: Calculate morning energy based on sleep quality
     const morningEnergy = calculateMorningEnergy(todaysSleep);
     
-    console.log(`[Sleep] Completed: ${duration.toFixed(1)}h → Total today: ${todaysSleep.toFixed(1)}h → Morning energy: ${morningEnergy}/100`);
+    // Award Q-coins for good sleep
+    let sleepCoins = 0;
+    if (todaysSleep >= 8) {
+      sleepCoins = 25; // Excellent sleep
+    } else if (todaysSleep >= 7) {
+      sleepCoins = 20; // Good sleep
+    } else if (todaysSleep >= 6) {
+      sleepCoins = 10; // Decent sleep
+    }
+    
+    console.log(`[Sleep] Completed: ${duration.toFixed(1)}h → Total today: ${todaysSleep.toFixed(1)}h → Morning energy: ${morningEnergy}/100 → Coins: +${sleepCoins}`);
     
     set({
       userData: {
@@ -479,6 +497,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
         sleepSessions: updatedSessions,
         maxEnergyCap: 100, // Always 100
         energy: morningEnergy, // Set energy based on sleep quality
+        qCoins: userData.qCoins + sleepCoins, // Award sleep coins
         activeSleepSession: undefined // Clear active session
       }
     });
@@ -938,8 +957,38 @@ Room: ${roomState}`;
 
   // Mark deadline as complete
   markDeadlineComplete: (id: string) => {
-    const { updateDeadline } = get();
-    updateDeadline(id, { isCompleted: true });
+    const { deadlines, userData } = get();
+    const deadline = deadlines.find(d => d.id === id);
+    
+    if (deadline) {
+      // Calculate completion bonus based on priority and hours
+      let completionBonus = 50; // Base bonus
+      if (deadline.priority === 'high') completionBonus += 30;
+      else if (deadline.priority === 'medium') completionBonus += 20;
+      else completionBonus += 10;
+      
+      // Bonus for completing on time
+      const now = new Date();
+      const dueDate = new Date(deadline.dueDate);
+      if (now <= dueDate) {
+        completionBonus += 25; // On-time bonus
+      }
+      
+      // Update deadline and award coins
+      const updatedDeadlines = deadlines.map(d => 
+        d.id === id ? { ...d, isCompleted: true } : d
+      );
+      
+      set({
+        deadlines: updatedDeadlines,
+        userData: {
+          ...userData,
+          qCoins: userData.qCoins + completionBonus
+        }
+      });
+      
+      console.log(`[Deadline] Completed "${deadline.title}" → +${completionBonus} Q-Coins!`);
+    }
   },
 
   // Add work hours to deadline
@@ -1018,63 +1067,81 @@ Room: ${roomState}`;
       .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
   },
 
-  // Create sample deadlines for testing
-  createSampleDeadlines: () => {
-    const now = new Date();
-    const sampleDeadlines: Deadline[] = [
+  // Shop Functions
+  getShopItems: () => {
+    return [
+      // Lights
       {
-        id: 'sample-1',
-        title: 'Math Final Exam',
-        dueDate: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days
-        dueTime: '14:00',
-        priority: 'high',
-        estimatedHours: 8,
-        category: 'study',
-        workCompleted: 2.5,
-        isCompleted: false,
-        createdAt: new Date().toISOString(),
-        reminders: { oneDayBefore: true, threeDaysBefore: true }
+        id: 'colored-fairy-lights',
+        name: 'Colored Fairy Lights',
+        description: 'Magical colorful twinkling lights to brighten your room',
+        price: 50,
+        category: 'light' as const,
+        assetPath: 'colored-fairy-lights',
+        icon: '✨'
+      },
+      // Plants
+      {
+        id: 'succulent-plant',
+        name: 'Succulent Plant',
+        description: 'A cute succulent to freshen up your space',
+        price: 30,
+        category: 'plant' as const,
+        assetPath: 'succulent-plant',
+        icon: '🌵'
       },
       {
-        id: 'sample-2',
-        title: 'History Essay',
-        dueDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days
-        priority: 'medium',
-        estimatedHours: 6,
-        category: 'study',
-        workCompleted: 1,
-        isCompleted: false,
-        createdAt: new Date().toISOString(),
-        reminders: { oneDayBefore: true, threeDaysBefore: true }
-      },
-      {
-        id: 'sample-3',
-        title: 'Chemistry Lab Report',
-        dueDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days
-        priority: 'low',
-        estimatedHours: 4,
-        category: 'study',
-        workCompleted: 0,
-        isCompleted: false,
-        createdAt: new Date().toISOString(),
-        reminders: { oneDayBefore: true, threeDaysBefore: false }
-      },
-      {
-        id: 'sample-4',
-        title: 'Biology Quiz',
-        dueDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Completed
-        priority: 'medium',
-        estimatedHours: 3,
-        category: 'study',
-        workCompleted: 3,
-        isCompleted: true,
-        createdAt: new Date().toISOString(),
-        reminders: { oneDayBefore: true, threeDaysBefore: true }
+        id: 'swiss-cheese-plant',
+        name: 'Swiss Cheese Plant',
+        description: 'Beautiful monstera plant with unique leaves',
+        price: 40,
+        category: 'plant' as const,
+        assetPath: 'swiss-cheese-plant',
+        icon: '🌿'
       }
     ];
+  },
+
+  purchaseItem: (itemId: string, price: number) => {
+    const { userData } = get();
     
-    set({ deadlines: sampleDeadlines });
-    console.log('[Deadlines] Sample deadlines created');
+    // Check if user has enough coins
+    if (userData.qCoins < price) {
+      return false;
+    }
+    
+    // Check if already purchased
+    if (userData.purchasedItems?.includes(itemId)) {
+      return false;
+    }
+    
+    // Deduct coins and add to purchased items
+    set({
+      userData: {
+        ...userData,
+        qCoins: userData.qCoins - price,
+        purchasedItems: [...(userData.purchasedItems || []), itemId]
+      }
+    });
+    
+    console.log(`[Shop] Purchased ${itemId} for ${price} coins`);
+    return true;
+  },
+
+  updateRoomCustomization: (lightType?: string, plantType?: string) => {
+    const { userData } = get();
+    
+    set({
+      userData: {
+        ...userData,
+        roomCustomization: {
+          lightType: (lightType as 'lamp' | 'fairy-lights') || userData.roomCustomization?.lightType || 'lamp',
+          plantType: (plantType as 'plant' | 'plant2' | 'plant3') || userData.roomCustomization?.plantType || 'plant'
+        }
+      }
+    });
+    
+    console.log(`[Room] Updated customization - Light: ${lightType}, Plant: ${plantType}`);
   }
 }),
 {

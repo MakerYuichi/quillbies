@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useQuillbyStore } from '../state/store';
-import { CheckpointResult } from '../core/types';
+import { useQuillbyStore } from '../../state/store';
+import { CheckpointResult } from '../../core/types';
 
 export default function StudyProgress() {
   const { userData, checkStudyCheckpoints } = useQuillbyStore();

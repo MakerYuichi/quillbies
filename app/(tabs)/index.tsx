@@ -5,21 +5,22 @@ import { useRouter } from 'expo-router';
 
 import { useQuillbyStore } from '../state/store';
 import { calculateFocusEnergyCost } from '../core/engine';
-import EnergyBar from '../components/EnergyBar';
-import RoomLayers from '../components/RoomLayers';
-import ExerciseEnvironment from '../components/ExerciseEnvironment';
-import HamsterCharacter from '../components/HamsterCharacter';
-import SpeechBubble from '../components/SpeechBubble';
-import WaterButton from '../components/WaterButton';
-import SleepButton from '../components/SleepButton';
-import MealButton from '../components/MealButton';
-import ExerciseButton from '../components/ExerciseButton';
-import CleanButton from '../components/CleanButton';
-import StudyProgress from '../components/StudyProgress';
-import NotificationBanner from '../components/NotificationBanner';
-import RealTimeClock from '../components/RealTimeClock';
-import SessionCustomizationModal, { SessionConfig } from '../components/SessionCustomizationModal';
-import { useNotifications } from '../hooks/useNotifications';
+import { 
+  EnergyBar, 
+  StudyProgress, 
+  RoomLayers, 
+  HamsterCharacter, 
+  SpeechBubble,
+  WaterButton,
+  SleepButton,
+  MealButton,
+  ExerciseButton,
+  CleanButton,
+  RealTimeClock,
+  ExerciseEnvironment,
+  SessionCustomizationModal
+} from '../components';
+import { SessionConfig } from '../components/modals/SessionCustomizationModal';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
 import { useMealTracking } from '../hooks/useMealTracking';
@@ -29,7 +30,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { userData, updateEnergy, cleanRoom, addMissedCheckpoint, checkAndProcessCheckpoints, startFocusSession } = useQuillbyStore();
+  const { userData, updateEnergy, cleanRoom, addMissedCheckpoint, checkAndProcessCheckpoints, startFocusSession, getUrgentDeadlines, getUpcomingDeadlines } = useQuillbyStore();
   const [isCleaning, setIsCleaning] = React.useState(false);
   const [cleaningStage, setCleaningStage] = React.useState(1);
   const [cleaningTaps, setCleaningTaps] = React.useState(0);
@@ -38,9 +39,6 @@ export default function HomeScreen() {
   const [cleaningPlan, setCleaningPlan] = React.useState<CleaningPlan | null>(null);
   const [lastCheckpointCheck, setLastCheckpointCheck] = React.useState(Date.now());
   const [showSessionModal, setShowSessionModal] = React.useState(false);
-  
-  // Notification system
-  const { notifications, dismissNotification } = useNotifications();
   
   // Get personalized data from onboarding
   const buddyName = userData.buddyName || 'Quillby';
@@ -83,6 +81,99 @@ export default function HomeScreen() {
     exerciseMessage,
     exerciseMessageTimestamp,
   } = useExerciseTracking(buddyName);
+
+  // Helper functions for today's deadline
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+
+    // Compare at the calendar-day level (ignore time of day)
+    const startOfDue = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffTime = startOfDue.getTime() - startOfToday.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    const formattedDate = date.toLocaleDateString('en-US', options);
+
+    if (diffDays === 0) return `${formattedDate} (Today)`;
+    if (diffDays === 1) return `${formattedDate} (Tomorrow)`;
+    if (diffDays > 1) return `${formattedDate} (${diffDays} days)`;
+    return `${formattedDate} (Overdue)`;
+  };
+
+  const getPriorityEmoji = (priority: string) => {
+    switch (priority) {
+      case 'high': return '🔴';
+      case 'medium': return '🟡';
+      case 'low': return '🟢';
+      default: return '⚪';
+    }
+  };
+
+  const getTodaysDeadline = () => {
+    const urgentDeadlines = getUrgentDeadlines();
+    const upcomingDeadlines = getUpcomingDeadlines();
+    
+    // First check for deadlines due today
+    const today = new Date();
+    const todayDeadlines = urgentDeadlines.filter(deadline => {
+      const dueDate = new Date(deadline.dueDate);
+      return dueDate.toDateString() === today.toDateString();
+    });
+    
+    if (todayDeadlines.length > 0) {
+      // Return the highest priority deadline due today
+      return todayDeadlines.sort((a, b) => {
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        return (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
+               (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+      })[0];
+    }
+    
+    // If no deadlines today, return the most urgent one
+    if (urgentDeadlines.length > 0) {
+      return urgentDeadlines[0];
+    }
+    
+    // If no urgent deadlines, return the next upcoming one
+    if (upcomingDeadlines.length > 0) {
+      return upcomingDeadlines[0];
+    }
+    
+    return null;
+  };
+
+  const renderTodaysDeadline = () => {
+    const deadline = getTodaysDeadline();
+    if (!deadline) return null;
+
+    const progressPercent = (deadline.workCompleted / deadline.estimatedHours) * 100;
+    const progressBars = Math.floor(progressPercent / 10); // Each bar represents 10%
+    const emptyBars = 10 - progressBars;
+    const progressDisplay = '█'.repeat(progressBars) + '░'.repeat(emptyBars);
+
+    return (
+      <TouchableOpacity 
+        style={styles.todaysDeadlineCard}
+        onPress={() => router.push('/(tabs)/focus')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.todaysDeadlineHeader}>
+          {getPriorityEmoji(deadline.priority)} {deadline.title}
+        </Text>
+        <Text style={styles.todaysDeadlineDate}>
+          {formatDate(deadline.dueDate)}
+        </Text>
+        <Text style={styles.todaysDeadlineProgress}>
+          {deadline.workCompleted.toFixed(1)}/{deadline.estimatedHours}h {progressDisplay}
+        </Text>
+        <Text style={styles.todaysDeadlineGoal}>
+          Today's goal: 2h [Focus on This →]
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   // Handle cleaning system with room state transitions
   const handleStartCleaning = () => {
@@ -335,18 +426,7 @@ export default function HomeScreen() {
         />
       )}
       
-      {/* NOTIFICATIONS - Show above speech bubble */}
-      {notifications.length > 0 && (
-        <View style={styles.notificationsContainer} pointerEvents="box-none">
-          {notifications.slice(0, 2).map(notification => (
-            <NotificationBanner
-              key={notification.id}
-              notification={notification}
-              onDismiss={dismissNotification}
-            />
-          ))}
-        </View>
-      )}
+
 
       {/* SPEECH BUBBLE - Now in top area where energy bar was */}
       <View style={styles.speechBubbleContainer} pointerEvents="none">
@@ -531,6 +611,14 @@ export default function HomeScreen() {
             <View style={styles.studyProgressContainer}>
               <StudyProgress />
             </View>
+          </View>
+        )}
+
+        {/* TODAY'S DEADLINE SECTION - Show under study section */}
+        {userData.enabledHabits?.includes('study') && getTodaysDeadline() && (
+          <View style={styles.todaysDeadlineSection}>
+            <Text style={styles.todaysDeadlineTitle}>📅 Today's Priority</Text>
+            {renderTodaysDeadline()}
           </View>
         )}
         
@@ -770,12 +858,59 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
-  // Notifications container
-  notificationsContainer: {
-    position: 'absolute',
-    top: 100,
-    left: 0,
-    right: 0,
-    zIndex: 50,
+  
+  // Today's deadline section
+  todaysDeadlineSection: {
+    width: '100%',
+    marginBottom: 15,
+    alignSelf: 'center',
+  },
+  
+  todaysDeadlineTitle: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: (SCREEN_WIDTH * 14) / 393,
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  
+  todaysDeadlineCard: {
+    backgroundColor: '#FFF3E0',
+    borderWidth: 2,
+    borderColor: '#FF9800',
+    borderRadius: (SCREEN_WIDTH * 12) / 393,
+    padding: (SCREEN_WIDTH * 12) / 393,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  
+  todaysDeadlineHeader: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: (SCREEN_WIDTH * 16) / 393,
+    color: '#E65100',
+    marginBottom: 4,
+  },
+  
+  todaysDeadlineDate: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    color: '#FF6F00',
+    marginBottom: 4,
+  },
+  
+  todaysDeadlineProgress: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    color: '#333',
+    marginBottom: 4,
+  },
+  
+  todaysDeadlineGoal: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    color: '#1976D2',
   },
 });

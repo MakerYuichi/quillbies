@@ -75,6 +75,15 @@ export interface UserData {
   lastCheckInDate: string;
   lastSleepReset?: string; // Date when sleep was last reset (for daily accumulation)
   lastExerciseReset?: string; // Date when exercise was last reset (for daily accumulation)
+  
+  // Room Customization
+  roomCustomization?: {
+    lightType: 'lamp' | 'colored-fairy-lights'; // Default: 'lamp'
+    plantType: 'plant' | 'succulent-plant' | 'swiss-cheese-plant'; // Default: 'plant'
+  };
+  
+  // Shop Purchases
+  purchasedItems?: string[]; // Array of purchased item IDs
 }
 
 export interface SessionData {
@@ -94,6 +103,16 @@ export interface EnergyModifiers {
   breakfastPenalty: number;
   hydrationPenalty: number;
   streakBonus: number;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: 'light' | 'plant' | 'decoration';
+  assetPath: string;
+  icon: string;
 }
 
 export interface SleepSession {

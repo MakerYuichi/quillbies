@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { getRoomState } from '../core/engine';
+import { getRoomState } from '../../core/engine';
 
 interface RoomBackgroundProps {
   messPoints: number;

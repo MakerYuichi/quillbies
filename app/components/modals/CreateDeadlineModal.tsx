@@ -12,9 +12,8 @@ import {
   StatusBar,
   ImageBackground
 } from 'react-native';
-import { DeadlineFormData, Deadline } from '../core/types';
-import CustomDatePicker from './CustomDatePicker';
-import CustomTimePicker from './CustomTimePicker';
+import { DeadlineFormData, Deadline } from '../../core/types';
+import { CustomDatePicker, CustomTimePicker } from '../ui';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
