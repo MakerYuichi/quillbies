@@ -19,88 +19,88 @@ export default function HamsterCharacter({ selectedCharacter, currentAnimation, 
       // Water drinking animation (only for water button)
       if (currentAnimation === 'eating') {
         try {
-          return require('../../assets/hamsters/casual/drinking.png');
+          return require('../../../assets/hamsters/casual/drinking.png');
         } catch {
-          return require('../../assets/hamsters/casual/idle-sit.png');
+          return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
       // Normal eating animation (for maintain weight goal)
       if (currentAnimation === 'eating-normal') {
         try {
-          return require('../../assets/hamsters/casual/eating-normal.png');
+          return require('../../../assets/hamsters/casual/eating-normal.png');
         } catch {
           // Fallback to idle
-          return require('../../assets/hamsters/casual/idle-sit.png');
+          return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
       // Light eating animation (for lose weight goal)
       if (currentAnimation === 'eating-light') {
         try {
-          return require('../../assets/hamsters/casual/eating-light.png');
+          return require('../../../assets/hamsters/casual/eating-small.png');
         } catch {
           // Fallback to normal eating
           try {
-            return require('../../assets/hamsters/casual/eating-normal.png');
+            return require('../../../assets/hamsters/casual/eating-normal.png');
           } catch {
-            return require('../../assets/hamsters/casual/idle-sit.png');
+            return require('../../../assets/hamsters/casual/idle-sit.png');
           }
         }
       }
       // Heavy eating animation (for gain weight goal)
       if (currentAnimation === 'eating-heavy') {
         try {
-          return require('../../assets/hamsters/casual/eating-heavy.png');
+          return require('../../../assets/hamsters/casual/eating-large.png');
         } catch {
           // Fallback to normal eating
           try {
-            return require('../../assets/hamsters/casual/eating-normal.png');
+            return require('../../../assets/hamsters/casual/eating-normal.png');
           } catch {
-            return require('../../assets/hamsters/casual/idle-sit.png');
+            return require('../../../assets/hamsters/casual/idle-sit.png');
           }
         }
       }
       if (currentAnimation === 'sleeping' || isSleeping) {
         try {
-          return require('../../assets/hamsters/casual/sleeping.png');
+          return require('../../../assets/hamsters/casual/sleeping.png');
         } catch {
-          return require('../../assets/hamsters/casual/idle-sit.png');
+          return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
       if (currentAnimation === 'wake-up') {
         try {
-          return require('../../assets/hamsters/casual/wake-up.png');
+          return require('../../../assets/hamsters/casual/wake-up.png');
         } catch {
-          return require('../../assets/hamsters/casual/idle-sit.png');
+          return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
       // Exercise animations - using jumping GIF for all exercise types
       if (currentAnimation === 'exercising' || currentAnimation === 'exercise-complete') {
         try {
-          return require('../../assets/hamsters/casual/jumping.gif');
+          return require('../../../assets/hamsters/casual/jumping.gif');
         } catch {
-          return require('../../assets/hamsters/casual/idle-sit.png');
+          return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
       // Study animation - focused studying pose
       if (currentAnimation === 'studying') {
         try {
-          return require('../../assets/hamsters/casual/studying.png');
+          return require('../../../assets/hamsters/casual/studying.png');
         } catch {
           // Fallback to idle if studying image doesn't exist
-          return require('../../assets/hamsters/casual/idle-sit.png');
+          return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
-      return require('../../assets/hamsters/casual/idle-sit.png');
+      return require('../../../assets/hamsters/casual/idle-sit.png');
     }
     
     // Other characters
     switch (selectedCharacter) {
       case 'energetic':
-        return require('../../assets/onboarding/hamster-energetic.png');
+        return require('../../../assets/onboarding/hamster-energetic.png');
       case 'scholar':
-        return require('../../assets/onboarding/hamster-scholar.png');
+        return require('../../../assets/onboarding/hamster-scholar.png');
       default:
-        return require('../../assets/hamsters/casual/idle-sit.png');
+        return require('../../../assets/hamsters/casual/idle-sit.png');
     }
   };
 

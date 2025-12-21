@@ -5,12 +5,9 @@ import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store';
 import { DeadlineFormData, Deadline } from '../core/types';
 import { calculateFocusEnergyCost } from '../core/engine';
-import { 
-  CreateDeadlineModal, 
-  DeadlineDetailModal, 
-  SessionCustomizationModal 
-} from '../components';
-import { SessionConfig } from '../components/modals/SessionCustomizationModal';
+import CreateDeadlineModal from '../components/modals/CreateDeadlineModal';
+import DeadlineDetailModal from '../components/modals/DeadlineDetailModal';
+import SessionCustomizationModal, { SessionConfig } from '../components/modals/SessionCustomizationModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -130,30 +127,7 @@ export default function FocusScreen() {
     }
   };
 
-  // Simple dev helper: send a test OS notification after 3 seconds
-  const handleTestNotification = async () => {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== 'granted') {
-      alert('Notifications are disabled. Please enable them in system settings to test.');
-      return;
-    }
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '🔔 Quillby Test Notification',
-        body: 'If you see this, mobile notifications are working!',
-      },
-      // Using null trigger shows it immediately; easier for testing
-      trigger: null,
-    });
-
-    alert('Test notification scheduled for 3 seconds from now.');
-  };
 
   return (
     <ImageBackground
@@ -315,13 +289,7 @@ export default function FocusScreen() {
 
 
 
-        {/* Dev: Test Notification Button */}
-        <TouchableOpacity 
-          style={styles.testNotificationButton}
-          onPress={handleTestNotification}
-        >
-          <Text style={styles.testNotificationText}>🔔 SEND TEST NOTIFICATION</Text>
-        </TouchableOpacity>
+
       </ScrollView>
 
       {/* Create / Edit Deadline Modal */}
@@ -549,16 +517,5 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.045,
     fontWeight: '700',
   },
-  testNotificationButton: {
-    backgroundColor: '#1976D2',
-    padding: SCREEN_WIDTH * 0.04,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.04,
-  },
-  testNotificationText: {
-    color: '#FFF',
-    fontSize: SCREEN_WIDTH * 0.04,
-    fontWeight: '700',
-  },
+
 });

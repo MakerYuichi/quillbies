@@ -103,16 +103,21 @@ export default function CharacterSelectScreen() {
               styles.characterCard,
               styles.energeticCard,
               selectedCharacter === 'energetic' && styles.selectedEnergeticCard,
+              styles.disabledCard,
             ]}
-            onPress={() => handleSelect('energetic')}
+            onPress={() => {}}
+            disabled={true}
           >
             <Image
               source={require('../../assets/onboarding/hamster-energetic.png')}
-              style={styles.energeticImage}
+              style={[styles.energeticImage, styles.disabledImage]}
               resizeMode="contain"
             />
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Coming Soon</Text>
+            </View>
           </TouchableOpacity>
-          <Text style={styles.energeticLabel}>Energetic</Text>
+          <Text style={[styles.energeticLabel, styles.disabledLabel]}>Energetic</Text>
           
           {/* Speech Bubble for Energetic */}
           {selectedCharacter === 'energetic' && (
@@ -141,16 +146,21 @@ export default function CharacterSelectScreen() {
               styles.characterCard,
               styles.scholarCard,
               selectedCharacter === 'scholar' && styles.selectedScholarCard,
+              styles.disabledCard,
             ]}
-            onPress={() => handleSelect('scholar')}
+            onPress={() => {}}
+            disabled={true}
           >
             <Image
               source={require('../../assets/onboarding/hamster-scholar.png')}
-              style={styles.scholarImage}
+              style={[styles.scholarImage, styles.disabledImage]}
               resizeMode="contain"
             />
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Coming Soon</Text>
+            </View>
           </TouchableOpacity>
-          <Text style={styles.scholarLabel}>Scholar</Text>
+          <Text style={[styles.scholarLabel, styles.disabledLabel]}>Scholar</Text>
           
           {/* Speech Bubble for Scholar */}
           {selectedCharacter === 'scholar' && (
@@ -386,6 +396,36 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontFamily: 'ChakraPetch_600SemiBold',
     fontSize: 18,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  // COMING SOON STYLES
+  disabledCard: {
+    opacity: 0.6,
+  },
+  disabledImage: {
+    opacity: 0.5,
+  },
+  disabledLabel: {
+    opacity: 0.5,
+  },
+  comingSoonBadge: {
+    position: 'absolute',
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  comingSoonText: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 14,
     color: '#FFFFFF',
     textAlign: 'center',
   },

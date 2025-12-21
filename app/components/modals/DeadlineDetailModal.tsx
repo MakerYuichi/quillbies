@@ -170,7 +170,7 @@ export default function DeadlineDetailModal({
     >
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
       <ImageBackground
-        source={require('../../assets/backgrounds/theme.png')}
+        source={require('../../../assets/backgrounds/theme.png')}
         style={styles.container}
         resizeMode="cover"
       >

@@ -32,27 +32,12 @@ export default function RealTimeClock() {
   }, [fadeAnim]);
 
   const formatTime = () => {
-    const timezone = userData.timezone || 'UTC';
-    
-    try {
-      // Format time according to user's timezone
-      const timeString = currentTime.toLocaleTimeString('en-US', {
-        timeZone: timezone,
-        hour12: true,
-        hour: 'numeric', // Remove leading zero for single digits
-        minute: '2-digit'
-      });
-      
-      return timeString;
-    } catch (error) {
-      // Fallback to local time if timezone is invalid
-      console.warn('[Clock] Invalid timezone:', timezone, 'Using local time');
-      return currentTime.toLocaleTimeString('en-US', {
-        hour12: true,
-        hour: 'numeric',
-        minute: '2-digit'
-      });
-    }
+    // Just use local time - timezone is for display purposes only
+    return currentTime.toLocaleTimeString('en-US', {
+      hour12: true,
+      hour: 'numeric',
+      minute: '2-digit'
+    });
   };
 
   const getBuddyName = () => {
@@ -60,20 +45,8 @@ export default function RealTimeClock() {
   };
 
   const getTimeBasedEmoji = () => {
-    const timezone = userData.timezone || 'UTC';
-    let hour;
-    
-    try {
-      // Get hour in user's timezone
-      const timeInTimezone = new Date().toLocaleString('en-US', {
-        timeZone: timezone,
-        hour12: false,
-        hour: '2-digit'
-      });
-      hour = parseInt(timeInTimezone);
-    } catch (error) {
-      hour = currentTime.getHours();
-    }
+    // Use local device time for emoji
+    const hour = currentTime.getHours();
     
     // Return appropriate emoji based on time of day
     if (hour >= 6 && hour < 12) return '🌅'; // Morning

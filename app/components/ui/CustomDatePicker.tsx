@@ -114,7 +114,7 @@ export default function CustomDatePicker({ visible, onClose, onDateSelect, initi
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <ImageBackground
-          source={require('../../assets/backgrounds/bluebg.png')}
+          source={require('../../../assets/backgrounds/bluebg.png')}
           style={styles.container}
           resizeMode="cover"
         >

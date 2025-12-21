@@ -5,26 +5,25 @@ import { useRouter } from 'expo-router';
 
 import { useQuillbyStore } from '../state/store';
 import { calculateFocusEnergyCost } from '../core/engine';
-import { 
-  EnergyBar, 
-  StudyProgress, 
-  RoomLayers, 
-  HamsterCharacter, 
-  SpeechBubble,
-  WaterButton,
-  SleepButton,
-  MealButton,
-  ExerciseButton,
-  CleanButton,
-  RealTimeClock,
-  ExerciseEnvironment,
-  SessionCustomizationModal
-} from '../components';
-import { SessionConfig } from '../components/modals/SessionCustomizationModal';
+import EnergyBar from '../components/progress/EnergyBar';
+import RoomLayers from '../components/room/RoomLayers';
+import ExerciseEnvironment from '../components/games/ExerciseEnvironment';
+import HamsterCharacter from '../components/character/HamsterCharacter';
+import SpeechBubble from '../components/character/SpeechBubble';
+import WaterButton from '../components/habits/WaterButton';
+import SleepButton from '../components/habits/SleepButton';
+import MealButton from '../components/habits/MealButton';
+import ExerciseButton from '../components/habits/ExerciseButton';
+import CleanButton from '../components/habits/CleanButton';
+import StudyProgress from '../components/progress/StudyProgress';
+import RealTimeClock from '../components/ui/RealTimeClock';
+import SessionCustomizationModal, { SessionConfig } from '../components/modals/SessionCustomizationModal';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
 import { useMealTracking } from '../hooks/useMealTracking';
 import { useExerciseTracking } from '../hooks/useExerciseTracking';
+import { useRandomReminders } from '../hooks/useRandomReminders';
+import { useIdleMessages } from '../hooks/useIdleMessages';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -81,6 +80,50 @@ export default function HomeScreen() {
     exerciseMessage,
     exerciseMessageTimestamp,
   } = useExerciseTracking(buddyName);
+
+  // Random reminders
+  const {
+    reminderMessage,
+    reminderTimestamp,
+  } = useRandomReminders(buddyName);
+
+  // Idle messages
+  const {
+    idleMessage,
+    idleTimestamp,
+    resetIdleTimer,
+  } = useIdleMessages(buddyName);
+
+  // Wrap handlers to reset idle timer on interaction
+  const handleDrinkWaterWithReset = () => {
+    resetIdleTimer();
+    handleDrinkWater();
+  };
+
+  const handleLogMealWithReset = () => {
+    resetIdleTimer();
+    handleLogMeal();
+  };
+
+  const handleStartExerciseWithReset = (type: 'walk' | 'stretch' | 'cardio' | 'energizer') => {
+    resetIdleTimer();
+    handleStartExercise(type);
+  };
+
+  const handleFinishExerciseWithReset = () => {
+    resetIdleTimer();
+    handleFinishExercise();
+  };
+
+  const handleSleepButtonWithReset = () => {
+    resetIdleTimer();
+    handleSleepButton();
+  };
+
+  const handleWakeUpButtonWithReset = () => {
+    resetIdleTimer();
+    handleWakeUpButton();
+  };
 
   // Helper functions for today's deadline
   const formatDate = (dateString: string) => {
@@ -284,17 +327,7 @@ export default function HomeScreen() {
     setCleaningPlan(null);
   };
 
-  // TEMPORARY TEST FUNCTIONS - Remove after testing
-  const addTestMess = () => {
-    addMissedCheckpoint(); // Adds 5 mess points
-  };
 
-  const testDailyReset = () => {
-    const { resetDay, generateDailySummary } = useQuillbyStore.getState();
-    const summary = generateDailySummary();
-    console.log('[Test] Daily Summary:', summary);
-    resetDay();
-  };
 
   // Handle focus session start
   const handleStartFocusSession = () => {
@@ -325,15 +358,22 @@ export default function HomeScreen() {
   
   // Find the most recent message among all features
   const messages = [
-    { text: waterMessage, timestamp: waterMessageTimestamp },
-    { text: sleepMessage, timestamp: sleepMessageTimestamp },
-    { text: mealMessage, timestamp: mealMessageTimestamp },
-    { text: exerciseMessage, timestamp: exerciseMessageTimestamp },
+    { text: waterMessage, timestamp: waterMessageTimestamp, priority: 3 }, // Action messages
+    { text: sleepMessage, timestamp: sleepMessageTimestamp, priority: 3 },
+    { text: mealMessage, timestamp: mealMessageTimestamp, priority: 3 },
+    { text: exerciseMessage, timestamp: exerciseMessageTimestamp, priority: 3 },
+    { text: reminderMessage, timestamp: reminderTimestamp, priority: 2 }, // Reminders
+    { text: idleMessage, timestamp: idleTimestamp, priority: 1 }, // Idle messages (lowest priority)
   ].filter(msg => msg.text); // Only messages that exist
   
   if (messages.length > 0) {
-    // Sort by timestamp and get the most recent
-    const mostRecent = messages.sort((a, b) => b.timestamp - a.timestamp)[0];
+    // Sort by priority first, then by timestamp
+    const mostRecent = messages.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return b.priority - a.priority; // Higher priority first
+      }
+      return b.timestamp - a.timestamp; // Then most recent
+    })[0];
     hamsterMessage = mostRecent.text;
   }
   
@@ -462,35 +502,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* TEMPORARY TEST BUTTONS - Remove after testing */}
-      <TouchableOpacity
-        style={styles.testButton}
-        onPress={addTestMess}
-      >
-        <Text style={styles.testButtonText}>
-          TEST: Add Mess (+1h)
-        </Text>
-        <Text style={styles.testButtonSubtext}>
-          Mess: {userData.messPoints.toFixed(1)} | Cap: {userData.maxEnergyCap}
-        </Text>
-        <Text style={styles.testButtonSubtext}>
-          Room: {userData.messPoints <= 5 ? 'Clean' : 
-                 userData.messPoints <= 10 ? 'Light Mess' :
-                 userData.messPoints <= 20 ? 'Medium Mess' : 'Heavy Mess'}
-        </Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.testButton, { top: 120, backgroundColor: 'rgba(0, 150, 0, 0.8)' }]}
-        onPress={testDailyReset}
-      >
-        <Text style={styles.testButtonText}>
-          TEST: Daily Reset
-        </Text>
-        <Text style={styles.testButtonSubtext}>
-          Decay mess & reset day
-        </Text>
-      </TouchableOpacity>
       
       {/* SCROLLABLE CONTENT AREA - Inside orange theme background */}
       <ScrollView 
@@ -512,14 +524,14 @@ export default function HomeScreen() {
                 {/* Water Button - Only when NOT in any active mode */}
                 <WaterButton 
                   waterGlasses={waterGlasses}
-                  onPress={handleDrinkWater}
+                  onPress={handleDrinkWaterWithReset}
                 />
                 
                 {/* Meal Button - Only when NOT in any active mode */}
                 <MealButton 
                   mealsLogged={mealsLogged}
                   portionDescription={portionDescription}
-                  onPress={handleLogMeal}
+                  onPress={handleLogMealWithReset}
                 />
                 
                 {/* Exercise Button - Only when exercise habit is enabled */}
@@ -527,8 +539,8 @@ export default function HomeScreen() {
                   <ExerciseButton 
                     isExercising={false}
                     exerciseDisplay={exerciseDisplay}
-                    onStartExercise={() => handleStartExercise('walk')}
-                    onFinishExercise={handleFinishExercise}
+                    onStartExercise={() => handleStartExerciseWithReset('walk')}
+                    onFinishExercise={handleFinishExerciseWithReset}
                   />
                 )}
                 
@@ -542,8 +554,8 @@ export default function HomeScreen() {
                 <SleepButton 
                   isSleeping={false}
                   sleepDisplay={sleepDisplay}
-                  onSleep={handleSleepButton}
-                  onWakeUp={handleWakeUpButton}
+                  onSleep={handleSleepButtonWithReset}
+                  onWakeUp={handleWakeUpButtonWithReset}
                 />
               </>
             ) : isSleeping ? (
@@ -552,8 +564,8 @@ export default function HomeScreen() {
                 <SleepButton 
                   isSleeping={true}
                   sleepDisplay={sleepDisplay}
-                  onSleep={handleSleepButton}
-                  onWakeUp={handleWakeUpButton}
+                  onSleep={handleSleepButtonWithReset}
+                  onWakeUp={handleWakeUpButtonWithReset}
                 />
               </>
             ) : isExercising ? (
@@ -562,8 +574,8 @@ export default function HomeScreen() {
                 <ExerciseButton 
                   isExercising={true}
                   exerciseDisplay={exerciseDisplay}
-                  onStartExercise={() => handleStartExercise('walk')}
-                  onFinishExercise={handleFinishExercise}
+                  onStartExercise={() => handleStartExerciseWithReset('walk')}
+                  onFinishExercise={handleFinishExerciseWithReset}
                 />
               </>
             ) : isCleaning ? (
@@ -703,26 +715,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     zIndex: 8,
   },
-  // TEMPORARY TEST STYLES - Remove after testing
-  testButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    backgroundColor: 'rgba(255, 0, 0, 0.8)',
-    padding: 10,
-    borderRadius: 8,
-    zIndex: 100,
-  },
-  testButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  testButtonSubtext: {
-    color: '#FFF',
-    fontSize: 10,
-    marginTop: 2,
-  },
+
   // Cleaning tap overlay - only when cleaning
   cleaningTapOverlay: {
     position: 'absolute',

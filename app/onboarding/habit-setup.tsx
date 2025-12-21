@@ -60,8 +60,6 @@ const HABIT_OPTIONS = [
 export default function HabitSetupScreen() {
   const router = useRouter();
   const setHabits = useQuillbyStore((state) => state.setHabits);
-  const setWeightGoal = useQuillbyStore((state) => state.setWeightGoal);
-  const setStudyGoal = useQuillbyStore((state) => state.setStudyGoal);
 
   // Initialize all habits with their default states
   const [habits, setHabitsState] = useState(
@@ -70,13 +68,6 @@ export default function HabitSetupScreen() {
       enabled: habit.enabledByDefault
     }))
   );
-
-  // Weight goal state (only shown when meals habit is enabled)
-  const [weightGoal, setWeightGoalState] = useState<'lose' | 'maintain' | 'gain'>('maintain');
-
-  // Study goal state (only shown when study habit is enabled)
-  const [studyGoalHours, setStudyGoalHours] = useState<number>(3);
-  const [checkpoints, setCheckpoints] = useState<string[]>(['12 PM', '6 PM', '9 PM']); // Default: lunch, evening, end of day
 
   // Load custom fonts
   const [fontsLoaded] = useFonts({
@@ -104,63 +95,16 @@ export default function HabitSetupScreen() {
     );
   };
 
-  const toggleCheckpoint = (timeLabel: string) => {
-    setCheckpoints(prev => 
-      prev.includes(timeLabel) 
-        ? prev.filter(t => t !== timeLabel)
-        : [...prev, timeLabel].sort((a, b) => {
-          // Sort by time order (9 AM, 12 PM, 3 PM, 6 PM, 9 PM)
-          const timeOrder = ['9 AM', '12 PM', '3 PM', '6 PM', '9 PM'];
-          return timeOrder.indexOf(a) - timeOrder.indexOf(b);
-        })
-    );
-  };
-
-  const STUDY_GOAL_OPTIONS = [
-    { hours: 1, label: '1 hour/day', description: 'Light' },
-    { hours: 2, label: '2 hours/day', description: 'Moderate' },
-    { hours: 3, label: '3 hours/day', description: 'Standard (recommended)' },
-    { hours: 4, label: '4 hours/day', description: 'Intensive' },
-  ];
-
-  const CHECKPOINT_OPTIONS = [
-    { label: '9 AM', description: 'Morning start' },
-    { label: '12 PM', description: 'Lunch check' },
-    { label: '3 PM', description: 'Afternoon' },
-    { label: '6 PM', description: 'Evening' },
-    { label: '9 PM', description: 'End of day' },
-  ];
-
-  const handleCompleteSetup = () => {
+  const handleNext = () => {
     // Save selected habits to store
     const selectedHabits = habits.filter(h => h.enabled).map(h => h.id);
     setHabits(selectedHabits);
     
-    // Save weight goal if meals habit is enabled
-    const mealsEnabled = habits.find(h => h.id === 'meals')?.enabled;
-    if (mealsEnabled) {
-      setWeightGoal(weightGoal);
-    }
-    
-    // Save study goal if study habit is enabled
-    const studyEnabled = habits.find(h => h.id === 'study')?.enabled;
-    if (studyEnabled) {
-      setStudyGoal(studyGoalHours, checkpoints);
-    }
-    
     console.log('[Onboarding] Habits selected:', selectedHabits);
-    console.log('[Onboarding] Weight goal:', mealsEnabled ? weightGoal : 'N/A');
-    console.log('[Onboarding] Complete! Navigating to main app...');
     
-    // Navigate to main app with tabs
-    router.replace('/(tabs)');
+    // Navigate to goal setup screen
+    router.push('/onboarding/goal-setup');
   };
-
-  // Check if meals habit is enabled
-  const isMealsEnabled = habits.find(h => h.id === 'meals')?.enabled || false;
-  
-  // Check if study habit is enabled
-  const isStudyEnabled = habits.find(h => h.id === 'study')?.enabled || false;
 
   return (
     <ImageBackground
@@ -183,24 +127,35 @@ export default function HabitSetupScreen() {
         {/* Habit Cards */}
         <View style={styles.habitsContainer}>
           {habits.map((habit) => (
-            <View 
-              key={habit.id} 
+            <TouchableOpacity
+              key={habit.id}
+              activeOpacity={0.7}
+              onPress={() => toggleHabit(habit.id)}
               style={[
                 styles.habitCard,
-                habit.id === 'study' && styles.studyCard // Highlight core habit
+                habit.id === 'study' && styles.studyCard,
+                habit.enabled && styles.habitCardEnabled,
               ]}
             >
               {/* Left: Icon and Text */}
               <View style={styles.habitInfo}>
                 <Text style={styles.habitIcon}>{habit.icon}</Text>
                 <View style={styles.habitTextContainer}>
-                  <Text style={styles.habitTitle}>
+                  <Text style={[
+                    styles.habitTitle,
+                    habit.enabled && styles.habitTitleEnabled
+                  ]}>
                     {habit.title}
                     {habit.id === 'study' && (
                       <Text style={styles.coreLabel}> (Core)</Text>
                     )}
                   </Text>
-                  <Text style={styles.habitDescription}>{habit.description}</Text>
+                  <Text style={[
+                    styles.habitDescription,
+                    habit.enabled && styles.habitDescriptionEnabled
+                  ]}>
+                    {habit.description}
+                  </Text>
                 </View>
               </View>
 
@@ -208,141 +163,20 @@ export default function HabitSetupScreen() {
               <Switch
                 value={habit.enabled}
                 onValueChange={() => toggleHabit(habit.id)}
-                trackColor={{ false: '#CCCCCC', true: '#4CAF50' }}
+                trackColor={{ false: '#DDD', true: '#4CAF50' }}
                 thumbColor="#FFFFFF"
-                ios_backgroundColor="#CCCCCC"
+                ios_backgroundColor="#DDD"
               />
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
-        {/* Weight Goal Selection - Only show when meals habit is enabled */}
-        {isMealsEnabled && (
-          <View style={styles.weightGoalCard}>
-            <Text style={styles.weightGoalTitle}>🍽️ Your Weight Goal</Text>
-            <Text style={styles.weightGoalSubtitle}>(Affects meal portion sizes)</Text>
-            
-            <View style={styles.weightGoalContainer}>
-              <TouchableOpacity
-                style={[styles.goalButton, weightGoal === 'lose' && styles.goalButtonSelected]}
-                onPress={() => setWeightGoalState('lose')}
-              >
-                <View style={styles.goalButtonContent}>
-                  <Text style={[styles.goalButtonText, weightGoal === 'lose' && styles.goalButtonTextSelected]}>
-                    📉 Lose Weight
-                  </Text>
-                  <Text style={[styles.goalSubtext, weightGoal === 'lose' && styles.goalSubtextSelected]}>
-                    3 small meals/day
-                  </Text>
-                </View>
-                {weightGoal === 'lose' && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.goalButton, weightGoal === 'maintain' && styles.goalButtonSelected]}
-                onPress={() => setWeightGoalState('maintain')}
-              >
-                <View style={styles.goalButtonContent}>
-                  <Text style={[styles.goalButtonText, weightGoal === 'maintain' && styles.goalButtonTextSelected]}>
-                    ⚖️ Maintain
-                  </Text>
-                  <Text style={[styles.goalSubtext, weightGoal === 'maintain' && styles.goalSubtextSelected]}>
-                    3 normal meals/day
-                  </Text>
-                </View>
-                {weightGoal === 'maintain' && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.goalButton, weightGoal === 'gain' && styles.goalButtonSelected]}
-                onPress={() => setWeightGoalState('gain')}
-              >
-                <View style={styles.goalButtonContent}>
-                  <Text style={[styles.goalButtonText, weightGoal === 'gain' && styles.goalButtonTextSelected]}>
-                    📈 Gain Weight
-                  </Text>
-                  <Text style={[styles.goalSubtext, weightGoal === 'gain' && styles.goalSubtextSelected]}>
-                    3 large meals/day
-                  </Text>
-                </View>
-                {weightGoal === 'gain' && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Study Goal Configuration - Only show when study habit is enabled */}
-        {isStudyEnabled && (
-          <View style={styles.studyGoalCard}>
-            <Text style={styles.studyGoalTitle}>📚 Daily Study Goal</Text>
-            <Text style={styles.studyGoalSubtitle}>(Affects accountability checkpoints)</Text>
-            
-            {/* Study Hours Selection */}
-            <View style={styles.studyHoursContainer}>
-              {STUDY_GOAL_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.hours}
-                  style={[styles.studyHourButton, studyGoalHours === option.hours && styles.studyHourButtonSelected]}
-                  onPress={() => setStudyGoalHours(option.hours)}
-                >
-                  <View style={styles.studyHourButtonContent}>
-                    <Text style={[styles.studyHourButtonText, studyGoalHours === option.hours && styles.studyHourButtonTextSelected]}>
-                      {option.label}
-                    </Text>
-                    <Text style={[styles.studyHourSubtext, studyGoalHours === option.hours && styles.studyHourSubtextSelected]}>
-                      {option.description}
-                    </Text>
-                  </View>
-                  {studyGoalHours === option.hours && (
-                    <Text style={styles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Checkpoint Times Selection */}
-            <Text style={styles.checkpointTitle}>Check-in Times (choose one or more):</Text>
-            <View style={styles.checkpointsContainer}>
-              {CHECKPOINT_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.label}
-                  style={[styles.checkpointButton, checkpoints.includes(option.label) && styles.checkpointButtonSelected]}
-                  onPress={() => toggleCheckpoint(option.label)}
-                >
-                  <View style={styles.checkpointButtonContent}>
-                    <Text style={[styles.checkpointButtonText, checkpoints.includes(option.label) && styles.checkpointButtonTextSelected]}>
-                      {option.label}
-                    </Text>
-                    <Text style={[styles.checkpointSubtext, checkpoints.includes(option.label) && styles.checkpointSubtextSelected]}>
-                      {option.description}
-                    </Text>
-                  </View>
-                  {checkpoints.includes(option.label) && (
-                    <Text style={styles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Note */}
-        <Text style={styles.note}>
-          💡 You can change these anytime in settings
-        </Text>
-
-        {/* Complete Button */}
+        {/* Next Button */}
         <TouchableOpacity
-          style={styles.completeButton}
-          onPress={handleCompleteSetup}
+          style={styles.nextButton}
+          onPress={handleNext}
         >
-          <Text style={styles.completeButtonText}>Complete Setup 🎉</Text>
+          <Text style={styles.nextButtonText}>Next →</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -395,25 +229,31 @@ const styles = StyleSheet.create({
   },
   // Habit Card
   habitCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: 'rgba(245, 245, 245, 0.95)',
     borderRadius: 16,
     padding: SCREEN_WIDTH * 0.04,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#EEE',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  // Study card (core habit) - special styling
-  studyCard: {
-    borderColor: '#4CAF50',
     borderWidth: 2,
-    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  habitCardEnabled: {
+    borderColor: '#4CAF50',
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  // Study card (core habit) - no special styling, follows same pattern as others
+  studyCard: {
+    // Removed special styling - will use habitCardEnabled style instead
   },
   habitInfo: {
     flexDirection: 'row',
@@ -431,8 +271,11 @@ const styles = StyleSheet.create({
   habitTitle: {
     fontFamily: 'ChakraPetch_600SemiBold',
     fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
+    color: '#888',
     marginBottom: SCREEN_HEIGHT * 0.005,
+  },
+  habitTitleEnabled: {
+    color: '#333',
   },
   coreLabel: {
     fontFamily: 'ChakraPetch_600SemiBold',
@@ -442,24 +285,19 @@ const styles = StyleSheet.create({
   habitDescription: {
     fontFamily: 'ChakraPetch_400Regular',
     fontSize: SCREEN_WIDTH * 0.032,
-    color: '#666',
+    color: '#AAA',
     lineHeight: SCREEN_WIDTH * 0.04,
   },
-  // Note
-  note: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.035,
+  habitDescriptionEnabled: {
     color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginBottom: SCREEN_HEIGHT * 0.03,
   },
-  // Complete Button
-  completeButton: {
+  // Next Button
+  nextButton: {
     backgroundColor: '#4CAF50',
     paddingVertical: SCREEN_HEIGHT * 0.022,
     borderRadius: 16,
     alignItems: 'center',
+    marginTop: SCREEN_HEIGHT * 0.02,
     marginBottom: SCREEN_HEIGHT * 0.02,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -467,191 +305,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  completeButtonText: {
+  nextButtonText: {
     fontFamily: 'ChakraPetch_600SemiBold',
     color: '#FFF',
     fontSize: SCREEN_WIDTH * 0.05,
-  },
-  // Weight Goal Styles
-  weightGoalCard: {
-    backgroundColor: 'rgba(255, 152, 0, 0.1)',
-    borderRadius: 16,
-    padding: SCREEN_WIDTH * 0.04,
-    marginBottom: SCREEN_HEIGHT * 0.025,
-    borderWidth: 2,
-    borderColor: '#FF9800',
-  },
-  weightGoalTitle: {
-    fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: SCREEN_WIDTH * 0.045,
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.005,
-  },
-  weightGoalSubtitle: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.032,
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginBottom: SCREEN_HEIGHT * 0.02,
-  },
-  weightGoalContainer: {
-    flexDirection: 'row',
-    gap: SCREEN_WIDTH * 0.02,
-  },
-  goalButton: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderWidth: 2,
-    borderColor: '#DDD',
-    borderRadius: 12,
-    padding: SCREEN_WIDTH * 0.03,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  goalButtonSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
-  },
-  goalButtonContent: {
-    alignItems: 'center',
-  },
-  goalButtonText: {
-    fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  goalButtonTextSelected: {
-    color: '#2E7D32',
-  },
-  goalSubtext: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.025,
-    color: '#999',
-    textAlign: 'center',
-  },
-  goalSubtextSelected: {
-    color: '#4CAF50',
-  },
-  checkmark: {
-    position: 'absolute',
-    top: SCREEN_WIDTH * 0.01,
-    right: SCREEN_WIDTH * 0.01,
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#4CAF50',
-    fontWeight: 'bold',
-  },
-  // Study Goal Styles
-  studyGoalCard: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    borderRadius: 16,
-    padding: SCREEN_WIDTH * 0.04,
-    marginBottom: SCREEN_HEIGHT * 0.025,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-  },
-  studyGoalTitle: {
-    fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: SCREEN_WIDTH * 0.045,
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.005,
-  },
-  studyGoalSubtitle: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.032,
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginBottom: SCREEN_HEIGHT * 0.02,
-  },
-  studyHoursContainer: {
-    gap: SCREEN_HEIGHT * 0.01,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-  },
-  studyHourButton: {
-    backgroundColor: '#F5F5F5',
-    borderWidth: 2,
-    borderColor: '#DDD',
-    borderRadius: 12,
-    padding: SCREEN_WIDTH * 0.03,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-  },
-  studyHourButtonSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
-  },
-  studyHourButtonContent: {
-    flex: 1,
-  },
-  studyHourButtonText: {
-    fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: SCREEN_WIDTH * 0.038,
-    color: '#666',
-    marginBottom: 2,
-  },
-  studyHourButtonTextSelected: {
-    color: '#2E7D32',
-  },
-  studyHourSubtext: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.028,
-    color: '#999',
-  },
-  studyHourSubtextSelected: {
-    color: '#4CAF50',
-  },
-  checkpointTitle: {
-    fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: SCREEN_WIDTH * 0.038,
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.015,
-  },
-  checkpointsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SCREEN_WIDTH * 0.02,
-  },
-  checkpointButton: {
-    backgroundColor: '#F5F5F5',
-    borderWidth: 2,
-    borderColor: '#DDD',
-    borderRadius: 12,
-    padding: SCREEN_WIDTH * 0.025,
-    width: '48%',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  checkpointButtonSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
-  },
-  checkpointButtonContent: {
-    alignItems: 'center',
-  },
-  checkpointButtonText: {
-    fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: SCREEN_WIDTH * 0.032,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  checkpointButtonTextSelected: {
-    color: '#2E7D32',
-  },
-  checkpointSubtext: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.025,
-    color: '#999',
-    textAlign: 'center',
-  },
-  checkpointSubtextSelected: {
-    color: '#4CAF50',
   },
 });

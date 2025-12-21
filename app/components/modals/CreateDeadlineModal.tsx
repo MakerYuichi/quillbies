@@ -13,7 +13,8 @@ import {
   ImageBackground
 } from 'react-native';
 import { DeadlineFormData, Deadline } from '../../core/types';
-import { CustomDatePicker, CustomTimePicker } from '../ui';
+import CustomDatePicker from '../ui/CustomDatePicker';
+import CustomTimePicker from '../ui/CustomTimePicker';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -178,7 +179,7 @@ export default function CreateDeadlineModal({
     >
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
       <ImageBackground
-        source={require('../../assets/backgrounds/theme.png')}
+        source={require('../../../assets/backgrounds/theme.png')}
         style={styles.container}
         resizeMode="cover"
       >

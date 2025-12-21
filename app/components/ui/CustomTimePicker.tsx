@@ -77,8 +77,8 @@ export default function CustomTimePicker({ visible, onClose, onTimeSelect, initi
   };
 
   const formatDisplayTime = () => {
-    const displayHour = selectedHour.toString().padStart(2, '0');
-    const displayMinute = selectedMinute.toString().padStart(2, '0');
+    const displayHour = (selectedHour || 12).toString().padStart(2, '0');
+    const displayMinute = (selectedMinute || 0).toString().padStart(2, '0');
     return `${displayHour}:${displayMinute} ${selectedPeriod}`;
   };
 
@@ -86,7 +86,7 @@ export default function CustomTimePicker({ visible, onClose, onTimeSelect, initi
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <ImageBackground
-          source={require('../../assets/backgrounds/bluebg.png')}
+          source={require('../../../assets/backgrounds/bluebg.png')}
           style={styles.container}
           resizeMode="cover"
         >

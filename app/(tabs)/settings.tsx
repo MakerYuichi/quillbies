@@ -1,56 +1,90 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ImageBackground, TextInput, Modal, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import ChangeHamsterModal from '../components/modals/ChangeHamsterModal';
+import ChangeNameModal from '../components/modals/ChangeNameModal';
+import ManageHabitsModal from '../components/modals/ManageHabitsModal';
+import EditGoalsModal from '../components/modals/EditGoalsModal';
+import EditProfileModal from '../components/modals/EditProfileModal';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { 
     userData, 
-    resetDay, 
-    setBuddyName, 
-    setProfile, 
     setCharacter, 
-    setHabits, 
-    setStudyGoal, 
-    setWeightGoal 
+    setBuddyName,
+    setProfile,
+    setHabits,
+    setStudyGoal,
+    setExerciseGoal,
+    setHydrationGoal,
+    setWeightGoal,
+    setSleepGoal,
   } = useQuillbyStore();
-
+  
   // Modal states
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showHamsterModal, setShowHamsterModal] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
   const [showHabitsModal, setShowHabitsModal] = useState(false);
-  const [showStudyModal, setShowStudyModal] = useState(false);
-  const [showCharacterModal, setShowCharacterModal] = useState(false);
+  const [showGoalsModal, setShowGoalsModal] = useState(false);
 
-  // Form states
-  const [tempUserName, setTempUserName] = useState(userData.userName || '');
-  const [tempBuddyName, setTempBuddyName] = useState(userData.buddyName || '');
-  const [tempStudentLevel, setTempStudentLevel] = useState(userData.studentLevel || 'university');
-  const [tempCountry, setTempCountry] = useState(userData.country || '');
-  const [tempTimezone, setTempTimezone] = useState(userData.timezone || '');
-  const [tempStudyHours, setTempStudyHours] = useState(userData.studyGoalHours?.toString() || '2');
-  const [tempHabits, setTempHabits] = useState(userData.enabledHabits || []);
-  const [tempCheckpoints, setTempCheckpoints] = useState(userData.studyCheckpoints || []);
-  
   const buddyName = userData.buddyName || 'Quillby';
-  const userName = userData.userName || 'Friend';
-  const studentLevel = userData.studentLevel || 'Not set';
-  const country = userData.country || 'Not set';
-  const timezone = userData.timezone || 'Not set';
+  const currentCharacter = userData.selectedCharacter || 'casual';
+  const enabledHabits = userData.enabledHabits || ['study'];
 
-  const availableHabits = [
-    { id: 'study', name: 'Study Sessions', icon: '📚' },
-    { id: 'hydration', name: 'Water Tracking', icon: '💧' },
-    { id: 'meals', name: 'Meal Logging', icon: '🍽️' },
-    { id: 'sleep', name: 'Sleep Tracking', icon: '😴' },
-    { id: 'exercise', name: 'Exercise', icon: '🏃' },
-  ];
+  const handleChangeHamster = (character: string) => {
+    setCharacter(character);
+    Alert.alert('Success', 'Hamster changed successfully!');
+  };
 
-  const availableCheckpoints = ['9 AM', '12 PM', '3 PM', '6 PM', '9 PM'];
-  const studentLevels = ['highschool', 'university', 'graduate', 'learner'];
-  const characters = ['casual', 'energetic', 'scholar'];
+  const handleChangeName = (name: string) => {
+    setBuddyName(name);
+    Alert.alert('Success', 'Buddy name updated!');
+  };
+
+  const handleSaveProfile = (profile: {
+    userName: string;
+    buddyName: string;
+    studentLevel: string;
+    country: string;
+    timezone: string;
+  }) => {
+    setBuddyName(profile.buddyName);
+    setProfile(profile.userName, profile.studentLevel, profile.country, profile.timezone);
+    Alert.alert('Success', 'Profile updated!');
+  };
+
+  const handleSaveHabits = (habits: string[]) => {
+    setHabits(habits);
+    Alert.alert('Success', 'Habits updated!');
+  };
+
+  const handleSaveGoals = (goals: {
+    studyHours?: number;
+    exerciseMinutes?: number;
+    hydrationGlasses?: number;
+    weightGoal?: 'lose' | 'maintain' | 'gain';
+    sleepHours?: number;
+  }) => {
+    if (goals.studyHours !== undefined) {
+      setStudyGoal(goals.studyHours, userData.studyCheckpoints || ['12 PM', '6 PM', '9 PM']);
+    }
+    if (goals.exerciseMinutes !== undefined) {
+      setExerciseGoal(goals.exerciseMinutes);
+    }
+    if (goals.hydrationGlasses !== undefined) {
+      setHydrationGoal(goals.hydrationGlasses);
+    }
+    if (goals.weightGoal !== undefined) {
+      setWeightGoal(goals.weightGoal);
+    }
+    if (goals.sleepHours !== undefined) {
+      setSleepGoal(goals.sleepHours);
+    }
+    Alert.alert('Success', 'Goals updated!');
+  };
 
   const handleResetOnboarding = () => {
     Alert.alert(
@@ -67,83 +101,26 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleSaveProfile = () => {
-    setBuddyName(tempBuddyName);
-    setProfile(tempUserName, tempStudentLevel, tempCountry, tempTimezone);
-    setShowProfileModal(false);
-    Alert.alert('Success', 'Profile updated successfully!');
-  };
-
-  const handleSaveHabits = () => {
-    setHabits(tempHabits);
-    setShowHabitsModal(false);
-    Alert.alert('Success', 'Habits updated successfully!');
-  };
-
-  const handleSaveStudyGoal = () => {
-    const hours = parseInt(tempStudyHours);
-    if (hours >= 1 && hours <= 8) {
-      setStudyGoal(hours, tempCheckpoints);
-      setShowStudyModal(false);
-      Alert.alert('Success', 'Study goal updated successfully!');
-    } else {
-      Alert.alert('Error', 'Study hours must be between 1 and 8.');
-    }
-  };
-
-  const toggleHabit = (habitId: string) => {
-    if (tempHabits.includes(habitId)) {
-      setTempHabits(tempHabits.filter(h => h !== habitId));
-    } else {
-      setTempHabits([...tempHabits, habitId]);
-    }
-  };
-
-  const toggleCheckpoint = (checkpoint: string) => {
-    if (tempCheckpoints.includes(checkpoint)) {
-      setTempCheckpoints(tempCheckpoints.filter(c => c !== checkpoint));
-    } else {
-      setTempCheckpoints([...tempCheckpoints, checkpoint]);
-    }
-  };
-
-  const handleCharacterSelect = (character: string) => {
-    setCharacter(character);
-    setShowCharacterModal(false);
-    Alert.alert('Success', `Character changed to ${character}!`);
-  };
-
-  const handleDataReset = () => {
-    Alert.alert(
-      'Reset All Data',
-      'This will permanently delete all your progress, habits, and settings. This cannot be undone!',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'DELETE ALL', 
-          style: 'destructive',
-          onPress: () => {
-            // Reset to initial state
-            const { initializeUser } = useQuillbyStore.getState();
-            initializeUser();
-            Alert.alert('Reset Complete', 'All data has been reset to defaults.');
-          }
-        }
-      ]
-    );
-  };
-
   return (
     <ImageBackground
       source={require('../../assets/backgrounds/theme.png')}
       style={styles.background}
       resizeMode="cover"
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>⚙️ Settings</Text>
-          <Text style={styles.subtitle}>Customize your Quillby experience</Text>
+          <Text style={styles.headerTitle}>⚙️ Settings</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statBadge}>
+              <Text style={styles.statBadgeValue}>{userData.qCoins}</Text>
+              <Text style={styles.statBadgeLabel}>Coins</Text>
+            </View>
+            <View style={styles.statBadge}>
+              <Text style={styles.statBadgeValue}>{userData.currentStreak}</Text>
+              <Text style={styles.statBadgeLabel}>Streak</Text>
+            </View>
+          </View>
         </View>
 
         {/* Profile Section */}
@@ -152,490 +129,237 @@ export default function SettingsScreen() {
             <Text style={styles.sectionTitle}>👤 Profile</Text>
             <TouchableOpacity 
               style={styles.editButton}
-              onPress={() => {
-                setTempUserName(userData.userName || '');
-                setTempBuddyName(userData.buddyName || '');
-                setTempStudentLevel(userData.studentLevel || 'university');
-                setTempCountry(userData.country || '');
-                setTempTimezone(userData.timezone || '');
-                setShowProfileModal(true);
-              }}
+              onPress={() => setShowProfileModal(true)}
             >
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Your Name:</Text>
-              <Text style={styles.infoValue}>{userName}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Buddy Name:</Text>
-              <Text style={styles.infoValue}>{buddyName}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Student Level:</Text>
-              <Text style={styles.infoValue}>{studentLevel}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Country:</Text>
-              <Text style={styles.infoValue}>{country}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Timezone:</Text>
-              <Text style={styles.infoValue}>{timezone}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Character Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🐹 Character</Text>
-            <TouchableOpacity 
-              style={styles.editButton}
-              onPress={() => setShowCharacterModal(true)}
-            >
-              <Text style={styles.editButtonText}>Change</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.infoCard}>
-            <View style={styles.characterDisplay}>
-              <Text style={styles.characterName}>
-                {userData.selectedCharacter || 'casual'} hamster
-              </Text>
-              <Text style={styles.characterDescription}>
-                {userData.selectedCharacter === 'energetic' ? '⚡ High-energy and enthusiastic' :
-                 userData.selectedCharacter === 'scholar' ? '📚 Studious and focused' :
-                 '😊 Friendly and balanced'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Habits Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>✅ Habits</Text>
-            <TouchableOpacity 
-              style={styles.editButton}
-              onPress={() => {
-                setTempHabits(userData.enabledHabits || []);
-                setShowHabitsModal(true);
-              }}
-            >
-              <Text style={styles.editButtonText}>Manage</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.infoCard}>
-            {userData.enabledHabits && userData.enabledHabits.length > 0 ? (
-              userData.enabledHabits.map((habit, index) => {
-                const habitInfo = availableHabits.find(h => h.id === habit);
-                return (
-                  <View key={index} style={styles.habitRow}>
-                    <Text style={styles.habitIcon}>{habitInfo?.icon || '✅'}</Text>
-                    <Text style={styles.habitText}>
-                      {habitInfo?.name || habit.charAt(0).toUpperCase() + habit.slice(1)}
-                    </Text>
-                  </View>
-                );
-              })
-            ) : (
-              <Text style={styles.habitText}>No habits enabled</Text>
-            )}
-          </View>
-        </View>
-
-        {/* Study Goals Section */}
-        {userData.enabledHabits?.includes('study') && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>📚 Study Goals</Text>
-              <TouchableOpacity 
-                style={styles.editButton}
-                onPress={() => {
-                  setTempStudyHours(userData.studyGoalHours?.toString() || '2');
-                  setTempCheckpoints(userData.studyCheckpoints || []);
-                  setShowStudyModal(true);
-                }}
-              >
-                <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Daily Goal:</Text>
-                <Text style={styles.infoValue}>{userData.studyGoalHours || 0} hours</Text>
+          <View style={styles.profileCard}>
+            {/* User Avatar and Name */}
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {(userData.userName || 'Student').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.buddyBadge}>
+                  <Text style={styles.buddyBadgeText}>🐹</Text>
+                </View>
               </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Checkpoints:</Text>
-                <Text style={styles.infoValue}>
-                  {userData.studyCheckpoints?.length || 0} selected
+              <View style={styles.profileHeaderInfo}>
+                <Text style={styles.profileHeaderName}>{userData.userName || 'Student'}</Text>
+                <Text style={styles.profileHeaderSubtitle}>
+                  🐹 Buddy: <Text style={styles.buddyNameText}>{buddyName}</Text>
                 </Text>
               </View>
-              {userData.studyCheckpoints && userData.studyCheckpoints.length > 0 && (
-                <View style={styles.checkpointsList}>
-                  {userData.studyCheckpoints.map((checkpoint, index) => (
-                    <Text key={index} style={styles.checkpointText}>
-                      🕐 {checkpoint}
-                    </Text>
-                  ))}
+            </View>
+
+            {/* Profile Details */}
+            <View style={styles.profileDetails}>
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconContainer}>
+                  <Text style={styles.detailIcon}>🎓</Text>
                 </View>
-              )}
-            </View>
-          </View>
-        )}
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Student Level</Text>
+                  <Text style={styles.detailValue}>{userData.studentLevel || 'University'}</Text>
+                </View>
+              </View>
 
-        {/* Weight Goal Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⚖️ Weight Goal</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.weightGoalContainer}>
-              {(['lose', 'maintain', 'gain'] as const).map((goal) => (
-                <TouchableOpacity
-                  key={goal}
-                  style={[
-                    styles.weightGoalButton,
-                    userData.weightGoal === goal && styles.weightGoalButtonActive
-                  ]}
-                  onPress={() => setWeightGoal(goal)}
-                >
-                  <Text style={[
-                    styles.weightGoalText,
-                    userData.weightGoal === goal && styles.weightGoalTextActive
-                  ]}>
-                    {goal === 'lose' ? '📉 Lose' :
-                     goal === 'maintain' ? '➡️ Maintain' :
-                     '📈 Gain'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconContainer}>
+                  <Text style={styles.detailIcon}>🌍</Text>
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Country</Text>
+                  <Text style={styles.detailValue}>{userData.country || 'Global'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconContainer}>
+                  <Text style={styles.detailIcon}>🕐</Text>
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Timezone</Text>
+                  <Text style={styles.detailValue}>{userData.timezone || 'Not set'}</Text>
+                </View>
+              </View>
             </View>
-            <Text style={styles.weightGoalDescription}>
-              Portion size: {userData.weightGoal === 'lose' ? '70% (smaller)' :
-                           userData.weightGoal === 'gain' ? '130% (larger)' :
-                           '100% (normal)'}
-            </Text>
           </View>
         </View>
 
-        {/* Shop Testing */}
+        {/* Customization Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>�️A Shop Testing</Text>
+          <Text style={styles.sectionTitle}>🎨 Customization</Text>
+          
           <TouchableOpacity 
-            style={[styles.button, styles.testButton]} 
-            onPress={() => {
-              const { userData } = useQuillbyStore.getState();
-              useQuillbyStore.setState({
-                userData: {
-                  ...userData,
-                  qCoins: userData.qCoins + 100
-                }
-              });
-              Alert.alert('Test Coins Added! 🪙', `Added 100 Q-Coins!\nTotal: ${userData.qCoins + 100} coins\n\nNow go to the Shop tab to test purchases!`);
-            }}
+            style={styles.settingButton}
+            onPress={() => setShowHamsterModal(true)}
           >
-            <Text style={styles.buttonText}>🪙 Add 100 Test Q-Coins</Text>
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>🐹</Text>
+              <View>
+                <Text style={styles.settingTitle}>Change Hamster</Text>
+                <Text style={styles.settingSubtitle}>Current: {currentCharacter}</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
           </TouchableOpacity>
+
           <TouchableOpacity 
-            style={[styles.button, styles.testButton]} 
-            onPress={() => {
-              const { userData, updateRoomCustomization } = useQuillbyStore.getState();
-              // Toggle between lamp and fairy lights
-              const newLight = userData.roomCustomization?.lightType === 'lamp' ? 'fairy-lights' : 'lamp';
-              updateRoomCustomization(newLight, undefined);
-              Alert.alert('Light Toggled! ✨', `Changed to: ${newLight === 'fairy-lights' ? 'Fairy Lights' : 'Lamp'}\n\nCheck your room on the Home screen!`);
-            }}
+            style={styles.settingButton}
+            onPress={() => setShowNameModal(true)}
           >
-            <Text style={styles.buttonText}>✨ Toggle Room Light</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.button, styles.testButton]} 
-            onPress={() => {
-              const { userData, updateRoomCustomization } = useQuillbyStore.getState();
-              // Cycle through plant types
-              const currentPlant = userData.roomCustomization?.plantType || 'plant';
-              const nextPlant = currentPlant === 'plant' ? 'plant2' : 
-                              currentPlant === 'plant2' ? 'plant3' : 'plant';
-              updateRoomCustomization(undefined, nextPlant);
-              const plantNames = { plant: 'Basic Plant', plant2: 'Succulent', plant3: 'Flowering Plant' };
-              Alert.alert('Plant Changed! 🌿', `Changed to: ${plantNames[nextPlant as keyof typeof plantNames]}\n\nCheck your room on the Home screen!`);
-            }}
-          >
-            <Text style={styles.buttonText}>🌿 Cycle Room Plants</Text>
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>✏️</Text>
+              <View>
+                <Text style={styles.settingTitle}>Change Name</Text>
+                <Text style={styles.settingSubtitle}>{buddyName}</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* App Controls */}
+        {/* Habits & Goals Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔧 App Controls</Text>
-          <TouchableOpacity style={styles.button} onPress={resetDay}>
-            <Text style={styles.buttonText}>🔄 Reset Daily Progress</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>🎯 Habits & Goals</Text>
+          
           <TouchableOpacity 
-            style={[styles.button, styles.warningButton]} 
+            style={styles.settingButton}
+            onPress={() => setShowHabitsModal(true)}
+          >
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>📋</Text>
+              <View>
+                <Text style={styles.settingTitle}>Manage Habits</Text>
+                <Text style={styles.settingSubtitle}>
+                  {enabledHabits.length} habits enabled
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingButton}
+            onPress={() => setShowGoalsModal(true)}
+          >
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>🎯</Text>
+              <View>
+                <Text style={styles.settingTitle}>Edit Goals</Text>
+                <Text style={styles.settingSubtitle}>Study, exercise, sleep targets</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👤 Account</Text>
+          
+          <TouchableOpacity 
+            style={styles.settingButton}
+            onPress={() => router.push('/onboarding/tutorial')}
+          >
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>📖</Text>
+              <View>
+                <Text style={styles.settingTitle}>View Tutorial</Text>
+                <Text style={styles.settingSubtitle}>Learn how to use Quillby</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.settingButton}
+            onPress={() => router.push('/test-supabase')}
+          >
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>🧪</Text>
+              <View>
+                <Text style={styles.settingTitle}>Test Supabase</Text>
+                <Text style={styles.settingSubtitle}>Verify database connection</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.settingButton}
             onPress={handleResetOnboarding}
           >
-            <Text style={styles.buttonText}>🚀 Restart Onboarding</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.button, styles.dangerButton]} 
-            onPress={handleDataReset}
-          >
-            <Text style={styles.buttonText}>🗑️ Reset All Data</Text>
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>🔄</Text>
+              <View>
+                <Text style={styles.settingTitle}>Reset Onboarding</Text>
+                <Text style={styles.settingSubtitle}>Start fresh setup</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
           </TouchableOpacity>
         </View>
 
         {/* App Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ℹ️ App Information</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Version:</Text>
-              <Text style={styles.infoValue}>1.0.0</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Total Q-Coins:</Text>
-              <Text style={styles.infoValue}>{userData.qCoins}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Current Streak:</Text>
-              <Text style={styles.infoValue}>{userData.currentStreak} days</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Data Storage:</Text>
-              <Text style={styles.infoValue}>Local Device</Text>
-            </View>
-          </View>
+        <View style={styles.appInfo}>
+          <Text style={styles.appInfoText}>Quillby v1.0.0</Text>
+          <Text style={styles.appInfoText}>Made with 💚 for students</Text>
         </View>
-
-        {/* Bottom Spacer */}
-        <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Profile Edit Modal */}
-      <Modal
+      {/* Modals */}
+      <EditProfileModal
         visible={showProfileModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowProfileModal(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
-            <TouchableOpacity onPress={handleSaveProfile}>
-              <Text style={styles.modalSave}>Save</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Your Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={tempUserName}
-                onChangeText={setTempUserName}
-                placeholder="Enter your name"
-              />
-            </View>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Buddy Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={tempBuddyName}
-                onChangeText={setTempBuddyName}
-                placeholder="Enter hamster's name"
-              />
-            </View>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Student Level</Text>
-              <View style={styles.optionGrid}>
-                {studentLevels.map((level) => (
-                  <TouchableOpacity
-                    key={level}
-                    style={[
-                      styles.optionButton,
-                      tempStudentLevel === level && styles.optionButtonActive
-                    ]}
-                    onPress={() => setTempStudentLevel(level)}
-                  >
-                    <Text style={[
-                      styles.optionText,
-                      tempStudentLevel === level && styles.optionTextActive
-                    ]}>
-                      {level.charAt(0).toUpperCase() + level.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Country</Text>
-              <TextInput
-                style={styles.textInput}
-                value={tempCountry}
-                onChangeText={setTempCountry}
-                placeholder="Enter your country"
-              />
-            </View>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Timezone</Text>
-              <TextInput
-                style={styles.textInput}
-                value={tempTimezone}
-                onChangeText={setTempTimezone}
-                placeholder="e.g., UTC+5:30"
-              />
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {/* Character Selection Modal */}
-      <Modal
-        visible={showCharacterModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowCharacterModal(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Choose Character</Text>
-            <View style={styles.modalSpacer} />
-          </View>
-          
-          <View style={styles.modalContent}>
-            {characters.map((character) => (
-              <TouchableOpacity
-                key={character}
-                style={[
-                  styles.characterOption,
-                  userData.selectedCharacter === character && styles.characterOptionActive
-                ]}
-                onPress={() => handleCharacterSelect(character)}
-              >
-                <Text style={styles.characterOptionTitle}>
-                  {character.charAt(0).toUpperCase() + character.slice(1)} Hamster
-                </Text>
-                <Text style={styles.characterOptionDescription}>
-                  {character === 'energetic' ? '⚡ High-energy and enthusiastic companion' :
-                   character === 'scholar' ? '📚 Studious and focused study buddy' :
-                   '😊 Friendly and balanced personality'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Habits Management Modal */}
-      <Modal
+        onClose={() => setShowProfileModal(false)}
+        onSave={handleSaveProfile}
+        currentProfile={{
+          userName: userData.userName,
+          buddyName: buddyName,
+          studentLevel: userData.studentLevel,
+          country: userData.country,
+          timezone: userData.timezone,
+        }}
+      />
+      
+      <ChangeHamsterModal
+        visible={showHamsterModal}
+        onClose={() => setShowHamsterModal(false)}
+        onSelect={handleChangeHamster}
+        currentCharacter={currentCharacter}
+      />
+      
+      <ChangeNameModal
+        visible={showNameModal}
+        onClose={() => setShowNameModal(false)}
+        onSave={handleChangeName}
+        currentName={buddyName}
+      />
+      
+      <ManageHabitsModal
         visible={showHabitsModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowHabitsModal(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Manage Habits</Text>
-            <TouchableOpacity onPress={handleSaveHabits}>
-              <Text style={styles.modalSave}>Save</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.modalContent}>
-            <Text style={styles.modalDescription}>
-              Select which habits you want to track in Quillby:
-            </Text>
-            {availableHabits.map((habit) => (
-              <TouchableOpacity
-                key={habit.id}
-                style={styles.habitOption}
-                onPress={() => toggleHabit(habit.id)}
-              >
-                <View style={styles.habitOptionLeft}>
-                  <Text style={styles.habitOptionIcon}>{habit.icon}</Text>
-                  <Text style={styles.habitOptionName}>{habit.name}</Text>
-                </View>
-                <Switch
-                  value={tempHabits.includes(habit.id)}
-                  onValueChange={() => toggleHabit(habit.id)}
-                  trackColor={{ false: '#E0E0E0', true: '#4CAF50' }}
-                  thumbColor={tempHabits.includes(habit.id) ? '#FFF' : '#FFF'}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Study Goal Modal */}
-      <Modal
-        visible={showStudyModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowStudyModal(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Study Goals</Text>
-            <TouchableOpacity onPress={handleSaveStudyGoal}>
-              <Text style={styles.modalSave}>Save</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Daily Study Goal (hours)</Text>
-              <TextInput
-                style={styles.textInput}
-                value={tempStudyHours}
-                onChangeText={setTempStudyHours}
-                placeholder="2"
-                keyboardType="numeric"
-              />
-            </View>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Study Checkpoints</Text>
-              <Text style={styles.inputDescription}>
-                Select times when you'll be reminded to check your progress:
-              </Text>
-              <View style={styles.checkpointGrid}>
-                {availableCheckpoints.map((checkpoint) => (
-                  <TouchableOpacity
-                    key={checkpoint}
-                    style={[
-                      styles.checkpointOption,
-                      tempCheckpoints.includes(checkpoint) && styles.checkpointOptionActive
-                    ]}
-                    onPress={() => toggleCheckpoint(checkpoint)}
-                  >
-                    <Text style={[
-                      styles.checkpointOptionText,
-                      tempCheckpoints.includes(checkpoint) && styles.checkpointOptionTextActive
-                    ]}>
-                      {checkpoint}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
+        onClose={() => setShowHabitsModal(false)}
+        onSave={handleSaveHabits}
+        currentHabits={enabledHabits}
+      />
+      
+      <EditGoalsModal
+        visible={showGoalsModal}
+        onClose={() => setShowGoalsModal(false)}
+        onSave={handleSaveGoals}
+        currentGoals={{
+          studyHours: userData.studyGoalHours,
+          exerciseMinutes: userData.exerciseGoalMinutes,
+          hydrationGlasses: userData.hydrationGoalGlasses,
+          weightGoal: userData.weightGoal || 'maintain',
+          sleepHours: userData.sleepGoalHours,
+        }}
+        enabledHabits={enabledHabits}
+      />
     </ImageBackground>
   );
 }
@@ -649,353 +373,238 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    padding: SCREEN_WIDTH * 0.05,
-    paddingTop: SCREEN_HEIGHT * 0.06,
-    paddingBottom: SCREEN_HEIGHT * 0.1,
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
   },
   header: {
-    marginBottom: SCREEN_HEIGHT * 0.03,
-    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 24,
   },
-  title: {
-    fontSize: SCREEN_WIDTH * 0.07,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: '700',
     color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.01,
+    marginBottom: 12,
   },
-  subtitle: {
-    fontSize: SCREEN_WIDTH * 0.04,
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statBadge: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statBadgeValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#4CAF50',
+  },
+  statBadgeLabel: {
+    fontSize: 14,
     color: '#666',
-    textAlign: 'center',
-  },
-  
-  // Section Styles
-  section: {
-    marginBottom: SCREEN_HEIGHT * 0.03,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.015,
-  },
-  sectionTitle: {
-    fontSize: SCREEN_WIDTH * 0.05,
-    fontWeight: '700',
-    color: '#333',
+    marginBottom: 12,
   },
   editButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: SCREEN_WIDTH * 0.04,
-    paddingVertical: SCREEN_HEIGHT * 0.008,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   editButtonText: {
     color: '#FFF',
-    fontSize: SCREEN_WIDTH * 0.035,
+    fontSize: 14,
     fontWeight: '600',
   },
-  
-  // Info Card Styles
-  infoCard: {
-    backgroundColor: '#FFF',
-    padding: SCREEN_WIDTH * 0.05,
+  profileCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: '#F0F0F0',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 16,
+  },
+  avatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  buddyBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  buddyBadgeText: {
+    fontSize: 14,
+  },
+  profileHeaderInfo: {
+    flex: 1,
+  },
+  profileHeaderName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  profileHeaderSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  buddyNameText: {
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  profileDetails: {
+    gap: 12,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9F9F9',
+    borderRadius: 12,
+    padding: 12,
+  },
+  detailIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  detailIcon: {
+    fontSize: 20,
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  settingButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SCREEN_HEIGHT * 0.01,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
-  },
-  infoLabel: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#666',
-  },
-  infoValue: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    fontWeight: '600',
-    color: '#333',
-  },
-  
-  // Character Display
-  characterDisplay: {
-    alignItems: 'center',
-    paddingVertical: SCREEN_HEIGHT * 0.02,
-  },
-  characterName: {
-    fontSize: SCREEN_WIDTH * 0.05,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.01,
-  },
-  characterDescription: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    textAlign: 'center',
-  },
-  
-  // Habit Styles
-  habitRow: {
+  settingButtonLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SCREEN_HEIGHT * 0.008,
-  },
-  habitIcon: {
-    fontSize: SCREEN_WIDTH * 0.05,
-    marginRight: SCREEN_WIDTH * 0.03,
-  },
-  habitText: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
     flex: 1,
   },
-  
-  // Checkpoints List
-  checkpointsList: {
-    marginTop: SCREEN_HEIGHT * 0.01,
-    paddingTop: SCREEN_HEIGHT * 0.01,
+  settingIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  settingSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  settingArrow: {
+    fontSize: 24,
+    color: '#CCC',
+    fontWeight: '300',
+  },
+  appInfo: {
+    alignItems: 'center',
+    marginTop: 20,
+    paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
-  checkpointText: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    paddingVertical: SCREEN_HEIGHT * 0.003,
-  },
-  
-  // Weight Goal Styles
-  weightGoalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SCREEN_HEIGHT * 0.015,
-  },
-  weightGoalButton: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    padding: SCREEN_WIDTH * 0.03,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: SCREEN_WIDTH * 0.01,
-  },
-  weightGoalButtonActive: {
-    backgroundColor: '#2196F3',
-  },
-  weightGoalText: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    fontWeight: '600',
-  },
-  weightGoalTextActive: {
-    color: '#FFF',
-  },
-  weightGoalDescription: {
-    fontSize: SCREEN_WIDTH * 0.035,
+  appInfoText: {
+    fontSize: 14,
     color: '#999',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  
-  // Button Styles
-  button: {
-    backgroundColor: '#2196F3',
-    padding: SCREEN_WIDTH * 0.04,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginVertical: SCREEN_HEIGHT * 0.005,
-  },
-  warningButton: {
-    backgroundColor: '#FF9800',
-  },
-  dangerButton: {
-    backgroundColor: '#F44336',
-  },
-  testButton: {
-    backgroundColor: '#4CAF50',
-  },
-  buttonText: {
-    color: '#FFF',
-    fontSize: SCREEN_WIDTH * 0.04,
-    fontWeight: '600',
-  },
-  
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#FFF',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SCREEN_WIDTH * 0.05,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    paddingTop: SCREEN_HEIGHT * 0.06,
-  },
-  modalTitle: {
-    fontSize: SCREEN_WIDTH * 0.05,
-    fontWeight: '700',
-    color: '#333',
-  },
-  modalCancel: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#666',
-  },
-  modalSave: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#2196F3',
-    fontWeight: '600',
-  },
-  modalSpacer: {
-    width: SCREEN_WIDTH * 0.1,
-  },
-  modalContent: {
-    flex: 1,
-    padding: SCREEN_WIDTH * 0.05,
-  },
-  modalDescription: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#666',
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    textAlign: 'center',
-  },
-  
-  // Input Styles
-  inputGroup: {
-    marginBottom: SCREEN_HEIGHT * 0.025,
-  },
-  inputLabel: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.01,
-  },
-  inputDescription: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    marginBottom: SCREEN_HEIGHT * 0.015,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: SCREEN_WIDTH * 0.04,
-    fontSize: SCREEN_WIDTH * 0.04,
-    backgroundColor: '#F9F9F9',
-  },
-  
-  // Option Grid Styles
-  optionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  optionButton: {
-    width: '48%',
-    backgroundColor: '#F5F5F5',
-    padding: SCREEN_WIDTH * 0.03,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.01,
-  },
-  optionButtonActive: {
-    backgroundColor: '#2196F3',
-  },
-  optionText: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    fontWeight: '600',
-  },
-  optionTextActive: {
-    color: '#FFF',
-  },
-  
-  // Character Option Styles
-  characterOption: {
-    backgroundColor: '#F9F9F9',
-    padding: SCREEN_WIDTH * 0.05,
-    borderRadius: 12,
-    marginBottom: SCREEN_HEIGHT * 0.015,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  characterOptionActive: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#2196F3',
-  },
-  characterOptionTitle: {
-    fontSize: SCREEN_WIDTH * 0.045,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.005,
-  },
-  characterOptionDescription: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-  },
-  
-  // Habit Option Styles
-  habitOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SCREEN_HEIGHT * 0.015,
-    paddingHorizontal: SCREEN_WIDTH * 0.02,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  habitOptionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  habitOptionIcon: {
-    fontSize: SCREEN_WIDTH * 0.05,
-    marginRight: SCREEN_WIDTH * 0.03,
-  },
-  habitOptionName: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
-    flex: 1,
-  },
-  
-  // Checkpoint Grid Styles
-  checkpointGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  checkpointOption: {
-    width: '30%',
-    backgroundColor: '#F5F5F5',
-    padding: SCREEN_WIDTH * 0.025,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.01,
-  },
-  checkpointOptionActive: {
-    backgroundColor: '#4CAF50',
-  },
-  checkpointOptionText: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    fontWeight: '600',
-  },
-  checkpointOptionTextActive: {
-    color: '#FFF',
-  },
-  
-  // Bottom Spacer
-  bottomSpacer: {
-    height: SCREEN_HEIGHT * 0.05,
+    marginBottom: 4,
   },
 });

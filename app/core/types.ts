@@ -39,6 +39,7 @@ export interface UserData {
   lastActiveTimestamp: number;
   
   // Onboarding
+  onboardingCompleted?: boolean; // Track if user has completed onboarding
   selectedCharacter?: string; // 'casual' | 'energetic' | 'scholar'
   buddyName?: string;
   
@@ -58,6 +59,15 @@ export interface UserData {
   lastStudyReset?: string; // Date when study was last reset
   missedCheckpoints?: number; // Count of missed checkpoints today
   
+  // Exercise goal
+  exerciseGoalMinutes?: number; // Daily exercise goal (15, 30, 45, 60 minutes)
+  
+  // Hydration goal
+  hydrationGoalGlasses?: number; // Daily water intake goal (6, 8, 10 glasses)
+  
+  // Sleep goal
+  sleepGoalHours?: number; // Nightly sleep goal (6, 7, 8, 9 hours)
+  
   // Daily habit tracking
   sleepSessions: SleepSession[]; // Array of sleep sessions
   activeSleepSession?: Partial<SleepSession>; // Currently active sleep session
@@ -65,6 +75,11 @@ export interface UserData {
   waterGlasses: number;
   mealsLogged: number; // 0-3 meals per day
   exerciseMinutes: number; // Accumulated exercise minutes today
+  
+  // Daily consumable limits (shared across all sessions in a day)
+  appleTapsToday: number; // Free apple uses today (max 5/day)
+  coffeeTapsToday: number; // Free coffee uses today (max 3/day)
+  lastConsumableReset?: string; // Date when consumables were last reset
   
   // Weight management
   weightGoal?: 'lose' | 'maintain' | 'gain';
@@ -75,6 +90,10 @@ export interface UserData {
   lastCheckInDate: string;
   lastSleepReset?: string; // Date when sleep was last reset (for daily accumulation)
   lastExerciseReset?: string; // Date when exercise was last reset (for daily accumulation)
+  signupDate?: string; // Date when user signed up
+  
+  // Meal tracking
+  mealGoalCount?: number; // Daily meal goal count
   
   // Room Customization
   roomCustomization?: {
@@ -96,6 +115,15 @@ export interface SessionData {
   lastDistractionTime: number | null;
   distractionWarnings: number;
   isInGracePeriod: boolean;
+  // Break tracking
+  totalBreakTime: number; // Total break time taken in seconds
+  maxBreakTime: number; // Maximum allowed break time (20% of session duration)
+  // Session consumables tracking (per session)
+  applePremiumUsedThisSession: boolean; // Premium apple used THIS SESSION (resets each session)
+  coffeePremiumUsedThisSession: boolean; // Premium coffee used THIS SESSION (resets each session)
+  coffeeBoostEndTime: number | null; // When coffee boost expires
+  coffeeBoostStartTime: number | null; // When coffee boost started
+  interactionBoosts: number; // Total points from apple/coffee taps
 }
 
 export interface EnergyModifiers {
@@ -127,6 +155,8 @@ export interface SessionRewards {
   qCoinsEarned: number;
   xpEarned: number;
   messPointsRemoved: number;
+  energyGained: number; // NEW: Energy calculated at session end
+  studyHours: number; // NEW: Study time in hours
 }
 
 export interface Deadline {

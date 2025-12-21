@@ -35,7 +35,7 @@ import {
   calculateMaxEnergyCap,
   canStartSession,
   startSessionEnergyCost,
-  updateFocusScore,
+  calculateFocusScore,
   drainFocusScore,
   calculateSessionRewards,
   addMessForSkippedTask,
@@ -45,7 +45,9 @@ import {
   calculateFocusEnergyCost,
   calculateDistractionDrain,
   calculateBreakRecovery,
-  calculateMorningEnergy
+  calculateMorningEnergy,
+  shouldApplyDailyDrains,
+  calculateMessEnergyDrain
 } from '../core/engine';
 
 interface QuillbyStore {
@@ -66,6 +68,11 @@ interface QuillbyStore {
   endFocusSession: () => void;
   updateFocusDuringSession: () => void;
   handleDistraction: () => void;
+  startBreak: () => boolean; // Returns false if max break time reached
+  endBreak: (breakDuration: number) => void; // Records break time taken
+  // Session interactions (boost focus score)
+  tapAppleInSession: (isPremium?: boolean) => boolean; // Returns false if limit/coins insufficient
+  tapCoffeeInSession: (isPremium?: boolean) => boolean; // Returns false if limit/coins insufficient
   logWater: () => void;
   logBreakfast: () => void;
   startSleep: () => string; // Returns session ID
@@ -76,16 +83,21 @@ interface QuillbyStore {
   skipTask: () => void;
   resetDay: () => void;
   // Onboarding actions
+  completeOnboarding: () => void;
   setCharacter: (character: string) => void;
   setBuddyName: (name: string) => void;
   setProfile: (userName: string, studentLevel: string, country: string, timezone: string) => void;
   setWeightGoal: (weightGoal: 'lose' | 'maintain' | 'gain') => void;
   setStudyGoal: (hours: number, checkpoints: string[]) => void;
+  setExerciseGoal: (minutes: number) => void;
+  setHydrationGoal: (glasses: number) => void;
+  setMealGoal: (count: number) => void;
+  setSleepGoal: (hours: number) => void;
   setHabits: (habits: string[]) => void;
   checkStudyCheckpoints: () => CheckpointResult;
   addMissedCheckpoint: (missingHours?: number) => void;
   checkAndProcessCheckpoints: () => CheckpointNotification;
-  getMessEnergyCapPenalty: () => number;
+  getMessEnergyCapPenalty: () => number; // Now returns daily drain amount, not cap penalty
   cleanRoom: (messPointsReduced: number) => void;
   applyDailyMessDecay: () => void;
   generateDailySummary: () => string;
@@ -109,30 +121,31 @@ export const useQuillbyStore = create<QuillbyStore>()(
   persist(
     (set, get) => ({
   userData: {
-    energy: 100, // Start with full energy
-    maxEnergyCap: 100, // Always 100 in simplified system
-    qCoins: 0,
+    energy: 100,
+    maxEnergyCap: 100,
+    qCoins: 100,
     messPoints: 0,
     lastActiveTimestamp: Date.now(),
-    sleepSessions: [], // Array of sleep sessions
+    onboardingCompleted: false,
+    sleepSessions: [],
     ateBreakfast: false,
     waterGlasses: 0,
-    mealsLogged: 0, // 0-3 meals per day
-    weightGoal: 'maintain', // Default weight goal
-    mealPortionSize: 1.0, // Default normal portions
+    mealsLogged: 0,
+    weightGoal: 'maintain',
+    mealPortionSize: 1.0,
     currentStreak: 0,
     lastCheckInDate: new Date().toDateString(),
-    lastSleepReset: new Date().toDateString(), // Track when sleep was last reset
-    exerciseMinutes: 0, // Accumulated exercise minutes today
-    lastExerciseReset: new Date().toDateString(), // Track when exercise was last reset
-    studyMinutesToday: 0, // Accumulated study minutes today
-    lastStudyReset: new Date().toDateString(), // Track when study was last reset
-    missedCheckpoints: 0, // Count of missed checkpoints today
-    roomCustomization: {
-      lightType: 'lamp',
-      plantType: 'plant'
-    },
-    purchasedItems: []
+    lastSleepReset: new Date().toDateString(),
+    exerciseMinutes: 0,
+    lastExerciseReset: new Date().toDateString(),
+    studyMinutesToday: 0,
+    lastStudyReset: new Date().toDateString(),
+    missedCheckpoints: 0,
+    appleTapsToday: 0,
+    coffeeTapsToday: 0,
+    lastConsumableReset: new Date().toDateString(),
+    purchasedItems: [],
+    signupDate: new Date().toDateString() // Track when user signed up
   },
   
   session: null,
@@ -148,9 +161,10 @@ export const useQuillbyStore = create<QuillbyStore>()(
       userData: {
         energy: 100, // Start with full energy
         maxEnergyCap: 100, // Always 100 in simplified system
-        qCoins: 0,
+        qCoins: 100, // Start with 100 coins
         messPoints: 0,
         lastActiveTimestamp: now,
+        onboardingCompleted: false,
         sleepSessions: [],
         ateBreakfast: false,
         waterGlasses: 0,
@@ -164,22 +178,45 @@ export const useQuillbyStore = create<QuillbyStore>()(
         lastExerciseReset: today,
         studyMinutesToday: 0,
         lastStudyReset: today,
-        missedCheckpoints: 0
+        missedCheckpoints: 0,
+        appleTapsToday: 0,
+        coffeeTapsToday: 0,
+        lastConsumableReset: today,
+        purchasedItems: [],
+        signupDate: today // Track when user signed up
       }
     });
   },
   
-  // Update energy - SIMPLIFIED: No automatic drains, just cap at 100
+  // Update energy - Check for daily drains and cap at 100
   updateEnergy: () => {
     const { userData } = get();
+    let newEnergy = userData.energy;
+    let updatedUserData = { ...userData };
     
-    // Simply ensure energy doesn't exceed 100
-    const cappedEnergy = Math.min(userData.energy, 100);
+    // Check for daily drains (breakfast skip, mess penalty)
+    const drainCheck = shouldApplyDailyDrains(userData);
+    if (drainCheck.shouldApply) {
+      newEnergy = Math.max(0, newEnergy - drainCheck.drainAmount);
+      
+      // Mark drain as applied for today
+      const today = new Date().toDateString();
+      if (drainCheck.drainType === 'breakfast') {
+        (updatedUserData as any).lastBreakfastDrain = today;
+        console.log(`[Daily] Breakfast skip penalty: -${drainCheck.drainAmount} energy`);
+      } else if (drainCheck.drainType === 'mess') {
+        (updatedUserData as any).lastMessDrain = today;
+        console.log(`[Daily] Mess penalty: -${drainCheck.drainAmount} energy (${userData.messPoints.toFixed(1)} mess points)`);
+      }
+    }
     
-    if (cappedEnergy !== userData.energy) {
+    // Ensure energy doesn't exceed 100
+    const cappedEnergy = Math.min(newEnergy, 100);
+    
+    if (cappedEnergy !== userData.energy || drainCheck.shouldApply) {
       set({
         userData: {
-          ...userData,
+          ...updatedUserData,
           energy: cappedEnergy,
           maxEnergyCap: 100 // Always 100
         }
@@ -216,7 +253,14 @@ export const useQuillbyStore = create<QuillbyStore>()(
         distractionCount: 0,
         lastDistractionTime: null,
         distractionWarnings: 0,
-        isInGracePeriod: false
+        isInGracePeriod: false,
+        totalBreakTime: 0,
+        maxBreakTime: 25 * 60 * 0.2,
+        applePremiumUsedThisSession: false,
+        coffeePremiumUsedThisSession: false,
+        coffeeBoostEndTime: null,
+        coffeeBoostStartTime: null,
+        interactionBoosts: 0
       }
     });
     
@@ -229,17 +273,17 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     if (!session) return;
     
-    const rewards = calculateSessionRewards(session.focusScore);
+    // Calculate rewards based on focus score and distractions
+    const rewards = calculateSessionRewards(session.focusScore, session.distractionCount);
     const newMessPoints = removeMessAfterSession(userData.messPoints, rewards.messPointsRemoved);
     
-    // Calculate session duration in minutes/hours for tracking
+    // Calculate session duration in minutes for display
     const sessionDurationMinutes = Math.floor(session.duration / 60);
-    const sessionDurationHours = session.duration / 3600;
     
-    // If this session was for a deadline, log the work
-    if (selectedDeadlineId && sessionDurationHours > 0) {
-      console.log(`[Focus→Deadline] Adding ${sessionDurationHours.toFixed(2)}h to deadline ${selectedDeadlineId}`);
-      addWorkToDeadline(selectedDeadlineId, sessionDurationHours);
+    // If this session was for a deadline, log the work (use study hours from rewards)
+    if (selectedDeadlineId && rewards.studyHours > 0) {
+      console.log(`[Focus→Deadline] Adding ${rewards.studyHours.toFixed(2)}h to deadline ${selectedDeadlineId}`);
+      addWorkToDeadline(selectedDeadlineId, rewards.studyHours);
     }
     
     // If study habit is enabled, log this focus session as study time
@@ -247,7 +291,8 @@ export const useQuillbyStore = create<QuillbyStore>()(
     let updatedUserData = {
       ...userData,
       qCoins: userData.qCoins + rewards.qCoinsEarned,
-      messPoints: newMessPoints
+      messPoints: newMessPoints,
+      energy: Math.min(userData.energy + rewards.energyGained, 100) // Add energy, cap at 100
     };
     
     if (studyEnabled && sessionDurationMinutes > 0) {
@@ -255,10 +300,13 @@ export const useQuillbyStore = create<QuillbyStore>()(
       const today = new Date().toDateString();
       const isNewDay = userData.lastStudyReset !== today;
       
-      // Calculate accumulated study (reset if new day)
-      const accumulatedMinutes = isNewDay ? sessionDurationMinutes : (userData.studyMinutesToday || 0) + sessionDurationMinutes;
+      // Convert study hours to minutes for tracking
+      const studyMinutes = Math.round(rewards.studyHours * 60);
       
-      console.log(`[Focus→Study] Adding ${sessionDurationMinutes}min → Total today: ${accumulatedMinutes}min`);
+      // Calculate accumulated study (reset if new day)
+      const accumulatedMinutes = isNewDay ? studyMinutes : (userData.studyMinutesToday || 0) + studyMinutes;
+      
+      console.log(`[Focus→Study] Adding ${studyMinutes}min → Total today: ${accumulatedMinutes}min`);
       
       updatedUserData = {
         ...updatedUserData,
@@ -266,6 +314,8 @@ export const useQuillbyStore = create<QuillbyStore>()(
         lastStudyReset: today
       };
     }
+    
+    console.log(`[Session End] Focus: ${session.focusScore}, Coins: +${rewards.qCoinsEarned}, Energy: +${rewards.energyGained}, Study: ${rewards.studyHours.toFixed(2)}h`);
     
     set({
       userData: updatedUserData,
@@ -287,7 +337,14 @@ export const useQuillbyStore = create<QuillbyStore>()(
     }
     
     const secondsElapsed = getSecondsElapsed(session.startTime);
-    const newScore = updateFocusScore(0, secondsElapsed);
+    
+    // Calculate focus score with proper coffee boost handling
+    const newScore = calculateFocusScore(
+      secondsElapsed,
+      session.coffeeBoostStartTime,
+      session.coffeeBoostEndTime,
+      session.interactionBoosts
+    );
     
     set({
       session: {
@@ -368,6 +425,223 @@ export const useQuillbyStore = create<QuillbyStore>()(
       });
     }
   },
+
+  // Start a break - returns false if max break time reached
+  startBreak: () => {
+    const { session } = get();
+    
+    if (!session) return false;
+    
+    // Check if user has break time remaining
+    const breakTimeRemaining = session.maxBreakTime - session.totalBreakTime;
+    
+    if (breakTimeRemaining <= 0) {
+      console.log('[Break] No break time remaining');
+      return false;
+    }
+    
+    console.log(`[Break] Starting break - ${Math.floor(breakTimeRemaining / 60)}m ${breakTimeRemaining % 60}s remaining`);
+    return true;
+  },
+
+  // End a break and record the time taken
+  endBreak: (breakDuration: number) => {
+    const { session } = get();
+    
+    if (!session) return;
+    
+    const newTotalBreakTime = session.totalBreakTime + breakDuration;
+    
+    console.log(`[Break] Ended - Duration: ${breakDuration}s, Total: ${newTotalBreakTime}s / ${session.maxBreakTime}s`);
+    
+    set({
+      session: {
+        ...session,
+        totalBreakTime: Math.min(newTotalBreakTime, session.maxBreakTime) // Cap at max
+      }
+    });
+  },
+
+  // Tap apple during session - boosts focus score (free or premium)
+  tapAppleInSession: (isPremium: boolean = false) => {
+    const { session, userData } = get();
+    
+    if (!session) return false;
+    
+    // Check if consumables need daily reset
+    const today = new Date().toDateString();
+    const needsReset = userData.lastConsumableReset !== today;
+    
+    if (needsReset) {
+      // Reset daily counters
+      set({
+        userData: {
+          ...userData,
+          appleTapsToday: 0,
+          coffeeTapsToday: 0,
+          lastConsumableReset: today
+        }
+      });
+    }
+    
+    const currentAppleTaps = needsReset ? 0 : userData.appleTapsToday;
+    
+    if (isPremium) {
+      // PREMIUM: 1 use per SESSION (resets each session)
+      if (session.applePremiumUsedThisSession) {
+        console.log('[Session Apple] Premium already used this session');
+        return false;
+      }
+      
+      if (userData.qCoins < 10) {
+        console.log('[Session Apple] Not enough coins for premium (need 10)');
+        return false;
+      }
+      
+      // Premium: +10 focus, -10 coins
+      const newInteractionBoosts = session.interactionBoosts + 10;
+      
+      console.log(`[Session Apple] PREMIUM +10 focus boost, -10 coins`);
+      
+      set({
+        session: {
+          ...session,
+          interactionBoosts: newInteractionBoosts,
+          applePremiumUsedThisSession: true
+        },
+        userData: {
+          ...userData,
+          qCoins: userData.qCoins - 10
+        }
+      });
+      
+      return true;
+    } else {
+      // FREE: 5 uses per DAY (shared across all sessions)
+      if (currentAppleTaps >= 5) {
+        console.log('[Session Apple] Daily limit reached (5 taps)');
+        return false;
+      }
+      
+      if (userData.qCoins < 2) {
+        console.log('[Session Apple] Not enough coins (need 2)');
+        return false;
+      }
+      
+      // Free: +3 focus, -2 coins
+      const newInteractionBoosts = session.interactionBoosts + 3;
+      
+      console.log(`[Session Apple] +3 focus boost, -2 coins (${currentAppleTaps + 1}/5 today)`);
+      
+      set({
+        session: {
+          ...session,
+          interactionBoosts: newInteractionBoosts
+        },
+        userData: {
+          ...userData,
+          qCoins: userData.qCoins - 2,
+          appleTapsToday: currentAppleTaps + 1
+        }
+      });
+      
+      return true;
+    }
+  },
+
+  // Tap coffee during session - boosts focus score + boost (free or premium)
+  tapCoffeeInSession: (isPremium: boolean = false) => {
+    const { session, userData } = get();
+    
+    if (!session) return false;
+    
+    // Check if consumables need daily reset
+    const today = new Date().toDateString();
+    const needsReset = userData.lastConsumableReset !== today;
+    
+    if (needsReset) {
+      // Reset daily counters
+      set({
+        userData: {
+          ...userData,
+          appleTapsToday: 0,
+          coffeeTapsToday: 0,
+          lastConsumableReset: today
+        }
+      });
+    }
+    
+    const currentCoffeeTaps = needsReset ? 0 : userData.coffeeTapsToday;
+    const now = Date.now();
+    
+    if (isPremium) {
+      // PREMIUM: 1 use per SESSION (resets each session)
+      if (session.coffeePremiumUsedThisSession) {
+        console.log('[Session Coffee] Premium already used this session');
+        return false;
+      }
+      
+      if (userData.qCoins < 15) {
+        console.log('[Session Coffee] Not enough coins for premium (need 15)');
+        return false;
+      }
+      
+      // Premium: +15 focus, 5-minute boost, -15 coins
+      const newInteractionBoosts = session.interactionBoosts + 15;
+      const boostEndTime = now + (5 * 60 * 1000); // 5 minutes
+      
+      console.log(`[Session Coffee] PREMIUM +15 focus boost, 5min extra boost, -15 coins`);
+      
+      set({
+        session: {
+          ...session,
+          interactionBoosts: newInteractionBoosts,
+          coffeePremiumUsedThisSession: true,
+          coffeeBoostStartTime: now,
+          coffeeBoostEndTime: boostEndTime
+        },
+        userData: {
+          ...userData,
+          qCoins: userData.qCoins - 15
+        }
+      });
+      
+      return true;
+    } else {
+      // FREE: 3 uses per DAY (shared across all sessions)
+      if (currentCoffeeTaps >= 3) {
+        console.log('[Session Coffee] Daily limit reached (3 taps)');
+        return false;
+      }
+      
+      if (userData.qCoins < 3) {
+        console.log('[Session Coffee] Not enough coins (need 3)');
+        return false;
+      }
+      
+      // Free: +6 focus, 3-minute boost, -3 coins
+      const newInteractionBoosts = session.interactionBoosts + 6;
+      const boostEndTime = now + (3 * 60 * 1000); // 3 minutes
+      
+      console.log(`[Session Coffee] +6 focus boost, 3min extra boost, -3 coins (${currentCoffeeTaps + 1}/3 today)`);
+      
+      set({
+        session: {
+          ...session,
+          interactionBoosts: newInteractionBoosts,
+          coffeeBoostStartTime: now,
+          coffeeBoostEndTime: boostEndTime
+        },
+        userData: {
+          ...userData,
+          qCoins: userData.qCoins - 3,
+          coffeeTapsToday: currentCoffeeTaps + 1
+        }
+      });
+      
+      return true;
+    }
+  },
   
   // Log water intake - SIMPLIFIED: +5 energy per glass, max 8 glasses
   logWater: () => {
@@ -442,7 +716,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
     return sessionId;
   },
 
-  // End a sleep session and calculate duration - SIMPLIFIED: Sets next morning energy
+  // End a sleep session and calculate duration - Only records sleep, doesn't change energy
   endSleep: (sessionId: string) => {
     const { userData } = get();
     const now = new Date();
@@ -476,9 +750,6 @@ export const useQuillbyStore = create<QuillbyStore>()(
     // Calculate today's total sleep
     const todaysSleep = getTodaysSleepHours(updatedSessions);
     
-    // SIMPLIFIED: Calculate morning energy based on sleep quality
-    const morningEnergy = calculateMorningEnergy(todaysSleep);
-    
     // Award Q-coins for good sleep
     let sleepCoins = 0;
     if (todaysSleep >= 8) {
@@ -489,14 +760,18 @@ export const useQuillbyStore = create<QuillbyStore>()(
       sleepCoins = 10; // Decent sleep
     }
     
-    console.log(`[Sleep] Completed: ${duration.toFixed(1)}h → Total today: ${todaysSleep.toFixed(1)}h → Morning energy: ${morningEnergy}/100 → Coins: +${sleepCoins}`);
+    console.log(`[Sleep] Completed: ${duration.toFixed(1)}h → Total today: ${todaysSleep.toFixed(1)}h → Coins: +${sleepCoins}`);
+    console.log(`[Sleep] Energy NOT changed (current: ${userData.energy}) - Energy only resets on daily reset based on total sleep`);
     
+    // IMPORTANT: Energy is NOT changed here!
+    // Energy is only set during daily reset (resetDay) based on total sleep
+    // This allows users to track sleep without accidentally resetting their energy
     set({
       userData: {
         ...userData,
         sleepSessions: updatedSessions,
         maxEnergyCap: 100, // Always 100
-        energy: morningEnergy, // Set energy based on sleep quality
+        // energy: NOT CHANGED - stays at current value
         qCoins: userData.qCoins + sleepCoins, // Award sleep coins
         activeSleepSession: undefined // Clear active session
       }
@@ -572,38 +847,51 @@ export const useQuillbyStore = create<QuillbyStore>()(
     });
   },
   
-  // Reset daily values (for testing or new day) - SIMPLIFIED
+  // Reset daily values (for testing or new day) - NO AUTOMATIC MESS DECAY
   resetDay: () => {
-    const { userData, applyDailyMessDecay } = get();
+    const { userData } = get();
     const today = new Date().toDateString();
     
-    // Apply mess decay before reset
-    applyDailyMessDecay();
-    
-    // Get updated mess after decay
-    const updatedUserData = get().userData;
+    // NO automatic mess decay - mess persists until user actively cleans!
+    // This forces accountability and makes cleaning meaningful
     
     // Calculate morning energy based on yesterday's sleep
-    const todaysSleep = getTodaysSleepHours(updatedUserData.sleepSessions || []);
+    const todaysSleep = getTodaysSleepHours(userData.sleepSessions || []);
     const morningEnergy = calculateMorningEnergy(todaysSleep);
     
     console.log(`[Daily Reset] Sleep: ${todaysSleep.toFixed(1)}h → Morning energy: ${morningEnergy}/100`);
+    console.log(`[Daily Reset] Mess persists: ${userData.messPoints.toFixed(1)} points (clean your room!)`);
     
     set({
       userData: {
-        ...updatedUserData,
+        ...userData,
         energy: morningEnergy, // Set based on sleep quality
         ateBreakfast: false,
         waterGlasses: 0,
         mealsLogged: 0, // Reset meals
         // Note: sleepSessions are kept (they have dates), no need to reset
+        // Note: messPoints are NOT reset - they persist until cleaned!
         exerciseMinutes: 0, // Reset exercise
         studyMinutesToday: 0, // Reset study
         missedCheckpoints: 0, // Reset missed checkpoints
         lastSleepReset: today,
         lastExerciseReset: today,
         lastStudyReset: today,
-        maxEnergyCap: 100 // Always 100
+        maxEnergyCap: 100, // Always 100
+        signupDate: (userData as any).signupDate || today // Preserve signup date
+      }
+    });
+  },
+  
+  // Onboarding: Mark onboarding as complete
+  completeOnboarding: () => {
+    const { userData } = get();
+    console.log('[Onboarding] Marking onboarding as complete');
+    
+    set({
+      userData: {
+        ...userData,
+        onboardingCompleted: true
       }
     });
   },
@@ -696,6 +984,58 @@ export const useQuillbyStore = create<QuillbyStore>()(
     });
   },
 
+  // Onboarding: Set exercise goal
+  setExerciseGoal: (minutes: number) => {
+    const { userData } = get();
+    console.log(`[Onboarding] Exercise goal set: ${minutes} minutes/day`);
+    
+    set({
+      userData: {
+        ...userData,
+        exerciseGoalMinutes: minutes
+      }
+    });
+  },
+
+  // Onboarding: Set hydration goal
+  setHydrationGoal: (glasses: number) => {
+    const { userData } = get();
+    console.log(`[Onboarding] Hydration goal set: ${glasses} glasses/day`);
+    
+    set({
+      userData: {
+        ...userData,
+        hydrationGoalGlasses: glasses
+      }
+    });
+  },
+
+  // Onboarding: Set meal goal
+  setMealGoal: (count: number) => {
+    const { userData } = get();
+    console.log(`[Onboarding] Meal goal set: ${count} meals/day`);
+    
+    set({
+      userData: {
+        ...userData,
+        mealGoalCount: count
+      }
+    });
+  },
+
+  // Onboarding: Set sleep goal
+  setSleepGoal: (hours: number) => {
+    const { userData } = get();
+    console.log(`[Onboarding] Sleep goal set: ${hours} hours/night`);
+    
+    set({
+      userData: {
+        ...userData,
+        sleepGoalHours: hours
+      }
+    });
+  },
+
 
 
   // Check study progress at checkpoints with proper time-based formula
@@ -703,6 +1043,16 @@ export const useQuillbyStore = create<QuillbyStore>()(
     const { userData } = get();
     
     if (!userData.studyGoalHours || !userData.studyCheckpoints) return { isBehind: false };
+    
+    // Skip checkpoint checks on first day (user just signed up)
+    const today = new Date().toDateString();
+    const signupDate = (userData as any).signupDate || today;
+    const isFirstDay = signupDate === today;
+    
+    if (isFirstDay) {
+      console.log('[Study] First day after signup - skipping checkpoint penalties');
+      return { isBehind: false };
+    }
     
     const now = new Date();
     const currentHour = now.getHours();
@@ -807,18 +1157,10 @@ export const useQuillbyStore = create<QuillbyStore>()(
     return { shouldNotify: false };
   },
 
-  // Get energy cap penalty from mess points
+  // Get daily energy drain from mess points (visual consequence of messy room)
   getMessEnergyCapPenalty: () => {
     const { userData } = get();
-    const mess = userData.messPoints;
-    
-    if (mess <= 5) return 0;   // No penalty for clean room
-    if (mess <= 10) return 5;  // -5 energy cap for light mess
-    if (mess <= 15) return 10; // -10 energy cap for medium mess
-    if (mess <= 20) return 15; // -15 energy cap for heavy mess
-    if (mess <= 25) return 20; // -20 energy cap for very messy
-    if (mess <= 30) return 25; // -25 energy cap for extremely messy
-    return 30; // -30 energy cap maximum penalty
+    return calculateMessEnergyDrain(userData.messPoints);
   },
 
   // Clean room (reduces mess points with efficiency-based rewards) - SIMPLIFIED
@@ -843,22 +1185,13 @@ export const useQuillbyStore = create<QuillbyStore>()(
     });
   },
 
-  // Apply daily mess decay (20% automatic cleaning each day) - SIMPLIFIED
+  // Apply daily mess decay - REMOVED: Mess should only decrease through user actions
   applyDailyMessDecay: () => {
-    const { userData } = get();
-    const currentMess = userData.messPoints;
-    const newMess = currentMess * 0.8; // 20% decay
-    
-    console.log(`[Daily] Mess decay: ${currentMess.toFixed(1)} → ${newMess.toFixed(1)} (-20%)`);
-    
-    set({
-      userData: {
-        ...userData,
-        messPoints: newMess,
-        maxEnergyCap: 100, // Always 100
-        energy: Math.min(userData.energy, 100) // Cap at 100
-      }
-    });
+    // NO AUTOMATIC DECAY - mess only decreases through:
+    // 1. Cleaning mini-game
+    // 2. Completed focus sessions (-2 mess per session)
+    // This forces users to actively clean their room!
+    console.log(`[Daily] No automatic mess decay - clean your room to reduce mess!`);
   },
 
   // Generate end-of-day summary
@@ -1131,17 +1464,39 @@ Room: ${roomState}`;
   updateRoomCustomization: (lightType?: string, plantType?: string) => {
     const { userData } = get();
     
+    // Build the new customization object
+    const newCustomization: any = {};
+    
+    // Handle lightType: empty string = reset to default, undefined = keep existing, value = set new
+    if (lightType !== undefined) {
+      if (lightType !== '') {
+        newCustomization.lightType = lightType as 'lamp' | 'colored-fairy-lights';
+      }
+      // Empty string means reset to default (don't set lightType)
+    } else if (userData.roomCustomization?.lightType) {
+      // Keep existing light type if not updating
+      newCustomization.lightType = userData.roomCustomization.lightType;
+    }
+    
+    // Handle plantType: empty string = reset to default, undefined = keep existing, value = set new
+    if (plantType !== undefined) {
+      if (plantType !== '') {
+        newCustomization.plantType = plantType as 'plant' | 'succulent-plant' | 'swiss-cheese-plant';
+      }
+      // Empty string means reset to default (don't set plantType)
+    } else if (userData.roomCustomization?.plantType) {
+      // Keep existing plant type if not updating
+      newCustomization.plantType = userData.roomCustomization.plantType;
+    }
+    
     set({
       userData: {
         ...userData,
-        roomCustomization: {
-          lightType: (lightType as 'lamp' | 'fairy-lights') || userData.roomCustomization?.lightType || 'lamp',
-          plantType: (plantType as 'plant' | 'plant2' | 'plant3') || userData.roomCustomization?.plantType || 'plant'
-        }
+        roomCustomization: Object.keys(newCustomization).length > 0 ? newCustomization : undefined
       }
     });
     
-    console.log(`[Room] Updated customization - Light: ${lightType}, Plant: ${plantType}`);
+    console.log(`[Room] Updated customization - Light: ${lightType}, Plant: ${plantType}, Result:`, newCustomization);
   }
 }),
 {

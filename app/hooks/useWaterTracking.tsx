@@ -11,8 +11,8 @@ export const useWaterTracking = (buddyName: string) => {
   const handleDrinkWater = () => {
     const newCount = userData.waterGlasses + 1;
     
-    // Show eating/drinking animation
-    setCurrentAnimation('eating');
+    // Show drinking animation only when water button is clicked
+    setCurrentAnimation('eating'); // This triggers the drinking animation
     setTimeout(() => setCurrentAnimation('idle'), 2000); // Back to idle after 2s
     
     // Log water in store

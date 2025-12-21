@@ -21,10 +21,10 @@ export default function StatsScreen() {
     
     // Sleep stats
     const todaysSleep = userData.sleepSessions?.filter(session => {
-      const sessionDate = new Date(session.startTime).toDateString();
+      const sessionDate = new Date(session.start).toDateString();
       const today = new Date().toDateString();
       return sessionDate === today;
-    }).reduce((total, session) => total + (session.duration || 0), 0) / 3600 || 0;
+    }).reduce((total, session) => total + (session.duration || 0), 0) || 0;
     
     const avgSleep = userData.sleepSessions?.length > 0
       ? userData.sleepSessions.reduce((total, session) => total + (session.duration || 0), 0) / userData.sleepSessions.length / 3600

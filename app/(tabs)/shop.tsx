@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, TouchableOpacity, Alert, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, TouchableOpacity, Image } from 'react-native';
 import { useQuillbyStore } from '../state/store';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -7,13 +7,19 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function ShopScreen() {
   const { userData, getShopItems, purchaseItem, updateRoomCustomization } = useQuillbyStore();
   const [selectedCategory, setSelectedCategory] = useState<'light' | 'plant'>('light');
-  const [previewLight, setPreviewLight] = useState<string>('lamp'); // Default to lamp
-  const [previewPlant, setPreviewPlant] = useState<string>('plant'); // Default to basic plant
+  const [previewLight, setPreviewLight] = useState<string>(userData.roomCustomization?.lightType || 'fairy-lights');
+  const [previewPlant, setPreviewPlant] = useState<string>(userData.roomCustomization?.plantType || 'plant');
   
   const buddyName = userData.buddyName || 'Quillby';
   const shopItems = getShopItems();
   
   const filteredItems = shopItems.filter(item => item.category === selectedCategory);
+
+  // Sync preview state with actual room customization when it changes
+  useEffect(() => {
+    setPreviewLight(userData.roomCustomization?.lightType || 'fairy-lights');
+    setPreviewPlant(userData.roomCustomization?.plantType || 'plant');
+  }, [userData.roomCustomization]);
 
   const handleItemPreview = (item: any) => {
     // Update preview state to show how the room would look
@@ -25,16 +31,36 @@ export default function ShopScreen() {
   };
 
   const handlePurchaseAndEquip = (item: any) => {
+    console.log(`[Shop] Handling purchase/equip for:`, item);
+    console.log(`[Shop] Current room customization:`, userData.roomCustomization);
+    
+    // Handle free default items (fairy-lights and plant)
+    if (item.id === 'fairy-lights') {
+      // Reset to default fairy lights (pass empty string to clear)
+      console.log(`[Shop] Equipping default fairy lights (resetting customization)`);
+      updateRoomCustomization('', undefined);
+      setPreviewLight('fairy-lights');
+      return;
+    }
+    
+    if (item.id === 'plant') {
+      // Reset to default plant (pass empty string to clear)
+      console.log(`[Shop] Equipping default plant (resetting customization)`);
+      updateRoomCustomization(undefined, '');
+      setPreviewPlant('plant');
+      return;
+    }
+    
     if (userData.purchasedItems?.includes(item.id)) {
       // Item already purchased, equip it
       if (item.category === 'light') {
+        console.log(`[Shop] Equipping light: ${item.assetPath}`);
         updateRoomCustomization(item.assetPath, undefined);
         setPreviewLight(item.assetPath);
-        Alert.alert('Equipped!', `${item.name} is now lighting up your room! ✨`);
       } else if (item.category === 'plant') {
+        console.log(`[Shop] Equipping plant: ${item.assetPath}`);
         updateRoomCustomization(undefined, item.assetPath);
         setPreviewPlant(item.assetPath);
-        Alert.alert('Equipped!', `${item.name} is now decorating your room! 🌿`);
       }
     } else {
       // Purchase item
@@ -42,16 +68,16 @@ export default function ShopScreen() {
       if (success) {
         // Auto-equip after purchase
         if (item.category === 'light') {
+          console.log(`[Shop] Purchasing and equipping light: ${item.assetPath}`);
           updateRoomCustomization(item.assetPath, undefined);
           setPreviewLight(item.assetPath);
         } else if (item.category === 'plant') {
+          console.log(`[Shop] Purchasing and equipping plant: ${item.assetPath}`);
           updateRoomCustomization(undefined, item.assetPath);
           setPreviewPlant(item.assetPath);
         }
-        Alert.alert('Purchase & Equipped! 🎉', `${item.name} is now in your room!`);
-      } else {
-        Alert.alert('Not Enough Coins! 💰', `You need ${item.price} Q-Coins but only have ${userData.qCoins}.`);
       }
+      // Note: No alert for insufficient coins - button should be disabled instead
     }
   };
 
@@ -73,14 +99,7 @@ export default function ShopScreen() {
             hour12: true 
           })} 🐹 {buddyName}'s Shop
         </Text>
-        
-        {/* Q-Coin Display */}
-        <Image
-          source={require('../../assets/overall/qbies.png')}
-          style={styles.qCoinIcon}
-          resizeMode="contain"
-        />
-        <Text style={styles.qCoinText}>{userData.qCoins}</Text>
+
         
         {/* Blue Background */}
         <Image
@@ -88,6 +107,16 @@ export default function ShopScreen() {
           style={styles.roomBlueBg}
           resizeMode="cover"
         />
+
+        {/* Q-Coin Display - Match study session design */}
+        <View style={styles.qCoinsContainer}>
+          <Image
+            source={require('../../assets/overall/qbies.png')}
+            style={styles.qCoinIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.qCoinText}>{userData.qCoins}</Text>
+        </View>
         
         {/* Walls */}
         <Image
@@ -117,27 +146,59 @@ export default function ShopScreen() {
         
         {/* Preview Plants */}
         <Image
-          source={require('../../assets/rooms/plant.png')}
+          source={
+            previewPlant === 'succulent-plant'
+              ? require('../../assets/shop/decoration/plants/succulent-plant.png')
+              : previewPlant === 'swiss-cheese-plant'
+              ? require('../../assets/shop/decoration/plants/swiss-cheese-plant.png')
+              : require('../../assets/rooms/plant.png')
+          }
           style={styles.roomPlant1}
           resizeMode="contain"
         />
         <Image
-          source={require('../../assets/rooms/plant.png')}
+          source={
+            previewPlant === 'succulent-plant'
+              ? require('../../assets/shop/decoration/plants/succulent-plant.png')
+              : previewPlant === 'swiss-cheese-plant'
+              ? require('../../assets/shop/decoration/plants/swiss-cheese-plant.png')
+              : require('../../assets/rooms/plant.png')
+          }
           style={styles.roomPlant2}
           resizeMode="contain"
         />
         
-        {/* Preview Light - Always show both, conditional visibility */}
+        {/* Hamster Character */}
+        <Image
+          source={require('../../assets/hamsters/casual/idle-sit.png')}
+          style={styles.roomHamster}
+          resizeMode="contain"
+        />
+        
+        {/* Preview Lights - Show based on selection */}
+        {/* Lamp */}
         <Image
           source={require('../../assets/rooms/lamp.png')}
           style={[
             styles.roomLamp,
-            previewLight === 'colored-fairy-lights' && { opacity: 0 }
+            previewLight !== 'lamp' && { opacity: 0 }
           ]}
           resizeMode="contain"
         />
+        
+        {/* Default Fairy Lights */}
         <Image
           source={require('../../assets/rooms/fairy-lights.png')}
+          style={[
+            styles.roomFairyLights,
+            previewLight !== 'fairy-lights' && { opacity: 0 }
+          ]}
+          resizeMode="contain"
+        />
+        
+        {/* Colored Fairy Lights */}
+        <Image
+          source={require('../../assets/shop/decoration/fairy-lights/colored.png')}
           style={[
             styles.roomFairyLights,
             previewLight !== 'colored-fairy-lights' && { opacity: 0 }
@@ -169,79 +230,72 @@ export default function ShopScreen() {
       {/* Shop Items */}
       <ScrollView style={styles.shopScrollView} contentContainerStyle={styles.shopContent}>
         <View style={styles.shopGrid}>
-          {/* Add default lamp option for lights */}
+          {/* Default Light Options - Simple PNG Display */}
           {selectedCategory === 'light' && (
-            <TouchableOpacity
-              style={[
-                styles.shopItem,
-                previewLight === 'lamp' && styles.shopItemSelected
-              ]}
-              onPress={() => handleItemPreview({ category: 'light', assetPath: 'lamp' })}
-            >
-              <Image
-                source={require('../../assets/rooms/lamp.png')}
-                style={styles.itemPreviewImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.itemName}>💡 Lamp</Text>
-              <Text style={styles.itemDescription}>Classic room lamp (Default)</Text>
-              <View style={styles.itemFooter}>
-                <Text style={styles.itemPrice}>Free</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.purchaseButton,
-                    userData.roomCustomization?.lightType === 'lamp' ? styles.purchaseButtonOwned : null
-                  ]}
-                  onPress={() => handlePurchaseAndEquip({ category: 'light', assetPath: 'lamp', id: 'lamp' })}
-                >
-                  <Text style={[
-                    styles.purchaseButtonText,
-                    userData.roomCustomization?.lightType === 'lamp' ? styles.purchaseButtonTextOwned : null
-                  ]}>
-                    {userData.roomCustomization?.lightType === 'lamp' ? 'Equipped' : 'Equip'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.shopItemSimple,
+                  previewLight === 'fairy-lights' && styles.shopItemSelected,
+                  !userData.roomCustomization?.lightType && styles.shopItemEquipped
+                ]}
+                onPress={() => handlePurchaseAndEquip({ category: 'light', assetPath: 'fairy-lights', id: 'fairy-lights' })}
+              >
+                <Image
+                  source={require('../../assets/rooms/fairy-lights.png')}
+                  style={styles.itemImageDirect}
+                  resizeMode="contain"
+                />
+                <Text style={styles.itemPriceFree}>Free</Text>
+                {!userData.roomCustomization?.lightType && (
+                  <Text style={styles.equippedIndicator}>✓</Text>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.shopItemSimple,
+                  previewLight === 'lamp' && styles.shopItemSelected,
+                  userData.roomCustomization?.lightType === 'lamp' && styles.shopItemEquipped
+                ]}
+                onPress={() => handlePurchaseAndEquip({ category: 'light', assetPath: 'lamp', id: 'lamp' })}
+              >
+                <Image
+                  source={require('../../assets/rooms/lamp.png')}
+                  style={styles.itemImageDirect}
+                  resizeMode="contain"
+                />
+                <Text style={styles.itemPriceFree}>Free</Text>
+                {userData.roomCustomization?.lightType === 'lamp' && (
+                  <Text style={styles.equippedIndicator}>✓</Text>
+                )}
+              </TouchableOpacity>
+            </>
           )}
           
-          {/* Add default plant option for plants */}
+          {/* Default Plant Option - Simple PNG Display */}
           {selectedCategory === 'plant' && (
             <TouchableOpacity
               style={[
-                styles.shopItem,
-                previewPlant === 'plant' && styles.shopItemSelected
+                styles.shopItemSimple,
+                previewPlant === 'plant' && styles.shopItemSelected,
+                !userData.roomCustomization?.plantType && styles.shopItemEquipped
               ]}
-              onPress={() => handleItemPreview({ category: 'plant', assetPath: 'plant' })}
+              onPress={() => handlePurchaseAndEquip({ category: 'plant', assetPath: 'plant', id: 'plant' })}
             >
               <Image
                 source={require('../../assets/rooms/plant.png')}
-                style={styles.itemPreviewImage}
+                style={styles.itemImageDirect}
                 resizeMode="contain"
               />
-              <Text style={styles.itemName}>🌿 Basic Plant</Text>
-              <Text style={styles.itemDescription}>Simple green plant (Default)</Text>
-              <View style={styles.itemFooter}>
-                <Text style={styles.itemPrice}>Free</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.purchaseButton,
-                    userData.roomCustomization?.plantType === 'plant' ? styles.purchaseButtonOwned : null
-                  ]}
-                  onPress={() => handlePurchaseAndEquip({ category: 'plant', assetPath: 'plant', id: 'plant' })}
-                >
-                  <Text style={[
-                    styles.purchaseButtonText,
-                    userData.roomCustomization?.plantType === 'plant' ? styles.purchaseButtonTextOwned : null
-                  ]}>
-                    {userData.roomCustomization?.plantType === 'plant' ? 'Equipped' : 'Equip'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.itemPriceFree}>Free</Text>
+              {!userData.roomCustomization?.plantType && (
+                <Text style={styles.equippedIndicator}>✓</Text>
+              )}
             </TouchableOpacity>
           )}
 
-          {/* Shop Items */}
+          {/* Shop Items - Simple PNG Display */}
           {filteredItems.map((item) => {
             const isPurchased = userData.purchasedItems?.includes(item.id);
             const isEquipped = (item.category === 'light' && userData.roomCustomization?.lightType === item.assetPath) ||
@@ -253,11 +307,13 @@ export default function ShopScreen() {
               <TouchableOpacity
                 key={item.id}
                 style={[
-                  styles.shopItem,
-                  isPreviewSelected && styles.shopItemSelected
+                  styles.shopItemSimple,
+                  isPreviewSelected && styles.shopItemSelected,
+                  isEquipped && styles.shopItemEquipped
                 ]}
-                onPress={() => handleItemPreview(item)}
+                onPress={() => handlePurchaseAndEquip(item)}
               >
+                {/* Item Image */}
                 <Image
                   source={
                     item.id === 'colored-fairy-lights'
@@ -268,35 +324,19 @@ export default function ShopScreen() {
                       ? require('../../assets/shop/decoration/plants/swiss-cheese-plant.png')
                       : require('../../assets/rooms/plant.png') // Fallback
                   }
-                  style={styles.itemPreviewImage}
+                  style={styles.itemImageDirect}
                   resizeMode="contain"
                 />
-                <View style={styles.itemHeader}>
-                  <Text style={styles.itemIcon}>{item.icon}</Text>
-                  {isEquipped && <Text style={styles.equippedBadge}>✓ Equipped</Text>}
-                </View>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemDescription}>{item.description}</Text>
-                <View style={styles.itemFooter}>
-                  <Text style={styles.itemPrice}>🪙 {item.price}</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.purchaseButton,
-                      isPurchased ? styles.purchaseButtonOwned : 
-                      userData.qCoins < item.price ? styles.purchaseButtonDisabled : null
-                    ]}
-                    onPress={() => handlePurchaseAndEquip(item)}
-                    disabled={!isPurchased && userData.qCoins < item.price}
-                  >
-                    <Text style={[
-                      styles.purchaseButtonText,
-                      isPurchased ? styles.purchaseButtonTextOwned : 
-                      userData.qCoins < item.price ? styles.purchaseButtonTextDisabled : null
-                    ]}>
-                      {isPurchased ? (isEquipped ? 'Equipped' : 'Equip') : 'Buy'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                
+                {/* Price (only if not purchased) */}
+                {!isPurchased && (
+                  <Text style={styles.itemPriceBelow}>🪙 {item.price}</Text>
+                )}
+                
+                {/* Equipped indicator */}
+                {isEquipped && (
+                  <Text style={styles.equippedIndicator}>✓</Text>
+                )}
               </TouchableOpacity>
             );
           })}
@@ -342,7 +382,7 @@ const styles = StyleSheet.create({
     width: (SCREEN_WIDTH * 266) / 393,
     height: (SCREEN_HEIGHT * 66) / 852,
     left: (SCREEN_WIDTH * 16) / 393,
-    top: (SCREEN_HEIGHT * 50) / 852, // Moved down to be more visible
+    top: (SCREEN_HEIGHT * 9) / 852, // Back to original position from CSS
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
     fontSize: (SCREEN_WIDTH * 21) / 393,
@@ -351,28 +391,27 @@ const styles = StyleSheet.create({
     zIndex: 10, // Ensure it's above other elements
   },
   
-  // Q-Coin Icon
-  qCoinIcon: {
+  // Q-Coin Display - Match study session design
+  qCoinsContainer: {
     position: 'absolute',
+    right: 16,
+    top: 3,
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  qCoinIcon: {
     width: (SCREEN_WIDTH * 47) / 393,
     height: (SCREEN_HEIGHT * 47) / 852,
-    left: (SCREEN_WIDTH * 327) / 393,
-    top: (SCREEN_HEIGHT * 3) / 852,
   },
-  
-  // Q-Coin Text
   qCoinText: {
-    position: 'absolute',
-    width: (SCREEN_WIDTH * 56) / 393,
-    height: (SCREEN_HEIGHT * 40) / 852,
-    left: (SCREEN_WIDTH * 336) / 393,
-    top: (SCREEN_HEIGHT * 46) / 852,
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
     fontSize: (SCREEN_WIDTH * 21) / 393,
     lineHeight: (SCREEN_HEIGHT * 27) / 852,
     color: '#000000',
     opacity: 0.7,
+    marginTop: 5,
+    textAlign: 'center',
   },
   
   // Blue Background
@@ -464,6 +503,15 @@ const styles = StyleSheet.create({
     left: (SCREEN_WIDTH * 11) / 393,
     top: (SCREEN_HEIGHT * 142) / 852,
   },
+  
+  // Hamster Character
+  roomHamster: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 120) / 393,
+    height: (SCREEN_HEIGHT * 90) / 852,
+    left: (SCREEN_WIDTH * 140) / 393,
+    top: (SCREEN_HEIGHT * 180) / 852,
+  },
 
   
   // Category Filter
@@ -540,9 +588,65 @@ const styles = StyleSheet.create({
   shopGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     marginBottom: SCREEN_HEIGHT * 0.03,
+    paddingHorizontal: SCREEN_WIDTH * 0.02,
   },
+  
+  // Simple Shop Item (just PNG + price)
+  shopItemSimple: {
+    alignItems: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.03,
+    marginHorizontal: SCREEN_WIDTH * 0.02,
+    position: 'relative',
+  },
+  shopItemSelected: {
+    transform: [{ scale: 1.1 }],
+  },
+  shopItemEquipped: {
+    opacity: 0.8,
+  },
+  
+  // Direct PNG Image
+  itemImageDirect: {
+    width: SCREEN_WIDTH * 0.2,
+    height: SCREEN_WIDTH * 0.2,
+    marginBottom: SCREEN_HEIGHT * 0.01,
+  },
+  
+  // Price below image
+  itemPriceBelow: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontWeight: '700',
+    color: '#FF9800',
+    textAlign: 'center',
+  },
+  
+  // Free price
+  itemPriceFree: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    fontWeight: '600',
+    color: '#4CAF50',
+    textAlign: 'center',
+  },
+  
+  // Equipped indicator
+  equippedIndicator: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#4CAF50',
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.04,
+    width: SCREEN_WIDTH * 0.06,
+    height: SCREEN_WIDTH * 0.06,
+    borderRadius: SCREEN_WIDTH * 0.03,
+    textAlign: 'center',
+    lineHeight: SCREEN_WIDTH * 0.06,
+    fontWeight: 'bold',
+  },
+  
+  // Legacy styles (keeping for compatibility)
   shopItem: {
     width: '48%',
     backgroundColor: '#FFF',
@@ -556,10 +660,6 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 2,
     borderColor: 'transparent',
-  },
-  shopItemSelected: {
-    borderColor: '#2196F3',
-    backgroundColor: '#E3F2FD',
   },
   
   // Item Preview Image
@@ -603,6 +703,11 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.035,
     fontWeight: '700',
     color: '#FF9800',
+  },
+  itemPriceOwned: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontWeight: '700',
+    color: '#4CAF50',
   },
   purchaseButton: {
     backgroundColor: '#4CAF50',

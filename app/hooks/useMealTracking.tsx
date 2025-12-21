@@ -12,6 +12,26 @@ export const useMealTracking = (buddyName: string) => {
     const currentMeals = userData.mealsLogged;
     const weightGoal = userData.weightGoal || 'maintain';
     
+    // Check if already at limit (3 meals)
+    if (currentMeals >= 3) {
+      console.log('[Meal] Already logged 3 meals today - showing warning');
+      
+      // Show warning animation
+      setCurrentAnimation('idle');
+      
+      // Show warning message based on weight goal
+      const warningMessages = {
+        lose: "⚠️ Already logged 3 meals today!\nStick to your plan to reach your goal! 💪",
+        maintain: "⚠️ Already logged 3 meals today!\nYou've had enough for today! 🍽️",
+        gain: "⚠️ Already logged 3 meals today!\nYour body needs time to digest! ⏸️"
+      };
+      
+      const warningMessage = warningMessages[weightGoal];
+      setMessage(warningMessage);
+      setMessageTimestamp(Date.now());
+      return; // Don't log the meal
+    }
+    
     // Get weight goal for animation
     let eatingAnimation = 'eating-normal'; // Default for maintain
     if (weightGoal === 'lose') eatingAnimation = 'eating-light';

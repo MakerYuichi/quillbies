@@ -7,30 +7,46 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function StudySessionScreen() {
   const router = useRouter();
-  const { userData, session, selectedDeadlineId, deadlines, updateFocusDuringSession, endFocusSession, handleDistraction, logWater, logMeal, logExercise } = useQuillbyStore();
+  const { 
+    userData, 
+    session, 
+    selectedDeadlineId, 
+    deadlines, 
+    updateFocusDuringSession, 
+    endFocusSession, 
+    handleDistraction, 
+    startBreak, 
+    endBreak,
+    tapAppleInSession,
+    tapCoffeeInSession
+  } = useQuillbyStore();
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
   const [speechKey, setSpeechKey] = useState(0); // Force re-render of speech bubble
   const [showReturnMessage, setShowReturnMessage] = useState(false);
   const [returnMessageTimer, setReturnMessageTimer] = useState<NodeJS.Timeout | null>(null);
   
   // Session control states
-  const [isPaused, setIsPaused] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [breakTimeRemaining, setBreakTimeRemaining] = useState(0);
   const [breakTimer, setBreakTimer] = useState<NodeJS.Timeout | null>(null);
+  const [breakStartTime, setBreakStartTime] = useState<number>(0); // Track when break started
+  
+  // Animation states
+  const [currentAnimation, setCurrentAnimation] = useState<'focus' | 'drinking' | 'eating' | 'exercising' | 'break'>('focus');
+  const [animationTimer, setAnimationTimer] = useState<NodeJS.Timeout | null>(null);
   
   // Update focus score and speech bubble every second
   useEffect(() => {
     const interval = setInterval(() => {
-      // Only update focus if not paused and not on break
-      if (!isPaused && !isOnBreak) {
+      // Only update focus if not on break
+      if (!isOnBreak) {
         updateFocusDuringSession();
       }
       setSpeechKey(prev => prev + 1); // Update speech bubble every second
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isPaused, isOnBreak]);
+  }, [isOnBreak]);
   
   // Detect when user leaves the app (distraction)
   useEffect(() => {
@@ -85,33 +101,71 @@ export default function StudySessionScreen() {
       if (breakTimer) {
         clearInterval(breakTimer);
       }
+      if (animationTimer) {
+        clearTimeout(animationTimer);
+      }
     };
-  }, [breakTimer]);
+  }, [breakTimer, animationTimer]);
   
-  const handlePauseSession = () => {
-    setIsPaused(!isPaused);
-    setSpeechKey(prev => prev + 1); // Update speech bubble
+  // Play animation for 3 seconds then return to focus
+  const playAnimation = (animation: 'drinking' | 'eating' | 'exercising') => {
+    // Clear any existing animation timer
+    if (animationTimer) {
+      clearTimeout(animationTimer);
+    }
+    
+    // Set the animation
+    setCurrentAnimation(animation);
+    
+    // Return to focus after 3 seconds
+    const timer = setTimeout(() => {
+      setCurrentAnimation('focus');
+      setAnimationTimer(null);
+    }, 3000);
+    
+    setAnimationTimer(timer);
   };
-
+  
   const handleBreakSession = () => {
     if (isOnBreak) {
-      // Skip break early
+      // Skip break early - record actual time taken
+      const actualBreakTime = Math.floor((Date.now() - breakStartTime) / 1000);
+      endBreak(actualBreakTime);
+      
       setIsOnBreak(false);
       setBreakTimeRemaining(0);
+      setCurrentAnimation('focus'); // Return to focus
       if (breakTimer) {
         clearInterval(breakTimer);
         setBreakTimer(null);
       }
+      
+      console.log(`[Break] Skipped early - ${actualBreakTime}s taken`);
     } else {
-      // Start 5-minute break
+      // Check if user can start a break
+      if (!startBreak()) {
+        // No break time remaining - show message
+        console.log('[Break] Cannot start - no break time remaining');
+        return;
+      }
+      
+      // Calculate available break time
+      const availableBreakTime = session ? session.maxBreakTime - session.totalBreakTime : 5 * 60;
+      const breakDuration = Math.min(5 * 60, availableBreakTime); // 5 minutes or remaining time
+      
+      // Start break
       setIsOnBreak(true);
-      setBreakTimeRemaining(5 * 60); // 5 minutes in seconds
+      setBreakTimeRemaining(breakDuration);
+      setBreakStartTime(Date.now());
+      setCurrentAnimation('break'); // Show break animation
       
       const timer = setInterval(() => {
         setBreakTimeRemaining(prev => {
           if (prev <= 1) {
-            // Break finished
+            // Break finished - record the full duration
+            endBreak(breakDuration);
             setIsOnBreak(false);
+            setCurrentAnimation('focus'); // Return to focus
             clearInterval(timer);
             setBreakTimer(null);
             return 0;
@@ -121,6 +175,8 @@ export default function StudySessionScreen() {
       }, 1000);
       
       setBreakTimer(timer);
+      
+      console.log(`[Break] Started - ${Math.floor(breakDuration / 60)}m ${breakDuration % 60}s`);
     }
     setSpeechKey(prev => prev + 1); // Update speech bubble
   };
@@ -179,18 +235,18 @@ export default function StudySessionScreen() {
   const getSpeechBubbleMessage = () => {
     const buddyName = userData.buddyName || 'Hammy';
     
-    console.log('[Speech] Paused:', isPaused, 'Break:', isOnBreak, 'Grace period:', session.isInGracePeriod, 'Warnings:', session.distractionWarnings);
+    console.log('[Speech] Break:', isOnBreak, 'Grace period:', session.isInGracePeriod, 'Warnings:', session.distractionWarnings);
     
     // Break state messages
     if (isOnBreak) {
       const minutes = Math.floor(breakTimeRemaining / 60);
       const seconds = breakTimeRemaining % 60;
-      return `☕ ${buddyName} is recharging! Break time: ${minutes}:${seconds.toString().padStart(2, '0')} ⭐`;
-    }
-    
-    // Paused state message
-    if (isPaused) {
-      return `⏸️ ${buddyName} asks: "Taking a breather? Ready to continue when you are!" 😌`;
+      const totalBreakUsed = session ? session.totalBreakTime : 0;
+      const maxBreak = session ? session.maxBreakTime : 5 * 60;
+      const remainingTotal = Math.max(0, maxBreak - totalBreakUsed);
+      const remainingMinutes = Math.floor(remainingTotal / 60);
+      
+      return `☕ ${buddyName} is recharging! Break: ${minutes}:${seconds.toString().padStart(2, '0')} | Total left: ${remainingMinutes}m ⭐`;
     }
     
     // Show return message for 4 seconds after user returns
@@ -356,7 +412,17 @@ export default function StudySessionScreen() {
       {/* Hamster Character */}
       <View style={styles.hamsterContainer}>
         <ImageBackground
-          source={require('../assets/hamsters/casual/focus.png')}
+          source={
+            currentAnimation === 'break'
+              ? require('../assets/study-session/5-min-break.png')
+              : currentAnimation === 'drinking' 
+              ? require('../assets/hamsters/casual/coffee.png')
+              : currentAnimation === 'eating'
+              ? require('../assets/hamsters/casual/apples.png')
+              : currentAnimation === 'exercising'
+              ? require('../assets/hamsters/casual/exercising.png')
+              : require('../assets/hamsters/casual/focus.png')
+          }
           style={styles.focusHamster}
           resizeMode="contain"
         />
@@ -364,20 +430,28 @@ export default function StudySessionScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity 
-          style={[styles.pauseButton, isPaused && styles.buttonActive]}
-          onPress={handlePauseSession}
-        >
-          <Text style={styles.pauseIcon}>{isPaused ? '▶️' : '⏸️'}</Text>
-          <Text style={styles.buttonLabel}>{isPaused ? 'Resume' : 'Pause'}</Text>
-        </TouchableOpacity>
+        {/* Focus Score Display */}
+        <View style={styles.focusScoreDisplay}>
+          <Text style={styles.focusScoreLabel}>Focus</Text>
+          <Text style={styles.focusScoreValue}>{Math.round(session.focusScore)}</Text>
+        </View>
         
         <TouchableOpacity 
-          style={[styles.breakButton, isOnBreak && styles.buttonActive]}
+          style={[
+            styles.breakButton, 
+            isOnBreak && styles.buttonActive,
+            session && session.totalBreakTime >= session.maxBreakTime && styles.buttonDisabled
+          ]}
           onPress={handleBreakSession}
+          disabled={session ? session.totalBreakTime >= session.maxBreakTime && !isOnBreak : false}
         >
           <Text style={styles.breakText}>
-            {isOnBreak ? 'Skip Break' : '5m Break'}
+            {isOnBreak 
+              ? 'Skip Break' 
+              : session && session.totalBreakTime >= session.maxBreakTime
+              ? 'No Break'
+              : `${Math.floor((session ? session.maxBreakTime - session.totalBreakTime : 5 * 60) / 60)}m Break`
+            }
           </Text>
         </TouchableOpacity>
         
@@ -406,33 +480,106 @@ export default function StudySessionScreen() {
           </Text>
         </View>
 
-        {/* Habit Buttons */}
+        {/* Habit Buttons - 2 horizontal buttons */}
         <View style={styles.habitButtons}>
-          <TouchableOpacity style={styles.habitButton} onPress={() => logExercise(5)}>
-            <ImageBackground
-              source={require('../assets/hamsters/casual/exercising.png')}
-              style={styles.hamsterInteraction}
-              resizeMode="contain"
-            />
-            <Text style={styles.habitReward}>+15</Text>
+          {/* Coffee Button */}
+          <TouchableOpacity 
+            style={[
+              styles.habitButton,
+              userData.coffeeTapsToday >= 3 && !session?.coffeePremiumUsedThisSession && styles.premiumButton,
+              userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession && styles.disabledButton
+            ]}
+            onPress={() => {
+              if (!session) return;
+              
+              if (userData.coffeeTapsToday < 3) {
+                if (tapCoffeeInSession(false)) {
+                  playAnimation('drinking');
+                }
+              } else if (!session.coffeePremiumUsedThisSession) {
+                if (tapCoffeeInSession(true)) {
+                  playAnimation('drinking');
+                }
+              }
+            }}
+            disabled={userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession}
+          >
+            <View style={styles.buttonLeft}>
+              <ImageBackground
+                source={require('../assets/study-session/coffee-cup.png')}
+                style={styles.buttonIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.buttonLabel}>Coffee</Text>
+            </View>
+            
+            <View style={styles.buttonRight}>
+              {userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession ? (
+                <Text style={styles.habitReward}>USED</Text>
+              ) : userData.coffeeTapsToday >= 3 ? (
+                <>
+                  <Text style={styles.premiumLabel}>PREMIUM</Text>
+                  <Text style={styles.habitReward}>+15 5m</Text>
+                  <Text style={styles.habitCost}>-15🪙</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.habitReward}>+6 3m</Text>
+                  <Text style={styles.habitCost}>-3🪙</Text>
+                  <Text style={styles.habitCount}>({userData.coffeeTapsToday}/3)</Text>
+                </>
+              )}
+            </View>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.habitButton} onPress={logMeal}>
-            <ImageBackground
-              source={require('../assets/hamsters/casual/eating-normal.png')}
-              style={styles.mealTime}
-              resizeMode="contain"
-            />
-            <Text style={styles.habitReward}>+10</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.habitButton} onPress={logWater}>
-            <ImageBackground
-              source={require('../assets/hamsters/casual/drinking.png')}
-              style={styles.coffeeTime}
-              resizeMode="contain"
-            />
-            <Text style={styles.habitReward}>+5</Text>
+          {/* Apple Button */}
+          <TouchableOpacity 
+            style={[
+              styles.habitButton,
+              userData.appleTapsToday >= 5 && !session?.applePremiumUsedThisSession && styles.premiumButton,
+              userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession && styles.disabledButton
+            ]}
+            onPress={() => {
+              if (!session) return;
+              
+              if (userData.appleTapsToday < 5) {
+                if (tapAppleInSession(false)) {
+                  playAnimation('eating');
+                }
+              } else if (!session.applePremiumUsedThisSession) {
+                if (tapAppleInSession(true)) {
+                  playAnimation('eating');
+                }
+              }
+            }}
+            disabled={userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession}
+          >
+            <View style={styles.buttonLeft}>
+              <ImageBackground
+                source={require('../assets/study-session/apple-pie.png')}
+                style={styles.buttonIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.buttonLabel}>Apple</Text>
+            </View>
+            
+            <View style={styles.buttonRight}>
+              {userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession ? (
+                <Text style={styles.habitReward}>USED</Text>
+              ) : userData.appleTapsToday >= 5 ? (
+                <>
+                  <Text style={styles.premiumLabel}>PREMIUM</Text>
+                  <Text style={styles.habitReward}>+10</Text>
+                  <Text style={styles.habitCost}>-10🪙</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.habitReward}>+3 🍎</Text>
+                  <Text style={styles.habitCost}>-2🪙</Text>
+                  <Text style={styles.habitCount}>({userData.appleTapsToday}/5)</Text>
+                </>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -660,18 +807,35 @@ const styles = StyleSheet.create({
     position: 'absolute',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     width: (SCREEN_WIDTH * 269) / 393,
     left: 60,
     top: 582,
   },
   
-  pauseButton: {
+  focusScoreDisplay: {
     width: (SCREEN_WIDTH * 79) / 393,
     height: (SCREEN_HEIGHT * 48) / 852,
-    backgroundColor: '#FFE797',
+    backgroundColor: '#E3F2FD',
     borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#2196F3',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  
+  focusScoreLabel: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '400',
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    color: '#2196F3',
+  },
+  
+  focusScoreValue: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '700',
+    fontSize: (SCREEN_WIDTH * 20) / 393,
+    color: '#1976D2',
   },
   
   breakButton: {
@@ -696,8 +860,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   
-  pauseIcon: {
-    fontSize: (SCREEN_WIDTH * 20) / 393,
+  buttonDisabled: {
+    backgroundColor: '#CCCCCC',
+    opacity: 0.5,
   },
   
   doneIcon: {
@@ -766,14 +931,68 @@ const styles = StyleSheet.create({
   habitButtons: {
     position: 'absolute',
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     width: SCREEN_WIDTH - 40,
     left: 20,
     top: 120,
+    gap: 10,
   },
   
   habitButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#FFE797',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
+  
+  premiumButton: {
+    backgroundColor: 'rgba(255, 193, 7, 0.3)',
+    borderWidth: 3,
+    borderColor: '#FFC107',
+  },
+  
+  disabledButton: {
+    opacity: 0.4,
+    backgroundColor: '#CCCCCC',
+  },
+  
+  premiumLabel: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '700',
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    color: '#FFC107',
+    marginRight: 8,
+  },
+  
+  buttonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  
+  buttonRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  
+  buttonIcon: {
+    width: (SCREEN_WIDTH * 40) / 393,
+    height: (SCREEN_HEIGHT * 40) / 852,
+  },
+  
+  buttonLabel: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '600',
+    fontSize: (SCREEN_WIDTH * 14) / 393,
+    color: '#000000',
   },
   
   hamsterInteraction: {
@@ -787,8 +1006,8 @@ const styles = StyleSheet.create({
   },
   
   coffeeTime: {
-    width: (SCREEN_WIDTH * 53) / 393,
-    height: (SCREEN_HEIGHT * 48) / 852,
+    width: (SCREEN_WIDTH * 65) / 393,  // Increased from 53 to 65
+    height: (SCREEN_HEIGHT * 60) / 852, // Increased from 48 to 60
   },
   
   habitReward: {
@@ -799,6 +1018,22 @@ const styles = StyleSheet.create({
     color: '#000000',
     opacity: 0.7,
     marginTop: 5,
+  },
+  
+  habitCost: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '600',
+    fontSize: (SCREEN_WIDTH * 11) / 393,
+    color: '#FF5722',
+    marginTop: 2,
+  },
+  
+  habitCount: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '500',
+    fontSize: (SCREEN_WIDTH * 10) / 393,
+    color: '#666666',
+    marginLeft: 4,
   },
   
   bottomText: {

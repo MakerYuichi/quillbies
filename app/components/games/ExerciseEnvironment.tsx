@@ -13,14 +13,14 @@ export default function ExerciseEnvironment({ pointerEvents = 'auto' }: Exercise
     <View pointerEvents={pointerEvents}>
       {/* LAYER 1: Sky Background */}
       <Image 
-        source={require('../../assets/exercise/sky.png')}
+        source={require('../../../assets/exercise/sky.png')}
         style={styles.skyLayer}
         resizeMode="cover"
       />
       
       {/* LAYER 2: Grass Floor */}
       <Image 
-        source={require('../../assets/exercise/grass.png')}
+        source={require('../../../assets/exercise/grass.png')}
         style={styles.grassLayer}
         resizeMode="cover"
       />

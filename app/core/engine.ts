@@ -128,16 +128,25 @@ export function shouldApplyDailyDrains(userData: UserData): { shouldApply: boole
   const now = new Date();
   const today = now.toDateString();
   
-  // Check if breakfast drain should be applied (only once at noon)
-  if (!userData.ateBreakfast && now.getHours() >= 12) {
+  // Check if breakfast drain should be applied (only once at 11 AM)
+  if (!userData.ateBreakfast && now.getHours() >= 11) {
     const lastBreakfastDrain = (userData as any).lastBreakfastDrain;
     if (lastBreakfastDrain !== today) {
-      return { shouldApply: true, drainAmount: 20, drainType: 'breakfast' };
+      return { shouldApply: true, drainAmount: 10, drainType: 'breakfast' };
     }
   }
   
-  // No drains needed - the simplified system should not have ongoing drains
-  // Hydration and mess penalties are removed to prevent constant energy loss
+  // Check if mess drain should be applied (only once per day at 6 PM)
+  if (now.getHours() >= 18) {
+    const lastMessDrain = (userData as any).lastMessDrain;
+    if (lastMessDrain !== today) {
+      const messDrain = calculateMessEnergyDrain(userData.messPoints);
+      if (messDrain > 0) {
+        return { shouldApply: true, drainAmount: messDrain, drainType: 'mess' };
+      }
+    }
+  }
+  
   return { shouldApply: false, drainAmount: 0, drainType: 'none' };
 }
 
@@ -179,21 +188,53 @@ export function startSessionEnergyCost(currentEnergy: number, userData: UserData
 // ============================================
 
 /**
- * Update focus score during an active session
- * @param currentScore - Current focus meter score
- * @param secondsFocused - Seconds of focused work (app active, no distractions)
+ * Calculate focus score during an active session
+ * @param secondsFocused - Total seconds of focused work
+ * @param coffeeBoostStartTime - When coffee boost started (null if no boost)
+ * @param coffeeBoostEndTime - When coffee boost ends (null if no boost)
+ * @param interactionBoosts - Total points from taps (water/meal/apple/coffee)
+ */
+export function calculateFocusScore(
+  secondsFocused: number,
+  coffeeBoostStartTime: number | null,
+  coffeeBoostEndTime: number | null,
+  interactionBoosts: number
+): number {
+  // Base focus: +1 point per 30 seconds
+  const baseFocusScore = Math.floor(secondsFocused / 30);
+  
+  // Coffee bonus: +1 EXTRA per 30 seconds during boost period (not doubling!)
+  let coffeeBonus = 0;
+  if (coffeeBoostStartTime !== null && coffeeBoostEndTime !== null) {
+    const now = Date.now();
+    const boostStartSeconds = (coffeeBoostStartTime - (now - secondsFocused * 1000)) / 1000;
+    const boostEndSeconds = Math.min(boostStartSeconds + 180, secondsFocused); // Max 3 min boost
+    
+    if (boostEndSeconds > boostStartSeconds && boostStartSeconds >= 0) {
+      const secondsWithBoost = boostEndSeconds - boostStartSeconds;
+      coffeeBonus = Math.floor(secondsWithBoost / 30); // Extra +1 per 30sec
+    }
+  }
+  
+  return baseFocusScore + coffeeBonus + interactionBoosts;
+}
+
+/**
+ * Update focus score during an active session (DEPRECATED - use calculateFocusScore)
  */
 export function updateFocusScore(
   currentScore: number,
-  secondsFocused: number
+  secondsFocused: number,
+  hasCoffeeBoost: boolean = false
 ): number {
-  // Gain 1 point per 30 seconds
-  const pointsGained = Math.floor(secondsFocused / 30) * FOCUS_GAIN_RATE;
+  // This is deprecated but kept for compatibility
+  const pointsPerInterval = hasCoffeeBoost ? 2 : 1;
+  const pointsGained = Math.floor(secondsFocused / 30) * pointsPerInterval;
   return currentScore + pointsGained;
 }
 
 /**
- * Drain focus score when user is distracted
+ * Drain focus score when user is distracted (4th offense)
  * @param currentScore - Current focus meter score
  * @param minutesDistracted - Minutes user has been away
  */
@@ -201,7 +242,8 @@ export function drainFocusScore(
   currentScore: number,
   minutesDistracted: number
 ): number {
-  const drain = currentScore * (FOCUS_DRAIN_RATE / 100) * minutesDistracted;
+  // Formula: Focus Score × 0.05 × minutes_away
+  const drain = currentScore * 0.05 * minutesDistracted;
   return Math.max(0, currentScore - drain);
 }
 
@@ -211,12 +253,35 @@ export function drainFocusScore(
 
 /**
  * Calculate rewards earned from completing a session
+ * @param focusScore - Final focus score
+ * @param distractionCount - Number of distraction penalties (4th+ offenses)
  */
-export function calculateSessionRewards(focusScore: number): SessionRewards {
+export function calculateSessionRewards(
+  focusScore: number, 
+  distractionCount: number
+): SessionRewards {
+  // Q-Coins: Focus Score × 0.5
+  const qCoinsEarned = Math.round(focusScore * 0.5);
+  
+  // Study Hours: (Focus Score / 120) × 1 hour
+  // 120 points ≈ 1 hour of intense study
+  const studyHours = focusScore / 120;
+  
+  // Energy: Based on distraction count
+  let energyMultiplier = 0.3; // Perfect (0 distractions)
+  if (distractionCount >= 3) {
+    energyMultiplier = 0.1; // Many distractions (3+)
+  } else if (distractionCount >= 1) {
+    energyMultiplier = 0.2; // Some distractions (1-2)
+  }
+  const energyGained = Math.round(focusScore * energyMultiplier);
+  
   return {
-    qCoinsEarned: Math.round(focusScore * QCOIN_MULTIPLIER),
-    xpEarned: Math.round(focusScore * XP_MULTIPLIER),
-    messPointsRemoved: MESS_REMOVAL_PER_SESSION
+    qCoinsEarned,
+    xpEarned: Math.round(focusScore), // XP = focus score
+    messPointsRemoved: MESS_REMOVAL_PER_SESSION, // Always -2
+    energyGained, // NEW: Energy calculated at end
+    studyHours // NEW: Study time in hours
   };
 }
 
@@ -235,11 +300,14 @@ export function getRoomState(messPoints: number): 'clean' | 'messy' | 'dirty' | 
 }
 
 /**
- * Check if mess affects energy recharge rate
+ * Calculate daily energy drain from mess (visual consequence of messy room)
  */
-export function getMessEnergyPenalty(messPoints: number): number {
-  // If mess > 10, energy recharge rate is halved (50% penalty)
-  return messPoints > 10 ? 0.5 : 1;
+export function calculateMessEnergyDrain(messPoints: number): number {
+  if (messPoints >= 21) return 20; // Heavy mess: -20 energy/day
+  if (messPoints >= 16) return 15; // Medium-high mess: -15 energy/day
+  if (messPoints >= 11) return 10; // Medium mess: -10 energy/day
+  if (messPoints >= 6) return 5;   // Light mess: -5 energy/day
+  return 0; // Clean room: no drain
 }
 
 /**

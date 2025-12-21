@@ -2,7 +2,9 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store';
-import { QuillbyPet, EnergyBar, RoomBackground } from './components';
+import QuillbyPet from './components/character/QuillbyPet';
+import EnergyBar from './components/progress/EnergyBar';
+import RoomBackground from './components/room/RoomBackground';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -12,7 +14,9 @@ export default function HomeScreen() {
     startFocusSession,
     logWater, 
     logBreakfast, 
-    logSleep,
+    startSleep,
+    endSleep,
+    getTodaysSleepHours,
     skipTask,
     resetDay
   } = useQuillbyStore();
@@ -23,15 +27,16 @@ export default function HomeScreen() {
   const selectedCharacter = userData.selectedCharacter || 'casual';
   const enabledHabits = userData.enabledHabits || ['study'];
   
-  // Always redirect to onboarding for testing
+  // Redirect to onboarding if not completed
   useEffect(() => {
-    // Small delay to ensure layout is mounted
-    const timer = setTimeout(() => {
-      router.replace('/onboarding/welcome');
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    if (!userData.onboardingCompleted) {
+      const timer = setTimeout(() => {
+        router.replace('/onboarding/welcome');
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [userData.onboardingCompleted]);
   
   // Update energy periodically (just caps it, no drain)
   useEffect(() => {
@@ -56,28 +61,11 @@ export default function HomeScreen() {
   };
   
   const handleLogSleep = () => {
-    Alert.prompt(
-      "Log Sleep",
-      "How many hours did you sleep last night?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "OK", 
-          onPress: (hours?: string) => {
-            const h = parseInt(hours || '7');
-            if (!isNaN(h) && h >= 0 && h <= 12) {
-              logSleep(h);
-              Alert.alert(
-                "Sleep Logged",
-                `${h} hours logged. ${h < 6 ? 'Max energy cap reduced by 30%!' : 'Good rest!'}`,
-                [{ text: "OK" }]
-              );
-            }
-          }
-        }
-      ],
-      "plain-text",
-      userData.sleepHours.toString()
+    const todaysSleep = getTodaysSleepHours();
+    Alert.alert(
+      "Sleep Tracking",
+      `Today's sleep: ${todaysSleep.toFixed(1)} hours\n\nUse the sleep button in the main app to track sleep sessions.`,
+      [{ text: "OK" }]
     );
   };
   
@@ -173,7 +161,7 @@ export default function HomeScreen() {
               onPress={handleLogSleep}
             >
               <Text style={styles.habitButtonText}>
-                😴 Log Sleep ({userData.sleepHours}h)
+                😴 Sleep Tracker ({getTodaysSleepHours().toFixed(1)}h)
               </Text>
             </TouchableOpacity>
           </View>

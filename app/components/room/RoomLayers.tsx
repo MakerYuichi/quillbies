@@ -19,16 +19,16 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
   const getRoomWall = () => {
     if (messPoints <= 5) {
       // Clean room (0-5 mess points)
-      return require('../../assets/rooms/walls.png');
+      return require('../../../assets/rooms/walls.png');
     } else if (messPoints <= 10) {
       // Light mess (6-10 mess points)
-      return require('../../assets/rooms/mess/walls-messy1.png');
+      return require('../../../assets/rooms/mess/walls-messy1.png');
     } else if (messPoints <= 20) {
       // Medium mess (11-20 mess points)
-      return require('../../assets/rooms/mess/walls-messy2.png');
+      return require('../../../assets/rooms/mess/walls-messy2.png');
     } else {
       // Heavy mess (21+ mess points)
-      return require('../../assets/rooms/mess/walls-messy3.png');
+      return require('../../../assets/rooms/mess/walls-messy3.png');
     }
   };
 
@@ -36,16 +36,16 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
   const getRoomFloor = () => {
     if (messPoints <= 5) {
       // Clean room (0-5 mess points)
-      return require('../../assets/rooms/floor.png');
+      return require('../../../assets/rooms/floor.png');
     } else if (messPoints <= 10) {
       // Light mess (6-10 mess points)
-      return require('../../assets/rooms/mess/floor-messy1.png');
+      return require('../../../assets/rooms/mess/floor-messy1.png');
     } else if (messPoints <= 20) {
       // Medium mess (11-20 mess points)
-      return require('../../assets/rooms/mess/floor-messy2.png');
+      return require('../../../assets/rooms/mess/floor-messy2.png');
     } else {
       // Heavy mess (21+ mess points)
-      return require('../../assets/rooms/mess/floor-messy3.png');
+      return require('../../../assets/rooms/mess/floor-messy3.png');
     }
   };
   return (
@@ -68,50 +68,65 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
       
       {/* LAYER 3: Blue decorative background */}
       <Image 
-        source={require('../../assets/backgrounds/bluebg.png')}
+        source={require('../../../assets/backgrounds/bluebg.png')}
         style={styles.blueBgDecor}
         resizeMode="cover"
       />
       
       {/* LAYER 4: Photo Frame 1 */}
       <Image 
-        source={require('../../assets/hamsters/casual/photo-frame.png')}
+        source={require('../../../assets/hamsters/casual/photo-frame.png')}
         style={styles.photoFrame1}
         resizeMode="contain"
       />
       
       {/* LAYER 5: Photo Frame 2 */}
       <Image 
-        source={require('../../assets/hamsters/photo-frame2.png')}
+        source={require('../../../assets/hamsters/photo-frame2.png')}
         style={styles.photoFrame2}
         resizeMode="contain"
       />
 
-      {/* LAYER 6: Customizable Light - Hidden when sleeping */}
+      {/* LAYER 6: Lights - Show based on room customization */}
       {!isSleeping && (
-        <Image 
-          source={
-            roomCustomization?.lightType === 'colored-fairy-lights' 
-              ? require('../../assets/rooms/fairy-lights.png')
-              : require('../../assets/rooms/lamp.png')
-          }
-          style={
-            roomCustomization?.lightType === 'colored-fairy-lights' 
-              ? styles.fairyLightsDecor 
-              : styles.lampDecor
-          }
-          resizeMode="contain"
-        />
+        <>
+          {/* Lamp - Show when explicitly equipped */}
+          {roomCustomization?.lightType === 'lamp' && (
+            <Image 
+              source={require('../../../assets/rooms/lamp.png')}
+              style={styles.lampDecor}
+              resizeMode="contain"
+            />
+          )}
+          
+          {/* Default Fairy Lights - Show when no customization (original default) */}
+          {!roomCustomization?.lightType && (
+            <Image 
+              source={require('../../../assets/rooms/fairy-lights.png')}
+              style={styles.fairyLightsDecor}
+              resizeMode="contain"
+            />
+          )}
+          
+          {/* Colored Fairy Lights - Show when colored fairy lights are equipped */}
+          {roomCustomization?.lightType === 'colored-fairy-lights' && (
+            <Image 
+              source={require('../../../assets/shop/decoration/fairy-lights/colored.png')}
+              style={styles.fairyLightsDecor}
+              resizeMode="contain"
+            />
+          )}
+        </>
       )}
       
       {/* LAYER 7: Customizable Plants */}
       <Image 
         source={
           roomCustomization?.plantType === 'succulent-plant' 
-            ? require('../../assets/rooms/plant.png') // Using default plant for now
+            ? require('../../../assets/shop/decoration/plants/succulent-plant.png')
             : roomCustomization?.plantType === 'swiss-cheese-plant'
-            ? require('../../assets/rooms/plant.png') // Using default plant for now
-            : require('../../assets/rooms/plant.png')
+            ? require('../../../assets/shop/decoration/plants/swiss-cheese-plant.png')
+            : require('../../../assets/rooms/plant.png') // Default plant when undefined or 'plant'
         }
         style={styles.plantDecor}
         resizeMode="contain"
@@ -120,25 +135,27 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
       <Image 
         source={
           roomCustomization?.plantType === 'succulent-plant' 
-            ? require('../../assets/rooms/plant.png') // Using default plant for now
+            ? require('../../../assets/shop/decoration/plants/succulent-plant.png')
             : roomCustomization?.plantType === 'swiss-cheese-plant'
-            ? require('../../assets/rooms/plant.png') // Using default plant for now
-            : require('../../assets/rooms/plant.png')
+            ? require('../../../assets/shop/decoration/plants/swiss-cheese-plant.png')
+            : require('../../../assets/rooms/plant.png') // Default plant when undefined or 'plant'
         }
         style={styles.plantDecor2}
         resizeMode="contain"
       />
      
       
-      {/* LAYER 9: Q-Coins Display */}
-      <Image 
-        source={require('../../assets/overall/qbies.png')}
-        style={styles.qbiesIcon}
-        resizeMode="contain"
-      />
-      <Text style={styles.qCoinsText}>
-        {qCoins}
-      </Text>
+      {/* LAYER 9: Q-Coins Display - Match study session design */}
+      <View style={styles.qCoinsContainer}>
+        <Image 
+          source={require('../../../assets/overall/qbies.png')}
+          style={styles.qbiesIcon}
+          resizeMode="contain"
+        />
+        <Text style={styles.qCoinsText}>
+          {qCoins}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -217,25 +234,25 @@ const styles = StyleSheet.create({
     left: (SCREEN_WIDTH * -81) / 393, // -81px on iPhone 15 Pro (extends beyond left edge)
     top: (SCREEN_HEIGHT * 75) / 852, // 75px on iPhone 15 Pro
   },
-  qbiesIcon: {
+  // Q-Coins Display - Match study session design
+  qCoinsContainer: {
     position: 'absolute',
-    width: (SCREEN_WIDTH * 38) / 393, // 38px on iPhone 15 Pro
-    height: (SCREEN_HEIGHT * 38) / 852, // 38px on iPhone 15 Pro
-    left: (SCREEN_WIDTH * 345) / 393, // 345px on iPhone 15 Pro
-    top: (SCREEN_HEIGHT * 9) / 852, // 9px on iPhone 15 Pro
+    right: 16,
+    top: 3,
+    alignItems: 'center',
+  },
+  qbiesIcon: {
+    width: (SCREEN_WIDTH * 47) / 393,
+    height: (SCREEN_HEIGHT * 47) / 852,
   },
   qCoinsText: {
-    position: 'absolute',
-    width: (SCREEN_WIDTH * 19) / 393, // 19px on iPhone 15 Pro
-    height: (SCREEN_HEIGHT * 14) / 852, // 14px on iPhone 15 Pro
-    left: (SCREEN_WIDTH * 354) / 393, // 354px on iPhone 15 Pro
-    top: (SCREEN_HEIGHT * 47) / 852, // 47px on iPhone 15 Pro
     fontFamily: 'ChakraPetch_700Bold',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 14) / 393, // 14px scaled
-    lineHeight: (SCREEN_HEIGHT * 18) / 852, // 18px scaled
+    fontSize: (SCREEN_WIDTH * 21) / 393,
+    lineHeight: (SCREEN_HEIGHT * 27) / 852,
     color: '#000000',
     opacity: 0.7,
+    marginTop: 5,
     textAlign: 'center',
   },
 });
