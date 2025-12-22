@@ -39,6 +39,17 @@ const tutorialSteps = [
     ]
   },
   {
+    title: "During Study Sessions ☕🍎",
+    description: "Boost your focus with coffee and apples!",
+    icon: "☕",
+    tips: [
+      "Coffee: +6 focus for 3min (3 free/day)",
+      "Apple: +3 focus instantly (5 free/day)",
+      "Premium boosts available after free uses",
+      "Stay in app to maintain focus score"
+    ]
+  },
+  {
     title: "Daily Habits 💧🍎😴",
     description: "Track your healthy habits throughout the day.",
     icon: "💧",

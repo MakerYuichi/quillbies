@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, AppState, AppStateStatus, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store';
+import StudySessionTutorialModal from './components/modals/StudySessionTutorialModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -24,6 +26,7 @@ export default function StudySessionScreen() {
   const [speechKey, setSpeechKey] = useState(0); // Force re-render of speech bubble
   const [showReturnMessage, setShowReturnMessage] = useState(false);
   const [returnMessageTimer, setReturnMessageTimer] = useState<NodeJS.Timeout | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
   
   // Session control states
   const [isOnBreak, setIsOnBreak] = useState(false);
@@ -34,6 +37,22 @@ export default function StudySessionScreen() {
   // Animation states
   const [currentAnimation, setCurrentAnimation] = useState<'focus' | 'drinking' | 'eating' | 'exercising' | 'break'>('focus');
   const [animationTimer, setAnimationTimer] = useState<NodeJS.Timeout | null>(null);
+  
+  // Check if first time in study session and show tutorial
+  useEffect(() => {
+    const checkFirstTime = async () => {
+      try {
+        const hasSeenTutorial = await AsyncStorage.getItem('hasSeenStudyTutorial');
+        if (!hasSeenTutorial) {
+          setShowTutorial(true);
+          await AsyncStorage.setItem('hasSeenStudyTutorial', 'true');
+        }
+      } catch (error) {
+        console.error('[Tutorial] Error checking first time:', error);
+      }
+    };
+    checkFirstTime();
+  }, []);
   
   // Update focus score and speech bubble every second
   useEffect(() => {
@@ -459,6 +478,13 @@ export default function StudySessionScreen() {
           <Text style={styles.doneIcon}>✅</Text>
           <Text style={styles.buttonLabel}>Done</Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.helpButton} 
+          onPress={() => setShowTutorial(true)}
+        >
+          <Text style={styles.helpIcon}>❓</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Bottom Orange Theme Section */}
@@ -515,19 +541,19 @@ export default function StudySessionScreen() {
             
             <View style={styles.buttonRight}>
               {userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession ? (
-                <Text style={styles.habitReward}>USED</Text>
+                <Text style={styles.habitUsed}>USED</Text>
               ) : userData.coffeeTapsToday >= 3 ? (
-                <>
+                <View style={styles.buttonStats}>
                   <Text style={styles.premiumLabel}>PREMIUM</Text>
                   <Text style={styles.habitReward}>+15 5m</Text>
                   <Text style={styles.habitCost}>-15🪙</Text>
-                </>
+                </View>
               ) : (
-                <>
+                <View style={styles.buttonStats}>
                   <Text style={styles.habitReward}>+6 3m</Text>
                   <Text style={styles.habitCost}>-3🪙</Text>
                   <Text style={styles.habitCount}>({userData.coffeeTapsToday}/3)</Text>
-                </>
+                </View>
               )}
             </View>
           </TouchableOpacity>
@@ -565,19 +591,19 @@ export default function StudySessionScreen() {
             
             <View style={styles.buttonRight}>
               {userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession ? (
-                <Text style={styles.habitReward}>USED</Text>
+                <Text style={styles.habitUsed}>USED</Text>
               ) : userData.appleTapsToday >= 5 ? (
-                <>
+                <View style={styles.buttonStats}>
                   <Text style={styles.premiumLabel}>PREMIUM</Text>
                   <Text style={styles.habitReward}>+10</Text>
                   <Text style={styles.habitCost}>-10🪙</Text>
-                </>
+                </View>
               ) : (
-                <>
+                <View style={styles.buttonStats}>
                   <Text style={styles.habitReward}>+3 🍎</Text>
                   <Text style={styles.habitCost}>-2🪙</Text>
                   <Text style={styles.habitCount}>({userData.appleTapsToday}/5)</Text>
-                </>
+                </View>
               )}
             </View>
           </TouchableOpacity>
@@ -587,6 +613,12 @@ export default function StudySessionScreen() {
           {userData.buddyName || 'Hammy'} feels your support! ⭐️
         </Text>
       </ImageBackground>
+      
+      {/* Study Session Tutorial Modal */}
+      <StudySessionTutorialModal
+        visible={showTutorial}
+        onClose={() => setShowTutorial(false)}
+      />
     </View>
   );
 }
@@ -856,6 +888,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   
+  helpButton: {
+    width: (SCREEN_WIDTH * 48) / 393,
+    height: (SCREEN_HEIGHT * 48) / 852,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#1976D2',
+  },
+  
+  helpIcon: {
+    fontSize: (SCREEN_WIDTH * 24) / 393,
+    color: '#1976D2',
+  },
+  
   buttonActive: {
     backgroundColor: '#4CAF50',
   },
@@ -966,21 +1014,31 @@ const styles = StyleSheet.create({
   premiumLabel: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 12) / 393,
+    fontSize: (SCREEN_WIDTH * 10) / 393,
     color: '#FFC107',
-    marginRight: 8,
+    textAlign: 'right',
+    marginBottom: 2,
   },
   
   buttonLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
+    minWidth: 80,
   },
   
   buttonRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  
+  buttonStats: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 2,
   },
   
   buttonIcon: {
@@ -988,7 +1046,7 @@ const styles = StyleSheet.create({
     height: (SCREEN_HEIGHT * 40) / 852,
   },
   
-  buttonLabel: {
+  habitButtonLabel: {
     fontFamily: 'Chakra Petch',
     fontWeight: '600',
     fontSize: (SCREEN_WIDTH * 14) / 393,
@@ -1013,11 +1071,10 @@ const styles = StyleSheet.create({
   habitReward: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 14) / 393,
-    lineHeight: (SCREEN_HEIGHT * 18) / 852,
+    fontSize: (SCREEN_WIDTH * 13) / 393,
     color: '#000000',
-    opacity: 0.7,
-    marginTop: 5,
+    opacity: 0.8,
+    textAlign: 'right',
   },
   
   habitCost: {
@@ -1025,7 +1082,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: (SCREEN_WIDTH * 11) / 393,
     color: '#FF5722',
-    marginTop: 2,
+    textAlign: 'right',
   },
   
   habitCount: {
@@ -1033,7 +1090,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: (SCREEN_WIDTH * 10) / 393,
     color: '#666666',
-    marginLeft: 4,
+    textAlign: 'right',
+  },
+  
+  habitUsed: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '700',
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    color: '#999999',
+    textAlign: 'right',
   },
   
   bottomText: {

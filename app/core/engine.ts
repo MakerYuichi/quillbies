@@ -128,6 +128,15 @@ export function shouldApplyDailyDrains(userData: UserData): { shouldApply: boole
   const now = new Date();
   const today = now.toDateString();
   
+  // Skip all penalties on first day after signup
+  const signupDate = (userData as any).signupDate || today;
+  const isFirstDay = signupDate === today;
+  
+  if (isFirstDay) {
+    console.log('[Daily] First day after signup - skipping all daily penalties');
+    return { shouldApply: false, drainAmount: 0, drainType: 'none' };
+  }
+  
   // Check if breakfast drain should be applied (only once at 11 AM)
   if (!userData.ateBreakfast && now.getHours() >= 11) {
     const lastBreakfastDrain = (userData as any).lastBreakfastDrain;
