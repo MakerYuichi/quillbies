@@ -1,97 +1,109 @@
 // Meal tracking button component
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Dimensions, View } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface MealButtonProps {
   mealsLogged: number;
-  portionDescription: string; // "Small", "Normal", "Large"
+  portionDescription: string;
   onPress: () => void;
   disabled?: boolean;
 }
 
 export default function MealButton({ mealsLogged, portionDescription, onPress, disabled }: MealButtonProps) {
-  // Button text changes based on meal count
-  const getButtonText = () => {
-    if (mealsLogged < 3) {
-      return `🍎 Meal (${mealsLogged}/3)`;
-    } else if (mealsLogged === 3) {
-      return `🍽️ Extra Meal`;
-    } else {
-      return `⚠️ Overeating (${mealsLogged})`;
-    }
+  // Get color based on meal count
+  const getColor = () => {
+    if (mealsLogged < 3) return '#FB8C00'; // Orange
+    if (mealsLogged === 3) return '#FFB300'; // Yellow warning
+    return '#E53935'; // Red danger
   };
-  
-  const getSubtext = () => {
-    if (mealsLogged < 3) {
-      return `${portionDescription} portion`;
-    } else if (mealsLogged === 3) {
-      return 'Proceed with caution';
-    } else {
-      return 'Consequences ahead!';
-    }
+
+  const getEmoji = () => {
+    if (mealsLogged < 3) return '🍎';
+    if (mealsLogged === 3) return '🍽️';
+    return '⚠️';
   };
-  
-  // Button color changes based on meal count
-  const getButtonStyle = () => {
-    if (mealsLogged < 3) {
-      return styles.mealButton; // Normal orange
-    } else if (mealsLogged === 3) {
-      return [styles.mealButton, styles.mealButtonWarning]; // Yellow warning
-    } else {
-      return [styles.mealButton, styles.mealButtonDanger]; // Red danger
-    }
-  };
+
+  const color = getColor();
+  const progress = Math.min(mealsLogged / 3, 1.33); // Allow overeating visual
 
   return (
     <TouchableOpacity 
-      style={getButtonStyle()}
+      style={styles.container}
       onPress={onPress}
-      // Never disabled - always allow pressing
+      activeOpacity={0.7}
     >
-      <Text style={styles.mealButtonText}>
-        {getButtonText()}
-      </Text>
-      <Text style={styles.mealButtonSubtext}>
-        {getSubtext()}
-      </Text>
+      {/* Circular icon with progress ring */}
+      <View style={styles.iconContainer}>
+        {/* Progress ring background */}
+        <View style={[styles.progressRingBg, { borderColor: `${color}33` }]} />
+        {/* Progress ring fill */}
+        <View style={[styles.progressRing, { 
+          borderColor: color,
+          borderTopWidth: 4,
+          borderRightWidth: progress > 0.25 ? 4 : 0,
+          borderBottomWidth: progress > 0.5 ? 4 : 0,
+          borderLeftWidth: progress > 0.75 ? 4 : 0,
+        }]} />
+        {/* Icon circle */}
+        <View style={[styles.iconCircle, { backgroundColor: color }]}>
+          <Text style={styles.iconEmoji}>{getEmoji()}</Text>
+        </View>
+      </View>
+      
+      {/* Label */}
+      <Text style={styles.label}>{mealsLogged}/3</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  mealButton: {
+  container: {
     flex: 1,
-    backgroundColor: '#FF9800', // Orange color
-    padding: (SCREEN_WIDTH * 12) / 393,
-    borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#F57C00',
-    shadowColor: '#000',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    width: (SCREEN_WIDTH * 60) / 393,
+    height: (SCREEN_WIDTH * 60) / 393,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  progressRingBg: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 60) / 393,
+    height: (SCREEN_WIDTH * 60) / 393,
+    borderRadius: (SCREEN_WIDTH * 30) / 393,
+    borderWidth: 4,
+  },
+  progressRing: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 60) / 393,
+    height: (SCREEN_WIDTH * 60) / 393,
+    borderRadius: (SCREEN_WIDTH * 30) / 393,
+    transform: [{ rotate: '-90deg' }],
+  },
+  iconCircle: {
+    width: (SCREEN_WIDTH * 50) / 393,
+    height: (SCREEN_WIDTH * 50) / 393,
+    borderRadius: (SCREEN_WIDTH * 25) / 393,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#BF360C',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 6,
   },
-  mealButtonText: {
-    color: '#FFFFFF',
-    fontSize: (SCREEN_WIDTH * 16) / 393,
+  iconEmoji: {
+    fontSize: (SCREEN_WIDTH * 28) / 393,
+  },
+  label: {
+    fontSize: (SCREEN_WIDTH * 12) / 393,
     fontWeight: '700',
-    marginBottom: 3,
-  },
-  mealButtonSubtext: {
-    color: '#FFFFFF',
-    fontSize: (SCREEN_WIDTH * 11) / 393,
-    opacity: 0.9,
-  },
-  mealButtonWarning: {
-    backgroundColor: '#FFC107', // Yellow warning
-    borderColor: '#FF8F00',
-  },
-  mealButtonDanger: {
-    backgroundColor: '#F44336', // Red danger
-    borderColor: '#D32F2F',
+    color: '#333',
+    textAlign: 'center',
   },
 });

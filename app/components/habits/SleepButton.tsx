@@ -5,7 +5,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface SleepButtonProps {
   isSleeping: boolean;
-  sleepDisplay: string; // "7h today" format from useSleepTracking
+  sleepDisplay: string;
   onSleep: () => void;
   onWakeUp: () => void;
 }
@@ -19,58 +19,73 @@ export default function SleepButton({ isSleeping, sleepDisplay, onSleep, onWakeU
     }
   };
 
+  const color = isSleeping ? '#FB8C00' : '#7E57C2';
+  const emoji = isSleeping ? '😴' : '🛏️';
+
   return (
     <TouchableOpacity 
-      style={[
-        styles.sleepButton,
-        isSleeping && styles.sleepButtonActive
-      ]} 
+      style={styles.container}
       onPress={handlePress}
+      activeOpacity={0.7}
     >
-      <Text style={styles.sleepTitle}>
-        {isSleeping ? '😴 Wake Up' : '🛏️ Sleep'}
-      </Text>
-      <Text style={styles.sleepSubtitle}>
-        {isSleeping ? 'Tap when awake' : sleepDisplay}
+      {/* Circular icon */}
+      <View style={styles.iconContainer}>
+        {/* Pulsing ring when sleeping */}
+        {isSleeping && <View style={[styles.pulseRing, { borderColor: color }]} />}
+        {/* Icon circle */}
+        <View style={[styles.iconCircle, { backgroundColor: color }]}>
+          <Text style={styles.iconEmoji}>{emoji}</Text>
+        </View>
+      </View>
+      
+      {/* Label */}
+      <Text style={styles.label}>
+        {isSleeping ? 'Wake Up' : sleepDisplay}
       </Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  sleepButton: {
+  container: {
     flex: 1,
-    backgroundColor: '#6A5ACD', // Purple for sleep
-    paddingVertical: (SCREEN_HEIGHT * 12) / 852,
-    paddingHorizontal: (SCREEN_WIDTH * 8) / 393,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
-    borderWidth: 2,
-    borderColor: '#483D8B',
   },
-  sleepButtonActive: {
-    backgroundColor: '#FF6B35', // Orange when sleeping (like exercise active)
-    borderColor: '#E55100',
+  iconContainer: {
+    width: (SCREEN_WIDTH * 60) / 393,
+    height: (SCREEN_WIDTH * 60) / 393,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
-
-  sleepTitle: {
-    fontFamily: 'Chakra Petch',
-    fontSize: (SCREEN_WIDTH * 14) / 393,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 2,
+  pulseRing: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 60) / 393,
+    height: (SCREEN_WIDTH * 60) / 393,
+    borderRadius: (SCREEN_WIDTH * 30) / 393,
+    borderWidth: 3,
+    opacity: 0.5,
   },
-  sleepSubtitle: {
-    fontFamily: 'Chakra Petch',
-    fontSize: (SCREEN_WIDTH * 10) / 393,
-    color: 'rgba(255, 255, 255, 0.9)',
+  iconCircle: {
+    width: (SCREEN_WIDTH * 50) / 393,
+    height: (SCREEN_WIDTH * 50) / 393,
+    borderRadius: (SCREEN_WIDTH * 25) / 393,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4A148C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  iconEmoji: {
+    fontSize: (SCREEN_WIDTH * 28) / 393,
+  },
+  label: {
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    fontWeight: '700',
+    color: '#333',
     textAlign: 'center',
   },
 });

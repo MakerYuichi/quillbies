@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, TouchableOpacity, Image } from 'react-native';
 import { useQuillbyStore } from '../state/store';
+import QuillbyPlusModal from '../components/shop/QuillbyPlusSection';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -9,6 +10,9 @@ export default function ShopScreen() {
   const [selectedCategory, setSelectedCategory] = useState<'light' | 'plant'>('light');
   const [previewLight, setPreviewLight] = useState<string>(userData.roomCustomization?.lightType || 'fairy-lights');
   const [previewPlant, setPreviewPlant] = useState<string>(userData.roomCustomization?.plantType || 'plant');
+  const [showPlusModal, setShowPlusModal] = useState(false);
+  const [insufficientCoins, setInsufficientCoins] = useState(false);
+  const [requiredCoins, setRequiredCoins] = useState(0);
   
   const buddyName = userData.buddyName || 'Quillby';
   const shopItems = getShopItems();
@@ -63,6 +67,15 @@ export default function ShopScreen() {
         setPreviewPlant(item.assetPath);
       }
     } else {
+      // Check if user has enough coins
+      if (userData.qCoins < item.price) {
+        // Show Plus modal with insufficient coins message
+        setRequiredCoins(item.price);
+        setInsufficientCoins(true);
+        setShowPlusModal(true);
+        return;
+      }
+      
       // Purchase item
       const success = purchaseItem(item.id, item.price);
       if (success) {
@@ -77,7 +90,6 @@ export default function ShopScreen() {
           setPreviewPlant(item.assetPath);
         }
       }
-      // Note: No alert for insufficient coins - button should be disabled instead
     }
   };
 
@@ -115,7 +127,7 @@ export default function ShopScreen() {
             style={styles.qCoinIcon}
             resizeMode="contain"
           />
-          <Text style={styles.qCoinText}>{userData.qCoins}</Text>
+          <Text style={styles.qCoinText}>{Number(userData.qCoins) || 0}</Text>
         </View>
         
         {/* Walls */}
@@ -223,6 +235,17 @@ export default function ShopScreen() {
         >
           <Text style={[styles.categoryText, selectedCategory === 'plant' && styles.categoryTextActive]}>
             🌿 Plants
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.categoryButton}
+          onPress={() => {
+            setInsufficientCoins(false);
+            setShowPlusModal(true);
+          }}
+        >
+          <Text style={styles.categoryTextPlus}>
+            💎 Plus
           </Text>
         </TouchableOpacity>
       </View>
@@ -355,6 +378,17 @@ export default function ShopScreen() {
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Quillby Plus Modal */}
+      <QuillbyPlusModal
+        visible={showPlusModal}
+        onClose={() => {
+          setShowPlusModal(false);
+          setInsufficientCoins(false);
+        }}
+        insufficientCoins={insufficientCoins}
+        requiredCoins={requiredCoins}
+      />
     </View>
   );
 }
@@ -539,6 +573,11 @@ const styles = StyleSheet.create({
   categoryTextActive: {
     color: '#2196F3',
     fontWeight: '700',
+  },
+  categoryTextPlus: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontWeight: '700',
+    color: '#7E57C2',
   },
   
   // Shop Scroll View

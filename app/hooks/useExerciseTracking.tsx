@@ -7,12 +7,34 @@ export const useExerciseTracking = (buddyName: string) => {
   const [isExercising, setIsExercising] = useState(false);
   const [exerciseStartTime, setExerciseStartTime] = useState<number | null>(null);
   const [exerciseType, setExerciseType] = useState<'walk' | 'stretch' | 'cardio' | 'energizer'>('walk');
+  const [exerciseDuration, setExerciseDuration] = useState<number | null>(null); // null = stopwatch, number = countdown
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   
   // Track accumulated minutes separately
   const [accumulatedMinutes, setAccumulatedMinutes] = useState<number>(0);
+
+  // Update elapsed time every second when exercising
+  useEffect(() => {
+    if (!isExercising || !exerciseStartTime) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - exerciseStartTime) / 1000);
+      setElapsedSeconds(elapsed);
+      
+      // Auto-finish if countdown timer reaches 0
+      if (exerciseDuration !== null && elapsed >= exerciseDuration * 60) {
+        handleFinishExercise();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isExercising, exerciseStartTime, exerciseDuration]);
 
   // Check if it's a new day and reset exercise if needed
   useEffect(() => {
@@ -25,10 +47,11 @@ export const useExerciseTracking = (buddyName: string) => {
     }
   }, [userData.lastExerciseReset, userData.lastCheckInDate, resetDay]);
 
-  const handleStartExercise = (type: 'walk' | 'stretch' | 'cardio' | 'energizer' = 'walk') => {
+  const handleStartExercise = (type: 'walk' | 'stretch' | 'cardio' | 'energizer' = 'walk', duration: number | null = null) => {
     // Start exercising
     setIsExercising(true);
     setExerciseType(type);
+    setExerciseDuration(duration);
     setExerciseStartTime(Date.now());
     setCurrentAnimation('exercising');
     
@@ -39,7 +62,8 @@ export const useExerciseTracking = (buddyName: string) => {
       energizer: 'Energizing'
     };
     
-    const newMessage = `🏃 ${buddyName} is ${exerciseNames[type].toLowerCase()}...\nTap "Finish" when done!`;
+    const durationText = duration ? `${duration} min` : 'stopwatch mode';
+    const newMessage = `🏃 ${buddyName} is ${exerciseNames[type].toLowerCase()} (${durationText})...\nTap "Finish" when done!`;
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
   };
@@ -73,13 +97,12 @@ export const useExerciseTracking = (buddyName: string) => {
       ? `${totalHours}h ${totalMins}m` 
       : `${totalHours}h`;
     
-    // Show completion animation
-    setCurrentAnimation('exercise-complete');
-    setTimeout(() => setCurrentAnimation('idle'), 3000); // Back to idle after 3s
-    
-    // End exercising state
+    // Reset ALL states immediately to prevent jumping - including animation
     setIsExercising(false);
     setExerciseStartTime(null);
+    setExerciseDuration(null);
+    setElapsedSeconds(0);
+    setCurrentAnimation('idle'); // Reset animation immediately
     
     // Log exercise in store
     logExercise(minutesInt);
@@ -124,10 +147,29 @@ export const useExerciseTracking = (buddyName: string) => {
     return `${mins}m today`;
   };
 
+  // Format elapsed time as MM:SS or countdown
+  const formatElapsedTime = () => {
+    if (exerciseDuration === null) {
+      // Stopwatch mode - count up
+      const minutes = Math.floor(elapsedSeconds / 60);
+      const seconds = elapsedSeconds % 60;
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      // Countdown mode - count down
+      const totalSeconds = exerciseDuration * 60;
+      const remaining = Math.max(0, totalSeconds - elapsedSeconds);
+      const minutes = Math.floor(remaining / 60);
+      const seconds = remaining % 60;
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+  };
+
   return {
     isExercising,
     exerciseType,
     exerciseDisplay: formatAccumulatedExercise(),
+    exerciseElapsedTime: formatElapsedTime(),
+    elapsedSeconds,
     handleStartExercise,
     handleFinishExercise,
     exerciseAnimation: currentAnimation,

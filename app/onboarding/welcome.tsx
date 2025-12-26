@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
+import TermsModal from '../components/modals/TermsModal';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const [showTerms, setShowTerms] = useState(false);
   
   // Load custom fonts (including Caviche from local file)
   const [fontsLoaded] = useFonts({
@@ -26,8 +28,24 @@ export default function WelcomeScreen() {
   }
 
   const handleGetStarted = () => {
-    console.log('[Welcome] User tapped Get Started');
+    console.log('[Welcome] User tapped Get Started - showing Terms');
+    setShowTerms(true);
+  };
+
+  const handleAcceptTerms = () => {
+    console.log('[Welcome] User accepted Terms & Conditions');
+    setShowTerms(false);
     router.push('/onboarding/character-select');
+  };
+
+  const handleDeclineTerms = () => {
+    console.log('[Welcome] User declined Terms & Conditions');
+    setShowTerms(false);
+    Alert.alert(
+      'Terms Required',
+      'You must accept the Terms & Conditions to use Quillby.',
+      [{ text: 'OK' }]
+    );
   };
 
   return (
@@ -62,6 +80,13 @@ export default function WelcomeScreen() {
           </View>
         </View>
       </View>
+
+      {/* Terms & Conditions Modal */}
+      <TermsModal
+        visible={showTerms}
+        onAccept={handleAcceptTerms}
+        onDecline={handleDeclineTerms}
+      />
     </ImageBackground>
   );
 }

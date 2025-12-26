@@ -278,20 +278,6 @@ export default function SettingsScreen() {
           
           <TouchableOpacity 
             style={styles.settingButton}
-            onPress={() => router.push('/test-supabase')}
-          >
-            <View style={styles.settingButtonLeft}>
-              <Text style={styles.settingIcon}>🧪</Text>
-              <View>
-                <Text style={styles.settingTitle}>Test Supabase</Text>
-                <Text style={styles.settingSubtitle}>Verify database connection</Text>
-              </View>
-            </View>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.settingButton}
             onPress={handleResetOnboarding}
           >
             <View style={styles.settingButtonLeft}>
@@ -309,6 +295,7 @@ export default function SettingsScreen() {
         <View style={styles.appInfo}>
           <Text style={styles.appInfoText}>Quillby v1.0.0</Text>
           <Text style={styles.appInfoText}>Made with 💚 for students</Text>
+          <Text style={styles.appInfoCreator}>Made by MakerYuichii</Text>
         </View>
       </ScrollView>
 
@@ -606,5 +593,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginBottom: 4,
+  },
+  appInfoCreator: {
+    fontSize: 13,
+    color: '#7E57C2',
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

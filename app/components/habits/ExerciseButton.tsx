@@ -1,86 +1,91 @@
 // Exercise button component with timer functionality
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Dimensions, View } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ExerciseButtonProps {
   isExercising: boolean;
   exerciseDisplay: string;
+  exerciseElapsedTime?: string;
   onStartExercise: () => void;
   onFinishExercise: () => void;
 }
 
 export default function ExerciseButton({ 
   isExercising, 
-  exerciseDisplay, 
+  exerciseDisplay,
+  exerciseElapsedTime = '00:00',
   onStartExercise, 
   onFinishExercise 
 }: ExerciseButtonProps) {
+  const color = isExercising ? '#FB8C00' : '#43A047';
+  const emoji = isExercising ? '✅' : '🏃';
   
   return (
     <TouchableOpacity
-      style={[
-        styles.exerciseButton,
-        isExercising && styles.exerciseButtonActive
-      ]}
+      style={styles.container}
       onPress={isExercising ? onFinishExercise : onStartExercise}
+      activeOpacity={0.7}
     >
-      <Text style={[
-        styles.exerciseButtonText,
-        isExercising && styles.exerciseButtonTextActive
-      ]}>
-        {isExercising ? '✅ Finish' : '🏃 Exercise'}
-      </Text>
-      <Text style={[
-        styles.exerciseButtonSubtext,
-        isExercising && styles.exerciseButtonSubtextActive
-      ]}>
-        {isExercising ? 'Tap when done' : exerciseDisplay}
+      {/* Circular icon */}
+      <View style={styles.iconContainer}>
+        {/* Pulsing ring when exercising */}
+        {isExercising && <View style={[styles.pulseRing, { borderColor: color }]} />}
+        {/* Icon circle */}
+        <View style={[styles.iconCircle, { backgroundColor: color }]}>
+          <Text style={styles.iconEmoji}>{emoji}</Text>
+        </View>
+      </View>
+      
+      {/* Label */}
+      <Text style={styles.label}>
+        {isExercising ? exerciseElapsedTime : exerciseDisplay}
       </Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  exerciseButton: {
+  container: {
     flex: 1,
-    backgroundColor: '#4CAF50', // Green for exercise
-    paddingVertical: (SCREEN_HEIGHT * 12) / 852,
-    paddingHorizontal: (SCREEN_WIDTH * 8) / 393,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
-    borderWidth: 2,
-    borderColor: '#388E3C',
   },
-  exerciseButtonActive: {
-    backgroundColor: '#FF9800', // Orange when exercising
-    borderColor: '#F57C00',
+  iconContainer: {
+    width: (SCREEN_WIDTH * 60) / 393,
+    height: (SCREEN_WIDTH * 60) / 393,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
-  exerciseButtonText: {
-    fontFamily: 'Chakra Petch',
-    fontSize: (SCREEN_WIDTH * 14) / 393,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  pulseRing: {
+    position: 'absolute',
+    width: (SCREEN_WIDTH * 60) / 393,
+    height: (SCREEN_WIDTH * 60) / 393,
+    borderRadius: (SCREEN_WIDTH * 30) / 393,
+    borderWidth: 3,
+    opacity: 0.5,
+  },
+  iconCircle: {
+    width: (SCREEN_WIDTH * 50) / 393,
+    height: (SCREEN_WIDTH * 50) / 393,
+    borderRadius: (SCREEN_WIDTH * 25) / 393,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1B5E20',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  iconEmoji: {
+    fontSize: (SCREEN_WIDTH * 28) / 393,
+  },
+  label: {
+    fontSize: (SCREEN_WIDTH * 12) / 393,
+    fontWeight: '700',
+    color: '#333',
     textAlign: 'center',
-    marginBottom: 2,
-  },
-  exerciseButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  exerciseButtonSubtext: {
-    fontFamily: 'Chakra Petch',
-    fontSize: (SCREEN_WIDTH * 10) / 393,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
-  exerciseButtonSubtextActive: {
-    color: 'rgba(255, 255, 255, 0.9)',
   },
 });

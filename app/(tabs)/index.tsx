@@ -18,6 +18,7 @@ import CleanButton from '../components/habits/CleanButton';
 import StudyProgress from '../components/progress/StudyProgress';
 import RealTimeClock from '../components/ui/RealTimeClock';
 import SessionCustomizationModal, { SessionConfig } from '../components/modals/SessionCustomizationModal';
+import ExerciseCustomizationModal from '../components/modals/ExerciseCustomizationModal';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
 import { useMealTracking } from '../hooks/useMealTracking';
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   const [cleaningPlan, setCleaningPlan] = React.useState<CleaningPlan | null>(null);
   const [lastCheckpointCheck, setLastCheckpointCheck] = React.useState(Date.now());
   const [showSessionModal, setShowSessionModal] = React.useState(false);
+  const [showExerciseModal, setShowExerciseModal] = React.useState(false);
   
   // Get personalized data from onboarding
   const buddyName = userData.buddyName || 'Quillby';
@@ -74,6 +76,8 @@ export default function HomeScreen() {
   const {
     isExercising,
     exerciseDisplay,
+    exerciseElapsedTime,
+    exerciseType,
     handleStartExercise,
     handleFinishExercise,
     exerciseAnimation,
@@ -105,9 +109,13 @@ export default function HomeScreen() {
     handleLogMeal();
   };
 
-  const handleStartExerciseWithReset = (type: 'walk' | 'stretch' | 'cardio' | 'energizer') => {
+  const handleStartExerciseWithReset = () => {
     resetIdleTimer();
-    handleStartExercise(type);
+    setShowExerciseModal(true);
+  };
+
+  const handleExerciseStart = (duration: number | null, type: 'walk' | 'stretch' | 'cardio' | 'energizer') => {
+    handleStartExercise(type, duration);
   };
 
   const handleFinishExerciseWithReset = () => {
@@ -435,13 +443,22 @@ export default function HomeScreen() {
   
   return (
     <ImageBackground
-      source={require('../../assets/backgrounds/orange-theme.png')}
+      source={require('../../assets/backgrounds/theme.png')}
       style={styles.container}
       resizeMode="cover"
     >
       {/* FIXED BACKGROUND LAYERS - Switch between room and exercise environment */}
       {isExercising ? (
-        <ExerciseEnvironment pointerEvents="none" />
+        <>
+          <ExerciseEnvironment pointerEvents="none" />
+          {/* Exercise Timer Overlay */}
+          <View style={styles.exerciseTimerContainer}>
+            <Text style={styles.exerciseTimerLabel}>
+              {buddyName}'s {exerciseType === 'walk' ? 'Walking' : exerciseType === 'stretch' ? 'Stretching' : exerciseType === 'cardio' ? 'Cardio' : 'Energizer'} Session
+            </Text>
+            <Text style={styles.exerciseTimerValue}>{exerciseElapsedTime}</Text>
+          </View>
+        </>
       ) : (
         <RoomLayers pointerEvents="none" messPoints={userData.messPoints} isSleeping={isSleeping} qCoins={userData.qCoins} />
       )}
@@ -539,7 +556,8 @@ export default function HomeScreen() {
                   <ExerciseButton 
                     isExercising={false}
                     exerciseDisplay={exerciseDisplay}
-                    onStartExercise={() => handleStartExerciseWithReset('walk')}
+                    exerciseElapsedTime={exerciseElapsedTime}
+                    onStartExercise={handleStartExerciseWithReset}
                     onFinishExercise={handleFinishExerciseWithReset}
                   />
                 )}
@@ -574,6 +592,7 @@ export default function HomeScreen() {
                 <ExerciseButton 
                   isExercising={true}
                   exerciseDisplay={exerciseDisplay}
+                  exerciseElapsedTime={exerciseElapsedTime}
                   onStartExercise={() => handleStartExerciseWithReset('walk')}
                   onFinishExercise={handleFinishExerciseWithReset}
                 />
@@ -648,6 +667,13 @@ export default function HomeScreen() {
         visible={showSessionModal}
         onClose={() => setShowSessionModal(false)}
         onStartSession={handleSessionStart}
+      />
+
+      {/* Exercise Customization Modal */}
+      <ExerciseCustomizationModal
+        visible={showExerciseModal}
+        onClose={() => setShowExerciseModal(false)}
+        onStartExercise={handleExerciseStart}
       />
 
     </ImageBackground>
@@ -905,5 +931,39 @@ const styles = StyleSheet.create({
     fontFamily: 'ChakraPetch_600SemiBold',
     fontSize: (SCREEN_WIDTH * 12) / 393,
     color: '#1976D2',
+  },
+  
+  // Exercise Timer Overlay
+  exerciseTimerContainer: {
+    position: 'absolute',
+    top: (SCREEN_HEIGHT * 80) / 852, // Position below "Quill's Room" text
+    left: (SCREEN_WIDTH * 20) / 393,
+    right: (SCREEN_WIDTH * 20) / 393,
+    backgroundColor: 'rgba(76, 175, 80, 0.95)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    alignItems: 'center',
+    zIndex: 15,
+  },
+  exerciseTimerLabel: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: (SCREEN_WIDTH * 16) / 393,
+    color: '#FFF',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  exerciseTimerValue: {
+    fontFamily: 'ChakraPetch_700Bold',
+    fontSize: (SCREEN_WIDTH * 28) / 393,
+    color: '#FFF',
+    letterSpacing: 2,
   },
 });

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, AppState, AppStateStatus, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store';
-import StudySessionTutorialModal from './components/modals/StudySessionTutorialModal';
+import InteractiveTooltip from './components/ui/InteractiveTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -22,11 +22,15 @@ export default function StudySessionScreen() {
     tapAppleInSession,
     tapCoffeeInSession
   } = useQuillbyStore();
+  
+  console.log('[StudySession] Render - session exists:', !!session);
+  
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
   const [speechKey, setSpeechKey] = useState(0); // Force re-render of speech bubble
   const [showReturnMessage, setShowReturnMessage] = useState(false);
   const [returnMessageTimer, setReturnMessageTimer] = useState<NodeJS.Timeout | null>(null);
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipStep, setTooltipStep] = useState(0);
   
   // Session control states
   const [isOnBreak, setIsOnBreak] = useState(false);
@@ -38,14 +42,89 @@ export default function StudySessionScreen() {
   const [currentAnimation, setCurrentAnimation] = useState<'focus' | 'drinking' | 'eating' | 'exercising' | 'break'>('focus');
   const [animationTimer, setAnimationTimer] = useState<NodeJS.Timeout | null>(null);
   
-  // Check if first time in study session and show tutorial
+  // Define tooltip steps for first-time users
+  // Orange theme starts at top: 634, habit buttons are at top: 120 relative to it
+  // So habit buttons actual position is 634 + 120 = 754
+  // Action buttons are at top: 582 (ABOVE orange box, not inside it)
+  const tooltipSteps = [
+    {
+      id: 'welcome',
+      title: '🎯 Welcome to Focus Mode!',
+      description: 'This is where you study with your hamster buddy. Let me show you around!',
+      position: { top: SCREEN_HEIGHT / 2 - 100, left: 20 },
+      arrowDirection: 'down' as const,
+    },
+    {
+      id: 'coffee',
+      title: '☕ Coffee Boost',
+      description: 'Tap here for +6 focus for 3 minutes. You get 3 free uses per day (costs 3 coins each).',
+      position: { top: 500, left: 20 },
+      arrowDirection: 'down' as const,
+      highlightArea: { top: 754, left: 20, width: (SCREEN_WIDTH - 50) / 2, height: 80 },
+    },
+    {
+      id: 'apple',
+      title: '🍎 Apple Snack',
+      description: 'Tap here for +3 focus instantly. You get 5 free uses per day (costs 2 coins each).',
+      position: { top: 500, right: 20 },
+      arrowDirection: 'down' as const,
+      highlightArea: { top: 754, left: SCREEN_WIDTH / 2 + 5, width: (SCREEN_WIDTH - 50) / 2, height: 80 },
+    },
+    {
+      id: 'focus',
+      title: '📊 Focus Score',
+      description: 'This shows your current focus level. Stay in the app to keep it high!',
+      position: { top: 300, left: 20 },
+      arrowDirection: 'down' as const,
+      highlightArea: { top: 582, left: 60, width: 80, height: 50 },
+    },
+    {
+      id: 'break',
+      title: '⏸️ Take a Break',
+      description: 'Need a break? Tap here for a 5-minute rest. You have limited break time per session.',
+      position: { top: 300, left: SCREEN_WIDTH / 2 - 140 },
+      arrowDirection: 'down' as const,
+      highlightArea: { top: 582, left: 150, width: 120, height: 50 },
+    },
+    {
+      id: 'done',
+      title: '✅ Finish Session',
+      description: 'When you\'re done studying, tap here. You\'ll earn coins and XP based on your performance!',
+      position: { top: 300, right: 20 },
+      arrowDirection: 'down' as const,
+      highlightArea: { top: 582, left: SCREEN_WIDTH - 140, width: 80, height: 50 },
+    },
+    {
+      id: 'final',
+      title: '🚀 Ready to Focus!',
+      description: 'Stay in the app while studying to maintain your focus score. Good luck!',
+      position: { top: SCREEN_HEIGHT / 2 - 100, left: 20 },
+      arrowDirection: 'down' as const,
+    },
+  ];
+  
+  console.log('[Tutorial] Screen dimensions:', SCREEN_WIDTH, 'x', SCREEN_HEIGHT);
+  console.log('[Tutorial] Action buttons at top:', 582, '(above orange box)');
+  console.log('[Tutorial] Habit buttons at top:', 754, '(634 orange + 120 relative)');
+  
+  // Check if first time in study session and show tooltips
   useEffect(() => {
     const checkFirstTime = async () => {
       try {
+        console.log('[Tutorial] Checking if first time...');
         const hasSeenTutorial = await AsyncStorage.getItem('hasSeenStudyTutorial');
+        console.log('[Tutorial] hasSeenStudyTutorial:', hasSeenTutorial);
+        
         if (!hasSeenTutorial) {
-          setShowTutorial(true);
-          await AsyncStorage.setItem('hasSeenStudyTutorial', 'true');
+          console.log('[Tutorial] First time! Starting tutorial in 1 second...');
+          // Delay tooltip to let UI render, then auto-start tutorial
+          setTimeout(() => {
+            console.log('[Tutorial] Showing tooltip now');
+            setShowTooltip(true);
+            setTooltipStep(0);
+          }, 1000);
+        } else {
+          console.log('[Tutorial] Already seen, skipping');
         }
       } catch (error) {
         console.error('[Tutorial] Error checking first time:', error);
@@ -53,6 +132,29 @@ export default function StudySessionScreen() {
     };
     checkFirstTime();
   }, []);
+  
+  const handleTooltipNext = async () => {
+    if (tooltipStep < tooltipSteps.length - 1) {
+      setTooltipStep(tooltipStep + 1);
+    } else {
+      // Finished all steps
+      setShowTooltip(false);
+      try {
+        await AsyncStorage.setItem('hasSeenStudyTutorial', 'true');
+      } catch (error) {
+        console.error('[Tutorial] Error saving tutorial state:', error);
+      }
+    }
+  };
+  
+  const handleTooltipSkip = async () => {
+    setShowTooltip(false);
+    try {
+      await AsyncStorage.setItem('hasSeenStudyTutorial', 'true');
+    } catch (error) {
+      console.error('[Tutorial] Error saving tutorial state:', error);
+    }
+  };
   
   // Update focus score and speech bubble every second
   useEffect(() => {
@@ -222,6 +324,15 @@ export default function StudySessionScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>No active session</Text>
+        
+        {/* Interactive Tooltip for first-time users - show even without session */}
+        <InteractiveTooltip
+          visible={showTooltip}
+          currentStep={tooltipStep}
+          steps={tooltipSteps}
+          onNext={handleTooltipNext}
+          onSkip={handleTooltipSkip}
+        />
       </View>
     );
   }
@@ -478,13 +589,6 @@ export default function StudySessionScreen() {
           <Text style={styles.doneIcon}>✅</Text>
           <Text style={styles.buttonLabel}>Done</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.helpButton} 
-          onPress={() => setShowTutorial(true)}
-        >
-          <Text style={styles.helpIcon}>❓</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Bottom Orange Theme Section */}
@@ -536,7 +640,7 @@ export default function StudySessionScreen() {
                 style={styles.buttonIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.buttonLabel}>Coffee</Text>
+              <Text style={styles.habitButtonLabel}>Coffee</Text>
             </View>
             
             <View style={styles.buttonRight}>
@@ -586,7 +690,7 @@ export default function StudySessionScreen() {
                 style={styles.buttonIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.buttonLabel}>Apple</Text>
+              <Text style={styles.habitButtonLabel}>Apple</Text>
             </View>
             
             <View style={styles.buttonRight}>
@@ -614,10 +718,13 @@ export default function StudySessionScreen() {
         </Text>
       </ImageBackground>
       
-      {/* Study Session Tutorial Modal */}
-      <StudySessionTutorialModal
-        visible={showTutorial}
-        onClose={() => setShowTutorial(false)}
+      {/* Interactive Tooltip for first-time users */}
+      <InteractiveTooltip
+        visible={showTooltip}
+        currentStep={tooltipStep}
+        steps={tooltipSteps}
+        onNext={handleTooltipNext}
+        onSkip={handleTooltipSkip}
       />
     </View>
   );
@@ -886,22 +993,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  
-  helpButton: {
-    width: (SCREEN_WIDTH * 48) / 393,
-    height: (SCREEN_HEIGHT * 48) / 852,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1976D2',
-  },
-  
-  helpIcon: {
-    fontSize: (SCREEN_WIDTH * 24) / 393,
-    color: '#1976D2',
   },
   
   buttonActive: {

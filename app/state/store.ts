@@ -1438,26 +1438,37 @@ Room: ${roomState}`;
   purchaseItem: (itemId: string, price: number) => {
     const { userData } = get();
     
+    // Ensure qCoins is a number and price is valid
+    const currentCoins = Number(userData.qCoins) || 0;
+    const itemPrice = Number(price) || 0;
+    
+    console.log(`[Shop] Purchase attempt - Item: ${itemId}, Price: ${itemPrice}, Current coins: ${currentCoins}`);
+    
     // Check if user has enough coins
-    if (userData.qCoins < price) {
+    if (currentCoins < itemPrice) {
+      console.log(`[Shop] Insufficient coins`);
       return false;
     }
     
     // Check if already purchased
     if (userData.purchasedItems?.includes(itemId)) {
+      console.log(`[Shop] Already purchased`);
       return false;
     }
     
     // Deduct coins and add to purchased items
+    const newCoins = Math.max(0, currentCoins - itemPrice); // Ensure never negative
+    console.log(`[Shop] New coin balance: ${newCoins}`);
+    
     set({
       userData: {
         ...userData,
-        qCoins: userData.qCoins - price,
+        qCoins: newCoins,
         purchasedItems: [...(userData.purchasedItems || []), itemId]
       }
     });
     
-    console.log(`[Shop] Purchased ${itemId} for ${price} coins`);
+    console.log(`[Shop] Purchased ${itemId} for ${itemPrice} coins`);
     return true;
   },
 
