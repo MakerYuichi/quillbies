@@ -1,8 +1,19 @@
-// Global state management with Zustand + Data Persistence
+// Global state management with Zustand + Data Persistence + Database Sync
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { UserData, SessionData, CheckpointResult, CheckpointNotification, Deadline, DeadlineFormData, SleepSession, ShopItem } from '../core/types';
+
+// Database sync functions
+import { updateUserProfile, getUserProfile, addCoins } from '../../lib/userProfile';
+import { updateDailyData, getTodayData, addMeal, incrementAppleTaps, incrementCoffeeTaps, addWater } from '../../lib/dailyData';
+import { updateDailyProgress, syncUserToProgress } from '../../lib/dailyProgress';
+import { syncAllUserData, loadAllUserData, periodicSync } from '../../lib/syncManager';
+import { getDeviceUser } from '../../lib/deviceAuth';
+import { createSleepSession } from '../../lib/sleepSessions';
+import { createFocusSession, endFocusSession as endFocusSessionDB } from '../../lib/focusSession';
+import { createDeadline, getUserDeadlines, updateDeadline as updateDeadlineDB, deleteDeadline as deleteDeadlineDB, markDeadlineComplete as markDeadlineCompleteDB, addWorkToDeadline as addWorkToDeadlineDB } from '../../lib/deadlines';
+import { purchaseItem as purchaseItemDB, getUserPurchasedItems } from '../../lib/shop';
 
 // Temporary fallback storage for development (until AsyncStorage is properly linked)
 const tempStorage = {
@@ -31,6 +42,48 @@ try {
   storage = tempStorage;
   console.log('[Storage] Using temporary fallback storage');
 }
+
+// Database sync helper function - Full sync with RLS disabled
+const syncToDatabase = async (userData: UserData) => {
+  try {
+    const user = await getDeviceUser();
+    if (!user) {
+      console.log('[Sync] No authenticated user, skipping database sync');
+      return;
+    }
+
+    // Use comprehensive sync manager now that RLS is disabled
+    await syncAllUserData(userData);
+    console.log('[Sync] Comprehensive sync completed successfully');
+  } catch (error) {
+    console.error('[Sync] Failed to sync to database:', error);
+    // Don't throw - app should continue working even if sync fails
+  }
+};
+
+// Load data from database on app startup - Full loading with RLS disabled
+const loadFromDatabase = async () => {
+  try {
+    const user = await getDeviceUser();
+    if (!user) {
+      console.log('[Load] No authenticated user, using local data only');
+      return null;
+    }
+
+    console.log('[Load] Loading comprehensive user data from database...');
+    const allData = await loadAllUserData();
+
+    if (allData && allData.userProfile) {
+      console.log('[Load] Comprehensive user data loaded from database');
+      return allData;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Load] Failed to load from database:', error);
+    return null;
+  }
+};
 import {
   calculateMaxEnergyCap,
   canStartSession,
@@ -56,6 +109,7 @@ interface QuillbyStore {
   
   // Session state
   session: SessionData | null;
+  currentSessionId: string | null; // Track current database session ID
   
   // Deadline state
   deadlines: Deadline[];
@@ -63,6 +117,7 @@ interface QuillbyStore {
   
   // Actions
   initializeUser: () => void;
+  loadFromDatabase: () => Promise<void>; // Load data from database
   updateEnergy: () => void;
   startFocusSession: (deadlineId?: string) => boolean;
   endFocusSession: () => void;
@@ -149,6 +204,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
   },
   
   session: null,
+  currentSessionId: null,
   
   deadlines: [],
   selectedDeadlineId: null,
@@ -186,6 +242,103 @@ export const useQuillbyStore = create<QuillbyStore>()(
         signupDate: today // Track when user signed up
       }
     });
+  },
+
+  // Load data from database and merge with local data - Enhanced
+  loadFromDatabase: async () => {
+    try {
+      const dbData = await loadFromDatabase();
+      if (dbData && dbData.userProfile) {
+        const { userData, deadlines } = get();
+        
+        // Merge database data with local data, prioritizing database for key fields
+        const mergedUserData = {
+          ...userData,
+          // Profile data from database
+          buddyName: dbData.userProfile.buddy_name || userData.buddyName,
+          selectedCharacter: dbData.userProfile.selected_character || userData.selectedCharacter,
+          userName: dbData.userProfile.user_name || userData.userName,
+          studentLevel: dbData.userProfile.student_level || userData.studentLevel,
+          country: dbData.userProfile.country || userData.country,
+          timezone: dbData.userProfile.timezone || userData.timezone,
+          qCoins: dbData.userProfile.q_coins ?? userData.qCoins,
+          messPoints: dbData.userProfile.mess_points ?? userData.messPoints,
+          currentStreak: dbData.userProfile.current_streak ?? userData.currentStreak,
+          enabledHabits: dbData.userProfile.enabled_habits || userData.enabledHabits,
+          studyGoalHours: dbData.userProfile.study_goal_hours ?? userData.studyGoalHours,
+          exerciseGoalMinutes: dbData.userProfile.exercise_goal_minutes ?? userData.exerciseGoalMinutes,
+          hydrationGoalGlasses: dbData.userProfile.hydration_goal_glasses ?? userData.hydrationGoalGlasses,
+          sleepGoalHours: dbData.userProfile.sleep_goal_hours ?? userData.sleepGoalHours,
+          weightGoal: dbData.userProfile.weight_goal || userData.weightGoal,
+          mealPortionSize: dbData.userProfile.meal_portion_size ?? userData.mealPortionSize,
+          purchasedItems: dbData.purchasedItems?.map((item: any) => item.item_id) || userData.purchasedItems,
+          roomCustomization: {
+            lightType: dbData.userProfile.light_type || userData.roomCustomization?.lightType,
+            plantType: dbData.userProfile.plant_type || userData.roomCustomization?.plantType,
+          },
+          // Daily data from database (prioritize daily_data over daily_progress)
+          ...(dbData.dailyData && {
+            studyMinutesToday: dbData.dailyData.study_minutes_today ?? userData.studyMinutesToday,
+            missedCheckpoints: dbData.dailyData.missed_checkpoints ?? userData.missedCheckpoints,
+            ateBreakfast: dbData.dailyData.ate_breakfast ?? userData.ateBreakfast,
+            waterGlasses: dbData.dailyData.water_glasses ?? userData.waterGlasses,
+            mealsLogged: dbData.dailyData.meals_logged ?? userData.mealsLogged,
+            exerciseMinutes: dbData.dailyData.exercise_minutes ?? userData.exerciseMinutes,
+            appleTapsToday: dbData.dailyData.apple_taps_today ?? userData.appleTapsToday,
+            coffeeTapsToday: dbData.dailyData.coffee_taps_today ?? userData.coffeeTapsToday,
+          }),
+          // Fallback to daily_progress if daily_data is not available
+          ...(!dbData.dailyData && dbData.dailyProgress && {
+            studyMinutesToday: dbData.dailyProgress.study_minutes_today ?? userData.studyMinutesToday,
+            missedCheckpoints: dbData.dailyProgress.missed_checkpoints ?? userData.missedCheckpoints,
+            ateBreakfast: dbData.dailyProgress.ate_breakfast ?? userData.ateBreakfast,
+            waterGlasses: dbData.dailyProgress.water_glasses ?? userData.waterGlasses,
+            mealsLogged: dbData.dailyProgress.meals_logged ?? userData.mealsLogged,
+            exerciseMinutes: dbData.dailyProgress.exercise_minutes ?? userData.exerciseMinutes,
+          }),
+          // Sleep sessions from database
+          sleepSessions: dbData.sleepSessions?.map((session: any) => ({
+            id: session.id,
+            start: session.start_time,
+            end: session.end_time,
+            duration: session.duration_hours,
+            date: session.date_assigned,
+          })) || userData.sleepSessions,
+        };
+
+        // Convert database deadlines to local format
+        const mergedDeadlines = dbData.deadlines?.map((dbDeadline: any) => ({
+          id: dbDeadline.id,
+          title: dbDeadline.title,
+          dueDate: dbDeadline.due_date,
+          dueTime: dbDeadline.due_time,
+          priority: dbDeadline.priority,
+          category: dbDeadline.category,
+          estimatedHours: dbDeadline.estimated_hours,
+          workCompleted: dbDeadline.work_completed,
+          isCompleted: dbDeadline.is_completed,
+          createdAt: dbDeadline.created_at,
+          reminders: {
+            oneDayBefore: dbDeadline.reminder_one_day_before,
+            threeDaysBefore: dbDeadline.reminder_three_days_before,
+          }
+        })) || deadlines;
+
+        set({ 
+          userData: mergedUserData,
+          deadlines: mergedDeadlines
+        });
+        console.log('[Load] Comprehensive data merged from database successfully');
+        
+        // Start periodic sync
+        setInterval(() => {
+          const currentState = get();
+          periodicSync(currentState.userData);
+        }, 5 * 60 * 1000); // Sync every 5 minutes
+      }
+    } catch (error) {
+      console.error('[Load] Failed to load from database:', error);
+    }
   },
   
   // Update energy - Check for daily drains and cap at 100
@@ -239,12 +392,15 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     console.log(`[Session] Starting focus session - Cost: ${energyCost} energy (${userData.energy} → ${newEnergy})`);
     
+    const updatedUserData = {
+      ...userData,
+      energy: newEnergy
+    };
+    
     set({
-      userData: {
-        ...userData,
-        energy: newEnergy
-      },
+      userData: updatedUserData,
       selectedDeadlineId: deadlineId || null,
+      currentSessionId: null, // Will be set by database response
       session: {
         focusScore: 0,
         startTime: Date.now(),
@@ -264,12 +420,55 @@ export const useQuillbyStore = create<QuillbyStore>()(
       }
     });
     
+    // Sync focus session to database
+    (async () => {
+      try {
+        console.log('[FocusSession] Starting database sync...');
+        const user = await getDeviceUser();
+        console.log('[FocusSession] User from getDeviceUser:', user);
+        
+        if (user && user.id) {
+          console.log('[FocusSession] User ID:', user.id);
+          console.log('[FocusSession] User ID type:', typeof user.id);
+          console.log('[FocusSession] User ID length:', user.id.length);
+          
+          // Validate UUID format
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(user.id)) {
+            console.error('[FocusSession] Invalid UUID format:', user.id);
+            console.error('[FocusSession] Skipping database sync due to invalid user ID');
+            return;
+          }
+          
+          console.log('[FocusSession] About to call createFocusSession...');
+          const sessionData = await createFocusSession(user.id, deadlineId);
+          console.log('[FocusSession] createFocusSession completed successfully');
+          
+          if (sessionData && sessionData.id) {
+            // Update the store with the database session ID
+            set((state) => ({
+              ...state,
+              currentSessionId: sessionData.id
+            }));
+            console.log('[FocusSession] Session ID stored:', sessionData.id);
+          }
+          
+          await syncToDatabase(updatedUserData);
+        } else {
+          console.log('[FocusSession] No valid user returned from getDeviceUser');
+          console.log('[FocusSession] Skipping database sync - working in offline mode');
+        }
+      } catch (error) {
+        console.error('[Session] Failed to sync focus session to database:', error);
+      }
+    })();
+    
     return true;
   },
   
   // End focus session and calculate rewards
   endFocusSession: () => {
-    const { userData, session, selectedDeadlineId, addWorkToDeadline } = get();
+    const { userData, session, selectedDeadlineId, addWorkToDeadline, currentSessionId } = get();
     
     if (!session) return;
     
@@ -320,8 +519,34 @@ export const useQuillbyStore = create<QuillbyStore>()(
     set({
       userData: updatedUserData,
       session: null,
-      selectedDeadlineId: null
+      selectedDeadlineId: null,
+      currentSessionId: null
     });
+    
+    // Sync session end to database
+    (async () => {
+      try {
+        if (currentSessionId) {
+          console.log('[FocusSession] Ending database session:', currentSessionId);
+          await endFocusSessionDB(currentSessionId, {
+            focusScore: session.focusScore,
+            distractionCount: session.distractionCount,
+            totalBreakTime: session.totalBreakTime,
+            applePremiumUsed: session.applePremiumUsedThisSession,
+            coffeePremiumUsed: session.coffeePremiumUsedThisSession,
+            durationSeconds: session.duration,
+          });
+          console.log('[FocusSession] Database session ended successfully');
+        } else {
+          console.log('[FocusSession] No session ID to end in database');
+        }
+        
+        // Sync updated user data
+        await syncToDatabase(updatedUserData);
+      } catch (error) {
+        console.error('[Session] Failed to sync session end to database:', error);
+      }
+    })();
   },
   
   // Update focus score during active session
@@ -533,17 +758,36 @@ export const useQuillbyStore = create<QuillbyStore>()(
       
       console.log(`[Session Apple] +3 focus boost, -2 coins (${currentAppleTaps + 1}/5 today)`);
       
+      const updatedUserData = {
+        ...userData,
+        qCoins: userData.qCoins - 2,
+        appleTapsToday: currentAppleTaps + 1
+      };
+      
       set({
         session: {
           ...session,
           interactionBoosts: newInteractionBoosts
         },
-        userData: {
-          ...userData,
-          qCoins: userData.qCoins - 2,
-          appleTapsToday: currentAppleTaps + 1
-        }
+        userData: updatedUserData
       });
+      
+      // Sync apple tap to database
+      (async () => {
+        try {
+          const user = await getDeviceUser();
+          if (user && user.id) {
+            console.log('[Apple] Syncing apple tap to database...');
+            await incrementAppleTaps(user.id);
+            await syncToDatabase(updatedUserData);
+            console.log('[Apple] Apple tap synced to database successfully');
+          } else {
+            console.log('[Apple] No user, working in offline mode');
+          }
+        } catch (error) {
+          console.error('[Apple] Failed to sync apple tap to database:', error);
+        }
+      })();
       
       return true;
     }
@@ -625,6 +869,12 @@ export const useQuillbyStore = create<QuillbyStore>()(
       
       console.log(`[Session Coffee] +6 focus boost, 3min extra boost, -3 coins (${currentCoffeeTaps + 1}/3 today)`);
       
+      const updatedUserData = {
+        ...userData,
+        qCoins: userData.qCoins - 3,
+        coffeeTapsToday: currentCoffeeTaps + 1
+      };
+      
       set({
         session: {
           ...session,
@@ -632,12 +882,25 @@ export const useQuillbyStore = create<QuillbyStore>()(
           coffeeBoostStartTime: now,
           coffeeBoostEndTime: boostEndTime
         },
-        userData: {
-          ...userData,
-          qCoins: userData.qCoins - 3,
-          coffeeTapsToday: currentCoffeeTaps + 1
-        }
+        userData: updatedUserData
       });
+      
+      // Sync coffee tap to database
+      (async () => {
+        try {
+          const user = await getDeviceUser();
+          if (user && user.id) {
+            console.log('[Coffee] Syncing coffee tap to database...');
+            await incrementCoffeeTaps(user.id);
+            await syncToDatabase(updatedUserData);
+            console.log('[Coffee] Coffee tap synced to database successfully');
+          } else {
+            console.log('[Coffee] No user, working in offline mode');
+          }
+        } catch (error) {
+          console.error('[Coffee] Failed to sync coffee tap to database:', error);
+        }
+      })();
       
       return true;
     }
@@ -657,14 +920,33 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     console.log(`[Water] Glass ${newCount}/8 logged: +${energyGain} energy`);
     
+    const updatedUserData = {
+      ...userData,
+      waterGlasses: newCount,
+      energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
+      qCoins: userData.qCoins + 5 // +5 coins per glass
+    };
+    
     set({
-      userData: {
-        ...userData,
-        waterGlasses: newCount,
-        energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
-        qCoins: userData.qCoins + 5 // +5 coins per glass
-      }
+      userData: updatedUserData
     });
+    
+    // Sync water to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user && user.id) {
+          console.log('[Water] Syncing water to database...');
+          await addWater(user.id);
+          await syncToDatabase(updatedUserData);
+          console.log('[Water] Water synced to database successfully');
+        } else {
+          console.log('[Water] No user, working in offline mode');
+        }
+      } catch (error) {
+        console.error('[Water] Failed to sync water to database:', error);
+      }
+    })();
   },
   
   // Log breakfast - SIMPLIFIED: +10 energy, enables focus bonus
@@ -766,16 +1048,47 @@ export const useQuillbyStore = create<QuillbyStore>()(
     // IMPORTANT: Energy is NOT changed here!
     // Energy is only set during daily reset (resetDay) based on total sleep
     // This allows users to track sleep without accidentally resetting their energy
+    const updatedUserData = {
+      ...userData,
+      sleepSessions: updatedSessions,
+      maxEnergyCap: 100, // Always 100
+      // energy: NOT CHANGED - stays at current value
+      qCoins: userData.qCoins + sleepCoins, // Award sleep coins
+      activeSleepSession: undefined // Clear active session
+    };
+    
     set({
-      userData: {
-        ...userData,
-        sleepSessions: updatedSessions,
-        maxEnergyCap: 100, // Always 100
-        // energy: NOT CHANGED - stays at current value
-        qCoins: userData.qCoins + sleepCoins, // Award sleep coins
-        activeSleepSession: undefined // Clear active session
-      }
+      userData: updatedUserData
     });
+    
+    // Sync sleep session to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          // Calculate duration in minutes for database
+          const durationMinutes = Math.round(duration * 60);
+          
+          await createSleepSession(user.id, {
+            start: completedSession.start,
+            end: completedSession.end,
+            duration: completedSession.duration, // Hours for compatibility
+            durationMinutes: durationMinutes, // Minutes for better display
+            date: completedSession.date,
+            quality: todaysSleep >= 8 ? 'excellent' : todaysSleep >= 7 ? 'good' : todaysSleep >= 6 ? 'fair' : 'poor',
+            coinsEarned: sleepCoins
+          });
+          
+          console.log(`[Sleep] Synced to database: ${completedSession.duration}h (${durationMinutes}min)`);
+          
+          // Also sync updated user data
+          await syncToDatabase(updatedUserData);
+        }
+      } catch (error) {
+        console.error('[Sleep] Failed to sync sleep session to database:', error);
+  
+      } 
+    })();
   },
 
   // Get today's total sleep hours
@@ -798,14 +1111,33 @@ export const useQuillbyStore = create<QuillbyStore>()(
     
     console.log(`[Meal] Meal ${mealCount}/3 logged: +${energyGain} energy`);
     
+    const updatedUserData = {
+      ...userData,
+      mealsLogged: mealCount,
+      energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
+      qCoins: userData.qCoins + 10 // +10 coins per meal
+    };
+    
     set({
-      userData: {
-        ...userData,
-        mealsLogged: mealCount,
-        energy: Math.min(userData.energy + energyGain, 100), // Cap at 100
-        qCoins: userData.qCoins + 10 // +10 coins per meal
-      }
+      userData: updatedUserData
     });
+    
+    // Sync meal to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user && user.id) {
+          console.log('[Meal] Syncing meal to database...');
+          await addMeal(user.id);
+          await syncToDatabase(updatedUserData);
+          console.log('[Meal] Meal synced to database successfully');
+        } else {
+          console.log('[Meal] No user, working in offline mode');
+        }
+      } catch (error) {
+        console.error('[Meal] Failed to sync meal to database:', error);
+      }
+    })();
   },
 
   // Log exercise minutes - SIMPLIFIED: +15 energy per session, enables focus bonus
@@ -888,12 +1220,17 @@ export const useQuillbyStore = create<QuillbyStore>()(
     const { userData } = get();
     console.log('[Onboarding] Marking onboarding as complete');
     
+    const updatedUserData = {
+      ...userData,
+      onboardingCompleted: true
+    };
+    
     set({
-      userData: {
-        ...userData,
-        onboardingCompleted: true
-      }
+      userData: updatedUserData
     });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
   },
   
   // Onboarding: Set selected character
@@ -1258,6 +1595,28 @@ Room: ${roomState}`;
     set({
       deadlines: [...deadlines, newDeadline]
     });
+    
+    // Sync deadline to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          await createDeadline(user.id, {
+            title: formData.title,
+            description: '', // No description in form data
+            dueDate: normalizedDueDate,
+            dueTime: formData.dueTime,
+            priority: formData.priority,
+            category: formData.category,
+            estimatedHours: parseFloat(formData.estimatedHours),
+            reminderOneDayBefore: true,
+            reminderThreeDaysBefore: true,
+          });
+        }
+      } catch (error) {
+        console.error('[Deadline] Failed to sync deadline to database:', error);
+      }
+    })();
   },
 
   // Update existing deadline
@@ -1277,6 +1636,18 @@ Room: ${roomState}`;
         deadline.id === id ? { ...deadline, ...normalizedUpdates } : deadline
       )
     });
+    
+    // Sync update to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          await updateDeadlineDB(id, normalizedUpdates);
+        }
+      } catch (error) {
+        console.error('[Deadline] Failed to sync update to database:', error);
+      }
+    })();
   },
 
   // Delete deadline
@@ -1286,6 +1657,18 @@ Room: ${roomState}`;
     set({
       deadlines: deadlines.filter(deadline => deadline.id !== id)
     });
+    
+    // Sync deletion to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          await deleteDeadlineDB(id);
+        }
+      } catch (error) {
+        console.error('[Deadline] Failed to sync deletion to database:', error);
+      }
+    })();
   },
 
   // Mark deadline as complete
@@ -1312,15 +1695,30 @@ Room: ${roomState}`;
         d.id === id ? { ...d, isCompleted: true } : d
       );
       
+      const updatedUserData = {
+        ...userData,
+        qCoins: userData.qCoins + completionBonus
+      };
+      
       set({
         deadlines: updatedDeadlines,
-        userData: {
-          ...userData,
-          qCoins: userData.qCoins + completionBonus
-        }
+        userData: updatedUserData
       });
       
       console.log(`[Deadline] Completed "${deadline.title}" → +${completionBonus} Q-Coins!`);
+      
+      // Sync completion to database
+      (async () => {
+        try {
+          const user = await getDeviceUser();
+          if (user) {
+            await markDeadlineCompleteDB(id);
+            await syncToDatabase(updatedUserData);
+          }
+        } catch (error) {
+          console.error('[Deadline] Failed to sync completion to database:', error);
+        }
+      })();
     }
   },
 
@@ -1345,6 +1743,18 @@ Room: ${roomState}`;
             : d
         )
       });
+      
+      // Sync work addition to database
+      (async () => {
+        try {
+          const user = await getDeviceUser();
+          if (user) {
+            await addWorkToDeadlineDB(id, hours);
+          }
+        } catch (error) {
+          console.error('[Deadline] Failed to sync work addition to database:', error);
+        }
+      })();
     }
   },
 
@@ -1460,13 +1870,30 @@ Room: ${roomState}`;
     const newCoins = Math.max(0, currentCoins - itemPrice); // Ensure never negative
     console.log(`[Shop] New coin balance: ${newCoins}`);
     
+    const updatedUserData = {
+      ...userData,
+      qCoins: newCoins,
+      purchasedItems: [...(userData.purchasedItems || []), itemId]
+    };
+    
     set({
-      userData: {
-        ...userData,
-        qCoins: newCoins,
-        purchasedItems: [...(userData.purchasedItems || []), itemId]
-      }
+      userData: updatedUserData
     });
+    
+    // Sync to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          // Record purchase in database
+          await purchaseItemDB(user.id, itemId);
+          // Sync updated user data
+          await syncToDatabase(updatedUserData);
+        }
+      } catch (error) {
+        console.error('[Shop] Failed to sync purchase to database:', error);
+      }
+    })();
     
     console.log(`[Shop] Purchased ${itemId} for ${itemPrice} coins`);
     return true;

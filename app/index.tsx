@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store';
 import QuillbyPet from './components/character/QuillbyPet';
 import EnergyBar from './components/progress/EnergyBar';
 import RoomBackground from './components/room/RoomBackground';
+import { formatSleepTime } from '../lib/timeUtils';
+import { getTodaysSleepHours } from './core/engine';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -16,7 +18,6 @@ export default function HomeScreen() {
     logBreakfast, 
     startSleep,
     endSleep,
-    getTodaysSleepHours,
     skipTask,
     resetDay
   } = useQuillbyStore();
@@ -27,12 +28,17 @@ export default function HomeScreen() {
   const selectedCharacter = userData.selectedCharacter || 'casual';
   const enabledHabits = userData.enabledHabits || ['study'];
   
+  // Calculate sleep hours with useMemo to ensure reactivity
+  const todaysSleep = useMemo(() => {
+    return getTodaysSleepHours(userData.sleepSessions || []);
+  }, [userData.sleepSessions]);
+  
   // Redirect to onboarding if not completed
   useEffect(() => {
     if (!userData.onboardingCompleted) {
       const timer = setTimeout(() => {
         router.replace('/onboarding/welcome');
-      }, 100);
+      }, 1000); // Increased to 1 second to prevent premature redirect
       
       return () => clearTimeout(timer);
     }
@@ -61,10 +67,10 @@ export default function HomeScreen() {
   };
   
   const handleLogSleep = () => {
-    const todaysSleep = getTodaysSleepHours();
+    const formattedSleep = formatSleepTime(todaysSleep);
     Alert.alert(
       "Sleep Tracking",
-      `Today's sleep: ${todaysSleep.toFixed(1)} hours\n\nUse the sleep button in the main app to track sleep sessions.`,
+      `Today's sleep: ${formattedSleep}\n\nUse the sleep button in the main app to track sleep sessions.`,
       [{ text: "OK" }]
     );
   };
@@ -161,7 +167,7 @@ export default function HomeScreen() {
               onPress={handleLogSleep}
             >
               <Text style={styles.habitButtonText}>
-                😴 Sleep Tracker ({getTodaysSleepHours().toFixed(1)}h)
+                😴 Sleep Tracker ({formatSleepTime(todaysSleep)})
               </Text>
             </TouchableOpacity>
           </View>

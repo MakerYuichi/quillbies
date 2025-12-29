@@ -50,6 +50,11 @@ export default function CreateDeadlineModal({
     category: 'study'
   });
 
+  // Debug log for form data changes
+  React.useEffect(() => {
+    console.log('[CreateDeadlineModal] Form data updated:', formData);
+  }, [formData]);
+
   // When opening in edit mode, prefill form with existing deadline data
   useEffect(() => {
     if (visible && mode === 'edit' && initialData) {
@@ -147,11 +152,15 @@ export default function CreateDeadlineModal({
 
   // Custom picker handlers
   const handleDateSelect = (date: string) => {
-    setFormData({...formData, dueDate: date});
+    console.log('[CreateDeadlineModal] Date selected:', date);
+    setFormData(prev => ({...prev, dueDate: date}));
+    setShowDatePicker(false);
   };
 
   const handleTimeSelect = (time: string) => {
-    setFormData({...formData, dueTime: time});
+    console.log('[CreateDeadlineModal] Time selected:', time);
+    setFormData(prev => ({...prev, dueTime: time}));
+    setShowTimePicker(false);
   };
 
   // Simple date/time validation
@@ -206,7 +215,7 @@ export default function CreateDeadlineModal({
               style={styles.textInput}
               placeholder="e.g., Math Final Exam"
               value={formData.title}
-              onChangeText={(text) => setFormData({...formData, title: text})}
+              onChangeText={(text) => setFormData(prev => ({...prev, title: text}))}
               autoFocus
             />
           </View>
@@ -221,7 +230,10 @@ export default function CreateDeadlineModal({
                 <View style={styles.dateTimeInputContainer}>
                   <TouchableOpacity 
                     style={styles.emojiButton}
-                    onPress={() => setShowDatePicker(true)}
+                    onPress={() => {
+                      console.log('[CreateDeadlineModal] Opening date picker with current date:', formData.dueDate);
+                      setShowDatePicker(true);
+                    }}
                   >
                     <Text style={styles.dateTimeEmoji}>📅</Text>
                   </TouchableOpacity>
@@ -229,11 +241,11 @@ export default function CreateDeadlineModal({
                     style={styles.dateTimeInput}
                     placeholder="2024-12-28"
                     value={formData.dueDate}
-                    onChangeText={(text) => setFormData({...formData, dueDate: text})}
+                    onChangeText={(text) => setFormData(prev => ({...prev, dueDate: text}))}
                     keyboardType="numeric"
                   />
                 </View>
-                <Text style={styles.inputHint}>Tap 📅 for calendar or type date</Text>
+                <Text style={styles.inputHint}>Tap 📅 for calendar or type date (Current: {formData.dueDate || 'None'})</Text>
               </View>
 
               {/* Time Input */}
@@ -250,7 +262,7 @@ export default function CreateDeadlineModal({
                     style={styles.dateTimeInput}
                     placeholder="14:30"
                     value={formData.dueTime}
-                    onChangeText={(text) => setFormData({...formData, dueTime: text})}
+                    onChangeText={(text) => setFormData(prev => ({...prev, dueTime: text}))}
                     keyboardType="numeric"
                   />
                 </View>
@@ -269,7 +281,7 @@ export default function CreateDeadlineModal({
                   styles.priorityHigh,
                   formData.priority === 'high' && styles.prioritySelected
                 ]}
-                onPress={() => setFormData({...formData, priority: 'high'})}
+                onPress={() => setFormData(prev => ({...prev, priority: 'high'}))}
               >
                 <Text style={formData.priority === 'high' ? styles.priorityTextSelected : styles.priorityText}>🔴 High</Text>
                 <Text style={formData.priority === 'high' ? styles.prioritySubtextSelected : styles.prioritySubtext}>Urgent</Text>
@@ -280,7 +292,7 @@ export default function CreateDeadlineModal({
                   styles.priorityMedium,
                   formData.priority === 'medium' && styles.prioritySelected
                 ]}
-                onPress={() => setFormData({...formData, priority: 'medium'})}
+                onPress={() => setFormData(prev => ({...prev, priority: 'medium'}))}
               >
                 <Text style={formData.priority === 'medium' ? styles.priorityTextSelected : styles.priorityText}>🟡 Medium</Text>
                 <Text style={formData.priority === 'medium' ? styles.prioritySubtextSelected : styles.prioritySubtext}>Important</Text>
@@ -291,7 +303,7 @@ export default function CreateDeadlineModal({
                   styles.priorityLow,
                   formData.priority === 'low' && styles.prioritySelected
                 ]}
-                onPress={() => setFormData({...formData, priority: 'low'})}
+                onPress={() => setFormData(prev => ({...prev, priority: 'low'}))}
               >
                 <Text style={formData.priority === 'low' ? styles.priorityTextSelected : styles.priorityText}>🟢 Low</Text>
                 <Text style={formData.priority === 'low' ? styles.prioritySubtextSelected : styles.prioritySubtext}>Nice to have</Text>
@@ -307,7 +319,7 @@ export default function CreateDeadlineModal({
               placeholder="e.g., 8"
               keyboardType="numeric"
               value={formData.estimatedHours}
-              onChangeText={(text) => setFormData({...formData, estimatedHours: text})}
+              onChangeText={(text) => setFormData(prev => ({...prev, estimatedHours: text}))}
             />
             <Text style={styles.inputHint}>How many hours do you think this will take?</Text>
           </View>
@@ -321,7 +333,7 @@ export default function CreateDeadlineModal({
                   styles.categoryButton,
                   formData.category === 'study' && styles.categorySelected
                 ]}
-                onPress={() => setFormData({...formData, category: 'study'})}
+                onPress={() => setFormData(prev => ({...prev, category: 'study'}))}
               >
                 <Text style={styles.categoryEmoji}>📚</Text>
                 <Text style={styles.categoryText}>Study</Text>
@@ -331,7 +343,7 @@ export default function CreateDeadlineModal({
                   styles.categoryButton,
                   formData.category === 'work' && styles.categorySelected
                 ]}
-                onPress={() => setFormData({...formData, category: 'work'})}
+                onPress={() => setFormData(prev => ({...prev, category: 'work'}))}
               >
                 <Text style={styles.categoryEmoji}>💼</Text>
                 <Text style={styles.categoryText}>Work</Text>
@@ -341,7 +353,7 @@ export default function CreateDeadlineModal({
                   styles.categoryButton,
                   formData.category === 'project' && styles.categorySelected
                 ]}
-                onPress={() => setFormData({...formData, category: 'project'})}
+                onPress={() => setFormData(prev => ({...prev, category: 'project'}))}
               >
                 <Text style={styles.categoryEmoji}>📊</Text>
                 <Text style={styles.categoryText}>Project</Text>
@@ -351,7 +363,7 @@ export default function CreateDeadlineModal({
                   styles.categoryButton,
                   formData.category === 'other' && styles.categorySelected
                 ]}
-                onPress={() => setFormData({...formData, category: 'other'})}
+                onPress={() => setFormData(prev => ({...prev, category: 'other'}))}
               >
                 <Text style={styles.categoryEmoji}>🎯</Text>
                 <Text style={styles.categoryText}>Other</Text>

@@ -54,9 +54,10 @@ export const createUserProfile = async (userId: string, profile: any) => {
   }
 };
 
-// Update user profile
+// Update user profile - with automatic creation if not exists
 export const updateUserProfile = async (userId: string, updates: any) => {
   try {
+    // First, try to update the existing profile
     const { data, error } = await supabase
       .from('user_profiles')
       .update({
@@ -67,7 +68,51 @@ export const updateUserProfile = async (userId: string, updates: any) => {
       .select()
       .single();
 
-    if (error) {
+    if (error && error.code === 'PGRST116') {
+      // Profile doesn't exist, create it first
+      console.log('[UpdateProfile] Profile not found, creating new profile for user:', userId);
+      
+      const { data: newProfile, error: createError } = await supabase
+        .from('user_profiles')
+        .insert([
+          {
+            id: userId,
+            email: updates.email || null,
+            buddy_name: updates.buddy_name || 'Hammy',
+            selected_character: updates.selected_character || 'casual',
+            user_name: updates.user_name,
+            student_level: updates.student_level || 'university',
+            country: updates.country,
+            timezone: updates.timezone || 'UTC',
+            energy: updates.energy || 100,
+            max_energy_cap: updates.max_energy_cap || 100,
+            q_coins: updates.q_coins || 100,
+            mess_points: updates.mess_points || 0,
+            current_streak: updates.current_streak || 0,
+            enabled_habits: updates.enabled_habits || ['study', 'hydration', 'sleep', 'exercise'],
+            study_goal_hours: updates.study_goal_hours || 3,
+            exercise_goal_minutes: updates.exercise_goal_minutes || 30,
+            hydration_goal_glasses: updates.hydration_goal_glasses || 8,
+            sleep_goal_hours: updates.sleep_goal_hours || 8,
+            weight_goal: updates.weight_goal || 'maintain',
+            meal_portion_size: updates.meal_portion_size || 1.0,
+            light_type: updates.light_type || 'lamp',
+            plant_type: updates.plant_type || 'plant',
+            created_at: new Date(),
+            updated_at: new Date(),
+          }
+        ])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('CreateProfile Error:', createError);
+        return null;
+      }
+
+      console.log('[UpdateProfile] Profile created successfully');
+      return newProfile;
+    } else if (error) {
       console.error('UpdateProfile Error:', error);
       return null;
     }

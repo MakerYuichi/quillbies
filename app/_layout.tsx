@@ -5,6 +5,7 @@ import { View, ActivityIndicator, Text } from 'react-native';
 import { useQuillbyStore } from './state/store';
 import { authenticateDevice, isDeviceAuthenticated } from '../lib/deviceAuth';
 import { requestNotificationPermissions } from '../lib/notifications';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function RootLayout() {
   const initializeUser = useQuillbyStore((state) => state.initializeUser);
@@ -27,27 +28,40 @@ export default function RootLayout() {
         console.log('[App] Device already authenticated');
       } else {
         // Authenticate device
-        const result = await authenticateDevice();
-        console.log('[App] Device authenticated:', result);
+        try {
+          const result = await authenticateDevice();
+          console.log('[App] Device authenticated:', result);
+        } catch (authError) {
+          console.warn('[App] Device authentication failed, continuing in offline mode:', authError);
+        }
       }
       
       // Initialize local user data
-      initializeUser();
+      try {
+        initializeUser();
+        console.log('[App] User data initialized');
+      } catch (userError) {
+        console.warn('[App] User initialization failed:', userError);
+      }
       
       // Request notification permissions
-      console.log('[App] Requesting notification permissions...');
-      const notificationPermission = await requestNotificationPermissions();
-      if (notificationPermission) {
-        console.log('[App] Notification permissions granted');
-      } else {
-        console.log('[App] Notification permissions denied');
+      try {
+        console.log('[App] Requesting notification permissions...');
+        const notificationPermission = await requestNotificationPermissions();
+        if (notificationPermission) {
+          console.log('[App] Notification permissions granted');
+        } else {
+          console.log('[App] Notification permissions denied');
+        }
+      } catch (notifError) {
+        console.warn('[App] Notification setup failed:', notifError);
       }
       
       setIsReady(true);
     } catch (err) {
-      console.error('[App] Auth initialization failed:', err);
+      console.error('[App] Critical initialization error:', err);
       setAuthError(String(err));
-      // Still mark as ready - app can work with local storage
+      // Still mark as ready - app can work with basic functionality
       setIsReady(true);
     }
   };
@@ -69,50 +83,52 @@ export default function RootLayout() {
   }
   
   return (
-    <SafeAreaProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false, // Hide header for all screens (onboarding needs full screen)
-        }}
-      >
-      {/* Onboarding Screens - Welcome is now the ENTRY POINT */}
-      <Stack.Screen 
-        name="onboarding/welcome" 
-        options={{ 
-          headerShown: false,
-        }} 
-      />
-      <Stack.Screen 
-        name="onboarding/character-select" 
-        options={{ 
-          headerShown: false,
-        }} 
-      />
-      
-      {/* Main App Screens */}
-      <Stack.Screen 
-        name="index" 
-        options={{ 
-          title: 'Quillby',
-          headerShown: true,
-          headerStyle: {
-            backgroundColor: '#FF9800',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }} 
-      />
-      <Stack.Screen 
-        name="study-session" 
-        options={{ 
-          title: 'Focus Session',
-          presentation: 'modal',
-          headerShown: false,
-        }} 
-      />
-      </Stack>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false, // Hide header for all screens (onboarding needs full screen)
+          }}
+        >
+        {/* Onboarding Screens - Welcome is now the ENTRY POINT */}
+        <Stack.Screen 
+          name="onboarding/welcome" 
+          options={{ 
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="onboarding/character-select" 
+          options={{ 
+            headerShown: false,
+          }} 
+        />
+        
+        {/* Main App Screens */}
+        <Stack.Screen 
+          name="index" 
+          options={{ 
+            title: 'Quillby',
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#FF9800',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }} 
+        />
+        <Stack.Screen 
+          name="study-session" 
+          options={{ 
+            title: 'Focus Session',
+            presentation: 'modal',
+            headerShown: false,
+          }} 
+        />
+        </Stack>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

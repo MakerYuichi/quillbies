@@ -25,6 +25,7 @@ export default function GoalSetupScreen() {
   const setExerciseGoal = useQuillbyStore((state) => state.setExerciseGoal);
   const setHydrationGoal = useQuillbyStore((state) => state.setHydrationGoal);
   const setSleepGoal = useQuillbyStore((state) => state.setSleepGoal);
+  const completeOnboarding = useQuillbyStore((state) => state.completeOnboarding);
 
   const enabledHabits = userData.enabledHabits || [];
 
@@ -103,8 +104,10 @@ export default function GoalSetupScreen() {
 
     console.log('[Onboarding] Goals saved, device auth will handle user creation automatically');
 
-    console.log('[Onboarding] Navigating to tutorial...');
-    router.replace('/onboarding/tutorial');
+    // Complete onboarding immediately and go to main app
+    console.log('[Onboarding] Completing onboarding and going to main app');
+    completeOnboarding();
+    router.replace('/(tabs)');
   };
 
   const CHECKPOINT_OPTIONS = [

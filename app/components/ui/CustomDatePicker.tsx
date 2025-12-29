@@ -27,12 +27,25 @@ export default function CustomDatePicker({ visible, onClose, onDateSelect, initi
   // Initialize with current date or provided initial date
   React.useEffect(() => {
     if (initialDate) {
+      console.log('[CustomDatePicker] Initializing with date:', initialDate);
       const date = new Date(initialDate);
+      console.log('[CustomDatePicker] Parsed date object:', date);
       setSelectedYear(date.getFullYear());
       setSelectedMonth(date.getMonth());
       setSelectedDay(date.getDate());
+      console.log('[CustomDatePicker] Set values:', { 
+        year: date.getFullYear(), 
+        month: date.getMonth(), 
+        day: date.getDate() 
+      });
+    } else {
+      console.log('[CustomDatePicker] No initial date, using current date');
+      const now = new Date();
+      setSelectedYear(now.getFullYear());
+      setSelectedMonth(now.getMonth());
+      setSelectedDay(now.getDate());
     }
-  }, [initialDate]);
+  }, [initialDate, visible]);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -50,6 +63,8 @@ export default function CustomDatePicker({ visible, onClose, onDateSelect, initi
   const handleConfirm = () => {
     const date = new Date(selectedYear, selectedMonth, selectedDay);
     const formattedDate = date.toISOString().split('T')[0];
+    console.log('[CustomDatePicker] Confirming date:', formattedDate);
+    console.log('[CustomDatePicker] Selected values:', { selectedYear, selectedMonth, selectedDay });
     onDateSelect(formattedDate);
     onClose();
   };
@@ -120,11 +135,17 @@ export default function CustomDatePicker({ visible, onClose, onDateSelect, initi
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={() => {
+              console.log('[CustomDatePicker] Cancel pressed');
+              onClose();
+            }}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Select Date</Text>
-            <TouchableOpacity onPress={handleConfirm}>
+            <TouchableOpacity onPress={() => {
+              console.log('[CustomDatePicker] Done pressed');
+              handleConfirm();
+            }}>
               <Text style={styles.confirmText}>Done</Text>
             </TouchableOpacity>
           </View>

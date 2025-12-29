@@ -148,6 +148,7 @@ export interface SleepSession {
   start: string; // ISO timestamp when sleep started
   end: string; // ISO timestamp when sleep ended
   duration: number; // Duration in hours (calculated)
+  durationMinutes?: number; // Duration in minutes (for better display)
   date: string; // Date string (YYYY-MM-DD) for the day this sleep counts toward
 }
 

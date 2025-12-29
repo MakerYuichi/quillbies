@@ -46,7 +46,7 @@ export const getOrCreateDeviceId = async (): Promise<string> => {
  * Authenticate device using Supabase Anonymous Auth
  * - Gets or creates device ID
  * - Signs in with anonymous auth
- * - Creates user profile if new
+ * - User profiles will be created on first sync
  * 
  * No email/password needed!
  */
@@ -88,47 +88,7 @@ export const authenticateDevice = async () => {
     
     const userId = user.id;
     console.log('[DeviceAuth] Anonymous sign in successful! User ID:', userId.substring(0, 8) + '...');
-    
-    // Check if user profile exists
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (profileError && profileError.code === 'PGRST116') {
-      // Profile doesn't exist, create it
-      console.log('[DeviceAuth] Creating new user profile...');
-      
-      const { error: createError } = await supabase
-        .from('user_profiles')
-        .insert([
-          {
-            id: userId,
-            email: null,  // No email for anonymous users
-            buddy_name: 'Hammy',
-            selected_character: 'casual',
-            student_level: 'university',
-            country: 'Unknown',
-            timezone: 'UTC',
-            energy: 100,
-            q_coins: 100,
-            mess_points: 0,
-          }
-        ]);
-      
-      if (createError) {
-        console.error('[DeviceAuth] Error creating profile:', createError);
-        throw createError;
-      }
-      
-      console.log('[DeviceAuth] Profile created successfully!');
-    } else if (profileError) {
-      console.error('[DeviceAuth] Error fetching profile:', profileError);
-      throw profileError;
-    } else {
-      console.log('[DeviceAuth] Existing profile found');
-    }
+    console.log('[DeviceAuth] User profiles will be created on first sync operation');
     
     return { userId, deviceId };
   } catch (err) {
@@ -145,8 +105,9 @@ export const isDeviceAuthenticated = async (): Promise<boolean> => {
     const { data: { user } } = await supabase.auth.getUser();
     return !!user;
   } catch (err) {
-    console.error('[DeviceAuth] Error checking auth:', err);
-    return false;
+    console.warn('[DeviceAuth] Error checking auth (offline mode):', err);
+    // Return true to skip auth in offline mode
+    return true;
   }
 };
 
@@ -157,10 +118,15 @@ export const getDeviceUser = async () => {
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     
+    console.log('[DeviceAuth] getDeviceUser called');
+    console.log('[DeviceAuth] Supabase auth response:', { user: user ? { id: user.id, is_anonymous: user.is_anonymous } : null, error });
+    
     if (error || !user) {
+      console.log('[DeviceAuth] No user or error, returning null');
       return null;
     }
     
+    console.log('[DeviceAuth] Returning user with ID:', user.id);
     return user;
   } catch (err) {
     console.error('[DeviceAuth] Error getting device user:', err);

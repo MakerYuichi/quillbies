@@ -593,7 +593,7 @@ export default function HomeScreen() {
                   isExercising={true}
                   exerciseDisplay={exerciseDisplay}
                   exerciseElapsedTime={exerciseElapsedTime}
-                  onStartExercise={() => handleStartExerciseWithReset('walk')}
+                  onStartExercise={handleStartExerciseWithReset}
                   onFinishExercise={handleFinishExerciseWithReset}
                 />
               </>

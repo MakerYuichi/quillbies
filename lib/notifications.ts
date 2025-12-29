@@ -8,6 +8,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -166,9 +168,9 @@ export async function scheduleStudyCheckpointReminder(
     '⏰ Study Checkpoint Reminder',
     `Your ${checkpointTime} study checkpoint is in 30 minutes! Time to focus! 📚`,
     {
+      repeats: true,
       hour: time.hour,
       minute: time.minute,
-      repeats: true, // Daily reminder
     },
     'study-reminders'
   );

@@ -10,12 +10,25 @@ export const createFocusSession = async (
   deadlineId?: string
 ) => {
   try {
+    // Validate UUID format for deadlineId if provided
+    let validDeadlineId = null;
+    if (deadlineId) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(deadlineId)) {
+        validDeadlineId = deadlineId;
+        console.log('[CreateSession] Valid deadline ID provided:', deadlineId);
+      } else {
+        console.warn('[CreateSession] Invalid deadline ID format, ignoring:', deadlineId);
+        validDeadlineId = null;
+      }
+    }
+
     const { data, error } = await supabase
       .from('focus_sessions')
       .insert([
         {
           user_id: userId,
-          deadline_id: deadlineId || null,
+          deadline_id: validDeadlineId,
           start_time: new Date(),
           focus_score: 0,
           is_completed: false,
@@ -29,6 +42,7 @@ export const createFocusSession = async (
       return null;
     }
 
+    console.log('[CreateSession] Focus session created successfully:', data.id);
     return data;
   } catch (err) {
     console.error('CreateSession Exception:', err);
@@ -45,6 +59,7 @@ export const endFocusSession = async (
     totalBreakTime: number;
     applePremiumUsed: boolean;
     coffeePremiumUsed: boolean;
+    durationSeconds: number;
   }
 ) => {
   try {
@@ -71,13 +86,18 @@ export const endFocusSession = async (
     const energyGained = Math.round(results.focusScore * energyMultiplier);
     const messRemoved = 2;
 
-    // Update session
+    // Update session with all results
     const { error: updateSessionError } = await supabase
       .from('focus_sessions')
       .update({
         end_time: new Date(),
+        duration_seconds: results.durationSeconds,
+        focus_score: results.focusScore,
+        distraction_count: results.distractionCount,
+        total_break_time: results.totalBreakTime,
+        apple_premium_used: results.applePremiumUsed,
+        coffee_premium_used: results.coffeePremiumUsed,
         is_completed: true,
-        ...results,
       })
       .eq('id', sessionId);
 
@@ -101,7 +121,7 @@ export const endFocusSession = async (
 
     // Update daily data
     await updateDailyData(userId, {
-      study_minutes_today: (session.study_minutes_today || 0) + Math.round(studyHours * 60),
+      study_minutes_today: Math.round(studyHours * 60),
     });
 
     // Update deadline if applicable

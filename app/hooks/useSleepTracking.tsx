@@ -1,6 +1,7 @@
 // Sleep/Wake cycle tracking hook for Casual character
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuillbyStore } from '../state/store';
+import { formatSleepTime } from '../../lib/timeUtils';
 
 export const useSleepTracking = (buddyName: string) => {
   const { userData, startSleep, endSleep, getTodaysSleepHours } = useQuillbyStore();
@@ -9,6 +10,11 @@ export const useSleepTracking = (buddyName: string) => {
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
+
+  // Calculate sleep hours reactively based on sleep sessions
+  const totalSleepHours = useMemo(() => {
+    return getTodaysSleepHours();
+  }, [userData.sleepSessions, getTodaysSleepHours]);
 
   // Check if there's an active sleep session on mount
   useEffect(() => {
@@ -45,23 +51,19 @@ export const useSleepTracking = (buddyName: string) => {
     setIsSleeping(false);
     setActiveSleepSessionId(null);
     
-    // Get updated sleep total after ending session
-    const totalSleepHours = getTodaysSleepHours();
+    // Get updated sleep total after ending session (will be calculated in next render)
+    const updatedSleepHours = getTodaysSleepHours();
     
-    // Format total sleep display
-    const totalHours = Math.floor(totalSleepHours);
-    const totalMins = Math.round((totalSleepHours - totalHours) * 60);
-    const totalText = totalMins > 0 
-      ? `${totalHours}h ${totalMins}m` 
-      : `${totalHours}h`;
+    // Format total sleep display using utility function
+    const totalText = formatSleepTime(updatedSleepHours);
     
     // Update message based on TOTAL accumulated sleep
     let newMessage = '';
-    if (totalSleepHours < 6) {
+    if (updatedSleepHours < 6) {
       newMessage = `😴 Woke up! (${totalText} total today)\nNeed more sleep! Max energy reduced.`;
-    } else if (totalSleepHours >= 6 && totalSleepHours < 8) {
+    } else if (updatedSleepHours >= 6 && updatedSleepHours < 8) {
       newMessage = `😊 Good morning! (${totalText} total today)\nGood rest, ${buddyName}!`;
-    } else if (totalSleepHours >= 8) {
+    } else if (updatedSleepHours >= 8) {
       newMessage = `⭐ Great sleep! (${totalText} total today)\nPerfect! Bonus +10 Energy!`;
     } else {
       newMessage = `💤 Well rested! (${totalText} total today)\nFeeling refreshed!`;
@@ -71,24 +73,16 @@ export const useSleepTracking = (buddyName: string) => {
     setMessageTimestamp(Date.now());
   };
 
-  // Format sleep display for button
+  // Format sleep display for button - use reactive totalSleepHours
   const formatSleepDisplay = () => {
-    const totalSleepHours = getTodaysSleepHours();
-    
     if (totalSleepHours === 0) return '0h today';
     
-    const hours = Math.floor(totalSleepHours);
-    const mins = Math.round((totalSleepHours - hours) * 60);
-    
-    if (mins > 0) {
-      return `${hours}h ${mins}m today`;
-    }
-    return `${hours}h today`;
+    return `${formatSleepTime(totalSleepHours)} today`;
   };
 
   return {
     isSleeping,
-    sleepHours: getTodaysSleepHours(),
+    sleepHours: totalSleepHours,
     sleepDisplay: formatSleepDisplay(),
     handleSleepButton,
     handleWakeUpButton,

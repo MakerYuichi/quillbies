@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground } from 'react-native';
 import { useQuillbyStore } from '../state/store';
+import { formatSleepTime, formatExerciseTime, formatStudyTime } from '../../lib/timeUtils';
+import { getTodaysSleepHours } from '../core/engine';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -19,12 +21,8 @@ export default function StatsScreen() {
       ? (userData.studyMinutesToday || 0) / (userData.studyGoalHours * 60) * 100
       : 0;
     
-    // Sleep stats
-    const todaysSleep = userData.sleepSessions?.filter(session => {
-      const sessionDate = new Date(session.start).toDateString();
-      const today = new Date().toDateString();
-      return sessionDate === today;
-    }).reduce((total, session) => total + (session.duration || 0), 0) || 0;
+    // Sleep stats - use the same function as everywhere else for consistency
+    const todaysSleep = getTodaysSleepHours(userData.sleepSessions || []);
     
     const avgSleep = userData.sleepSessions?.length > 0
       ? userData.sleepSessions.reduce((total, session) => total + (session.duration || 0), 0) / userData.sleepSessions.length / 3600
@@ -127,14 +125,14 @@ export default function StatsScreen() {
             </View>
             {renderProgressBar(stats.studyGoalProgress, '#1976D2')}
             <Text style={styles.statDetail}>
-              {((userData.studyMinutesToday || 0) / 60).toFixed(1)}h / {userData.studyGoalHours || 0}h
+              {formatStudyTime(userData.studyMinutesToday || 0)} / {formatStudyTime((userData.studyGoalHours || 0) * 60)}
             </Text>
             
             <View style={styles.divider} />
             
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Total Study Time:</Text>
-              <Text style={styles.statValue}>{stats.totalStudyHours.toFixed(1)}h</Text>
+              <Text style={styles.statValue}>{formatStudyTime(stats.totalStudyHours * 60)}</Text>
             </View>
             
             <View style={styles.statRow}>
@@ -199,7 +197,7 @@ export default function StatsScreen() {
               <View style={styles.divider} />
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>🏃 Exercise:</Text>
-                <Text style={styles.statValue}>{userData.exerciseMinutes} / 30 min</Text>
+                <Text style={styles.statValue}>{formatExerciseTime(userData.exerciseMinutes)} / {formatExerciseTime(30)}</Text>
               </View>
               {renderProgressBar(stats.exerciseProgress, '#4CAF50')}
             </>
@@ -219,12 +217,12 @@ export default function StatsScreen() {
           
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Last Night:</Text>
-            <Text style={styles.statValue}>{stats.todaysSleep.toFixed(1)}h</Text>
+            <Text style={styles.statValue}>{formatSleepTime(stats.todaysSleep)}</Text>
           </View>
           
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Average Sleep:</Text>
-            <Text style={styles.statValue}>{stats.avgSleep.toFixed(1)}h</Text>
+            <Text style={styles.statValue}>{formatSleepTime(stats.avgSleep)}</Text>
           </View>
           
           <View style={styles.statRow}>

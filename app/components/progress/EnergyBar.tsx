@@ -13,10 +13,10 @@ export default function EnergyBar({ current, max }: EnergyBarProps) {
   const percentage = Math.min((current / max) * 100, 100);
   
   // Gradient colors based on energy level
-  const getGradientColors = () => {
-    if (percentage > 60) return ['#66BB6A', '#43A047']; // Green gradient
-    if (percentage > 30) return ['#FFA726', '#FB8C00']; // Orange gradient
-    return ['#EF5350', '#E53935']; // Red gradient
+  const getGradientColors = (): readonly [string, string] => {
+    if (percentage > 60) return ['#66BB6A', '#43A047'] as const; // Green gradient
+    if (percentage > 30) return ['#FFA726', '#FB8C00'] as const; // Orange gradient
+    return ['#EF5350', '#E53935'] as const; // Red gradient
   };
   
   // Glow color for the bar

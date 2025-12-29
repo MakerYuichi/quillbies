@@ -21,6 +21,8 @@ export default function SettingsScreen() {
     setHydrationGoal,
     setWeightGoal,
     setSleepGoal,
+    loadFromDatabase,
+    logWater, // For testing database sync
   } = useQuillbyStore();
   
   // Modal states
@@ -99,6 +101,33 @@ export default function SettingsScreen() {
         }
       ]
     );
+  };
+
+  const handleTestDatabaseSync = () => {
+    const currentCoins = userData.qCoins;
+    logWater(); // This will add +5 coins and sync to database
+    Alert.alert(
+      'Database Sync Test',
+      `Added +5 coins (${currentCoins} → ${currentCoins + 5}) and synced to database.\n\nCheck your database to verify the sync worked!`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleLoadFromDatabase = async () => {
+    try {
+      await loadFromDatabase();
+      Alert.alert(
+        'Load from Database',
+        'Data refreshed from database successfully!',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      Alert.alert(
+        'Load Failed',
+        'Failed to load data from database. Check your connection.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -285,6 +314,39 @@ export default function SettingsScreen() {
               <View>
                 <Text style={styles.settingTitle}>Reset Onboarding</Text>
                 <Text style={styles.settingSubtitle}>Start fresh setup</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Database Sync Test */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🗄️ Database Sync</Text>
+          
+          <TouchableOpacity 
+            style={styles.settingButton}
+            onPress={handleTestDatabaseSync}
+          >
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>🧪</Text>
+              <View>
+                <Text style={styles.settingTitle}>Test Database Sync</Text>
+                <Text style={styles.settingSubtitle}>Add +5 coins and sync to database</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.settingButton}
+            onPress={handleLoadFromDatabase}
+          >
+            <View style={styles.settingButtonLeft}>
+              <Text style={styles.settingIcon}>📥</Text>
+              <View>
+                <Text style={styles.settingTitle}>Load from Database</Text>
+                <Text style={styles.settingSubtitle}>Refresh data from server</Text>
               </View>
             </View>
             <Text style={styles.settingArrow}>›</Text>
