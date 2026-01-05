@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text } from 'react-native';
-import { useQuillbyStore } from './state/store';
+import { useQuillbyStore } from './state/store-modular';
 import { authenticateDevice, isDeviceAuthenticated } from '../lib/deviceAuth';
 import { requestNotificationPermissions } from '../lib/notifications';
 import { ErrorBoundary } from './components/ErrorBoundary';

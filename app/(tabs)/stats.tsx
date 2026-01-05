@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground } from 'react-native';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 import { formatSleepTime, formatExerciseTime, formatStudyTime } from '../../lib/timeUtils';
 import { getTodaysSleepHours } from '../core/engine';
 
@@ -29,9 +29,11 @@ export default function StatsScreen() {
       : 0;
     
     // Habit completion rates
-    const waterProgress = (userData.waterGlasses / 8) * 100;
-    const mealProgress = (userData.mealsLogged / 3) * 100;
-    const exerciseGoal = 30; // 30 minutes goal
+    const hydrationGoal = userData.hydrationGoalGlasses || 8;
+    const mealGoal = userData.mealGoalCount || 3;
+    const exerciseGoal = userData.exerciseGoalMinutes || 30; // Use dynamic exercise goal
+    const waterProgress = (userData.waterGlasses / hydrationGoal) * 100;
+    const mealProgress = (userData.mealsLogged / mealGoal) * 100;
     const exerciseProgress = Math.min((userData.exerciseMinutes / exerciseGoal) * 100, 100);
     
     // Deadline stats
@@ -62,6 +64,9 @@ export default function StatsScreen() {
       completionRate,
       totalStudyHours,
       roomStatus,
+      hydrationGoal,
+      mealGoal,
+      exerciseGoal,
     };
   }, [userData, deadlines, getCompletedDeadlines, getUrgentDeadlines, getUpcomingDeadlines]);
 
@@ -180,7 +185,7 @@ export default function StatsScreen() {
           
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>💧 Hydration:</Text>
-            <Text style={styles.statValue}>{userData.waterGlasses} / 8</Text>
+            <Text style={styles.statValue}>{userData.waterGlasses} / {stats.hydrationGoal}</Text>
           </View>
           {renderProgressBar(stats.waterProgress, '#2196F3')}
           
@@ -188,7 +193,7 @@ export default function StatsScreen() {
           
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>🍽️ Meals:</Text>
-            <Text style={styles.statValue}>{userData.mealsLogged} / 3</Text>
+            <Text style={styles.statValue}>{userData.mealsLogged} / {stats.mealGoal}</Text>
           </View>
           {renderProgressBar(stats.mealProgress, '#FF9800')}
           
@@ -197,7 +202,7 @@ export default function StatsScreen() {
               <View style={styles.divider} />
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>🏃 Exercise:</Text>
-                <Text style={styles.statValue}>{formatExerciseTime(userData.exerciseMinutes)} / {formatExerciseTime(30)}</Text>
+                <Text style={styles.statValue}>{formatExerciseTime(userData.exerciseMinutes)} / {formatExerciseTime(stats.exerciseGoal)}</Text>
               </View>
               {renderProgressBar(stats.exerciseProgress, '#4CAF50')}
             </>
@@ -304,7 +309,7 @@ export default function StatsScreen() {
                 <Text style={styles.achievementName}>Study Star</Text>
               </View>
             )}
-            {userData.waterGlasses >= 8 && (
+            {userData.waterGlasses >= stats.hydrationGoal && (
               <View style={styles.achievementBadge}>
                 <Text style={styles.achievementIcon}>💧</Text>
                 <Text style={styles.achievementName}>Hydration Hero</Text>

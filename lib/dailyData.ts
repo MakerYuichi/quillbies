@@ -2,27 +2,33 @@
 // lib/dailyData.ts
 import { supabase } from './supabase';
 
-// Get today's data
+// Get today's data - using single record per user approach
 export const getTodayData = async (userId: string) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
+    // Get the user's single daily_data record
     const { data, error } = await supabase
       .from('daily_data')
       .select('*')
       .eq('user_id', userId)
-      .eq('date_tracked', today)
-      .single();
-
-    if (error && error.code === 'PGRST116') {
-      // No data for today, create it
-      console.log('[DailyData] No record for today, creating new one');
-      return createTodayData(userId, today);
-    }
+      .maybeSingle(); // Use maybeSingle() to handle 0 rows gracefully
 
     if (error) {
       console.error('GetTodayData Error:', error);
       return null;
+    }
+
+    if (!data) {
+      // No record exists, create the user's single daily record
+      console.log('[DailyData] No daily record exists, creating one');
+      return await createTodayData(userId, today);
+    }
+
+    // Check if we need to reset for a new day
+    if (data.date_tracked !== today) {
+      console.log(`[DailyData] New day detected: ${data.date_tracked} → ${today}`);
+      return await resetDailyData(userId, today);
     }
 
     return data;
@@ -32,12 +38,13 @@ export const getTodayData = async (userId: string) => {
   }
 };
 
-// Create today's data - with user profile validation
+// Create today's data - single record per user approach
 const createTodayData = async (userId: string, date: string) => {
   try {
     // First ensure user profile exists
     await ensureUserProfileExists(userId);
     
+    // Create the user's single daily_data record
     const { data, error } = await supabase
       .from('daily_data')
       .insert([
@@ -58,6 +65,23 @@ const createTodayData = async (userId: string, date: string) => {
       .single();
 
     if (error) {
+      // If it's a duplicate key error, the record already exists
+      if (error.code === '23505') {
+        console.log('[DailyData] Record already exists, fetching it');
+        const { data: existingData, error: fetchError } = await supabase
+          .from('daily_data')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (fetchError) {
+          console.error('CreateTodayData - Fetch existing error:', fetchError);
+          return null;
+        }
+        
+        return existingData;
+      }
+      
       console.error('CreateTodayData Error:', error);
       return null;
     }
@@ -70,6 +94,42 @@ const createTodayData = async (userId: string, date: string) => {
   }
 };
 
+// Reset daily data for a new day - single record per user approach
+const resetDailyData = async (userId: string, newDate: string) => {
+  try {
+    console.log(`[DailyData] Resetting daily data for new day: ${newDate}`);
+    
+    const { data, error } = await supabase
+      .from('daily_data')
+      .update({
+        date_tracked: newDate,
+        study_minutes_today: 0,
+        missed_checkpoints: 0,
+        ate_breakfast: false,
+        water_glasses: 0,
+        meals_logged: 0,
+        exercise_minutes: 0,
+        apple_taps_today: 0,
+        coffee_taps_today: 0,
+        updated_at: new Date(),
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('ResetDailyData Error:', error);
+      return null;
+    }
+
+    console.log('[DailyData] Daily data reset for new day');
+    return data;
+  } catch (err) {
+    console.error('ResetDailyData Exception:', err);
+    return null;
+  }
+};
+
 // Ensure user profile exists before creating daily data
 const ensureUserProfileExists = async (userId: string) => {
   try {
@@ -78,9 +138,9 @@ const ensureUserProfileExists = async (userId: string) => {
       .from('user_profiles')
       .select('id')
       .eq('id', userId)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to handle 0 rows gracefully
 
-    if (profileError && profileError.code === 'PGRST116') {
+    if (!profile && !profileError) {
       // Profile doesn't exist, create minimal profile
       console.log('[DailyData] Creating user profile for daily data:', userId);
       
@@ -132,12 +192,10 @@ const ensureUserProfileExists = async (userId: string) => {
   }
 };
 
-// Update daily data - FIXED VERSION
+// Update daily data - single record per user approach
 export const updateDailyData = async (userId: string, updates: any) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-
-    // First, make sure today's data exists
+    // First, make sure today's data exists and is current
     let todayData = await getTodayData(userId);
         
     if (!todayData) {
@@ -150,7 +208,7 @@ export const updateDailyData = async (userId: string, updates: any) => {
       updates.study_minutes_today = (todayData.study_minutes_today || 0) + updates.study_minutes_today;
     }
 
-    // Now update the existing record
+    // Update the user's single daily record
     const { data, error } = await supabase
       .from('daily_data')
       .update({
@@ -158,7 +216,6 @@ export const updateDailyData = async (userId: string, updates: any) => {
         updated_at: new Date(),
       })
       .eq('user_id', userId)
-      .eq('date_tracked', today)
       .select()
       .single();
 

@@ -1,7 +1,7 @@
 // Room background layers component
 import React from 'react';
 import { View, Image, StyleSheet, Dimensions, Text } from 'react-native';
-import { useQuillbyStore } from '../../state/store';
+import { useQuillbyStore } from '../../state/store-modular';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

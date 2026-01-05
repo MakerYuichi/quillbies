@@ -1,57 +1,57 @@
 // Random reminder system for Casual character
 import { useState, useEffect } from 'react';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 
 // Message collections
 const REMINDER_MESSAGES = {
   water: [
-    "Hey, my water bottle's looking lonely... thirsty? 💧",
-    "Just thinking about how good water tastes right now...",
-    "My plant friend looks thirsty too! Water break? 🌿",
-    "Hydration time maybe? I'm getting a bit parched..."
+    "My water bottle's looking at me funny... thirsty? 💧",
+    "Could use a water break maybe?",
+    "Water sounds good right about now...",
+    "My water bottle's getting lonely..."
   ],
   meal: {
     breakfast: [
-      "My tummy's rumbling... breakfast time maybe? 🍎",
+      "Mornin' tummy rumble... breakfast? 🍳",
       "Morning! How about some breakfast?",
       "I could go for some breakfast... how about you?",
       "Getting hungry over here... what's for breakfast?"
     ],
     lunch: [
-      "Lunch time! My little hamster tummy is ready! 🍽️",
+      "Lunch o'clock? I'm getting snacky! 🥪",
       "I could use some lunch... how about you?",
       "Midday meal break? I'm getting hungry!",
       "Lunch time! Let's refuel for the afternoon!"
     ],
     dinner: [
-      "Dinner time! What are we having? 🍽️",
+      "Evening fuel time? 🍽️",
       "Evening meal time! I'm getting hungry!",
       "My tummy says it's dinner time!",
       "How about some dinner? I'm ready to eat!"
     ]
   },
   exercise: [
-    "I'm feeling a bit stiff... stretch break maybe? 🤸",
-    "Could use some movement! Wanna get active with me?",
-    "My legs are getting restless... exercise time?",
+    "Getting a bit couch-potato-ish... stretch? 🛋️",
+    "Could wiggle around a bit... exercise maybe?",
+    "Legs are getting antsy...",
     "Feeling cooped up! Let's move around a bit? 🏃"
   ],
   sleep: [
-    "Getting sleepy... bedtime soon maybe? 😴",
-    "My eyes are getting heavy... sleep schedule check?",
+    "Getting droopy-eyed... bedtime soon? 😴",
+    "Yawn... sleep schedule check?",
     "I'm yawning... might be time to wind down soon",
     "Feeling drowsy over here... sleep soon?"
   ],
   general: [
-    "What are we studying today? I'm curious! 🤔",
-    "I rearranged my room a bit! Like it? 🏠",
+    "Whatcha working on? Curious hammy here! 🤔",
+    "Just rearranged my room a bit - what do you think? 🏠",
     "Just practicing my reading... books are heavy!",
     "Thinking about all the things we'll learn today!",
-    "My plant friend says hi! 🌿"
+    "My plant buddy says hi! 🌿"
   ],
   timeOfDay: {
     morning: [
-      "Good morning! Ready to make today awesome? ☀️",
+      "Mornin'! Ready to make today awesome? ☀️",
       "Morning! I already did my hamster stretches!",
       "Fresh day, fresh start! Let's make it count!"
     ],
@@ -103,12 +103,12 @@ export const useRandomReminders = (buddyName: string) => {
       }
 
       // Dinner time (5-8 PM): Dinner reminder
-      if (hour >= 17 && hour <= 20 && userData.mealsLogged < 3 && enabledHabits.includes('meals')) {
+      if (hour >= 17 && hour <= 20 && userData.mealsLogged < (userData.mealGoalCount || 3) && enabledHabits.includes('meals')) {
         reminders.push(...REMINDER_MESSAGES.meal.dinner);
       }
 
       // Day (10 AM-6 PM): Water reminders
-      if (hour >= 10 && hour <= 18 && userData.waterGlasses < 6 && enabledHabits.includes('hydration')) {
+      if (hour >= 10 && hour <= 18 && userData.waterGlasses < (userData.hydrationGoalGlasses || 8) - 2 && enabledHabits.includes('hydration')) {
         reminders.push(...REMINDER_MESSAGES.water);
       }
 

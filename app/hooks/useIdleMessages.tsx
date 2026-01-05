@@ -1,15 +1,15 @@
 // Idle message system - shows casual messages when user is inactive
 import { useState, useEffect } from 'react';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 
 // Idle message collections
 const IDLE_MESSAGES = {
   general: [
-    "What are we studying today? I'm curious! 🤔",
-    "I rearranged my room a bit! Like it? 🏠",
+    "Whatcha working on? Curious hammy here! 🤔",
+    "Just rearranged my room a bit - what do you think? 🏠",
     "Just practicing my reading... books are heavy!",
     "Thinking about all the things we'll learn today!",
-    "My plant friend says hi! 🌿",
+    "My plant buddy says hi! 🌿",
     "I've been doing some hamster yoga... very relaxing!",
     "Did you know hamsters can run 5 miles a night? I prefer studying though 📚",
     "I organized my seed collection by size today!",
@@ -17,7 +17,7 @@ const IDLE_MESSAGES = {
     "I found a cozy spot for napping later! 😴"
   ],
   morning: [
-    "Good morning! Ready to make today awesome? ☀️",
+    "Mornin'! Ready to make today awesome? ☀️",
     "Morning! I already did my hamster stretches!",
     "Fresh day, fresh start! Let's make it count!",
     "The early hamster gets the... knowledge? 📚",
@@ -54,19 +54,19 @@ const IDLE_MESSAGES = {
   ],
   energyBased: {
     high: [
-      "I'm feeling super energetic today! Let's do something! ⚡",
+      "So much energy! Let's do something fun! ⚡",
       "So much energy! Ready for anything! 💪",
       "Feeling pumped! What should we tackle first?",
       "I could run a marathon! Well, a hamster-sized one! 🏃"
     ],
     medium: [
-      "Feeling pretty good! Just vibing here 😊",
+      "Chillin'... good vibes today 😊",
       "Nice and relaxed... good study mood!",
       "Comfortable energy level... not too much, not too little!",
       "Just the right amount of energy for focus! 🎯"
     ],
     low: [
-      "Taking it easy today... conserving energy 😌",
+      "Taking it easy... conserving my hammy energy 😴",
       "Feeling a bit sleepy... but I'm here for you!",
       "Low energy mode... but still ready to help! 💤",
       "Maybe we both need a little rest soon?"
@@ -74,22 +74,22 @@ const IDLE_MESSAGES = {
   },
   messBased: {
     clean: [
-      "The room looks so nice and clean! 🏠✨",
+      "Room's looking tidy! Nice work! ✨",
       "I love when everything is tidy! So peaceful!",
       "Clean room, clear mind! Ready to study! 📚",
       "Everything in its place! Feels good!"
     ],
     messy: [
-      "The room's getting a bit messy... maybe clean later? 🧹",
+      "Could use a quick tidy-up later maybe? 🧹",
       "I can barely see my desk under all this mess!",
       "Cleaning might help us focus better... just saying! 🗑️",
       "My mom would not approve of this mess... 😅"
     ]
   },
   studyMotivation: [
-    "Every study session brings us closer to our goals! 🎯",
-    "You're doing great! Keep it up! 💪",
-    "Learning is like planting seeds... they grow over time! 🌱",
+    "Every bit of studying adds up! 📚",
+    "You're doing great! Keep going! 💪",
+    "Learning's like leveling up! 🎮",
     "Small steps every day lead to big achievements! ⭐",
     "I believe in us! We can do this! 📚",
     "Knowledge is the best treasure! Let's collect some! 💎"

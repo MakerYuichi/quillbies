@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 
 export default function CharacterSelectScreen() {
   const router = useRouter();

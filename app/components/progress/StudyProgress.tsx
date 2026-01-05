@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useQuillbyStore } from '../../state/store';
+import { useQuillbyStore } from '../../state/store-modular';
 import { CheckpointResult } from '../../core/types';
 
 export default function StudyProgress() {

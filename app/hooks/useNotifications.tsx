@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 
 interface NotificationData {
   id: string;

@@ -6,11 +6,18 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 interface SleepButtonProps {
   isSleeping: boolean;
   sleepDisplay: string;
+  sleepElapsedTime?: string;
   onSleep: () => void;
   onWakeUp: () => void;
 }
 
-export default function SleepButton({ isSleeping, sleepDisplay, onSleep, onWakeUp }: SleepButtonProps) {
+export default function SleepButton({ 
+  isSleeping, 
+  sleepDisplay, 
+  sleepElapsedTime = '00:00',
+  onSleep, 
+  onWakeUp 
+}: SleepButtonProps) {
   const handlePress = () => {
     if (isSleeping) {
       onWakeUp();
@@ -40,7 +47,7 @@ export default function SleepButton({ isSleeping, sleepDisplay, onSleep, onWakeU
       
       {/* Label */}
       <Text style={styles.label}>
-        {isSleeping ? 'Wake Up' : sleepDisplay}
+        {isSleeping ? sleepElapsedTime : sleepDisplay}
       </Text>
     </TouchableOpacity>
   );

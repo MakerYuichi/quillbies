@@ -1,23 +1,24 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuillbyStore } from './state/store';
+import { useQuillbyStore } from './state/store-modular';
 import QuillbyPet from './components/character/QuillbyPet';
 import EnergyBar from './components/progress/EnergyBar';
 import RoomBackground from './components/room/RoomBackground';
 import { formatSleepTime } from '../lib/timeUtils';
 import { getTodaysSleepHours } from './core/engine';
+import { isOnboardingCompleted } from '../lib/deviceOnboarding';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [deviceOnboardingCompleted, setDeviceOnboardingCompleted] = useState<boolean | null>(null);
+  
   const { 
     userData, 
     updateEnergy,
     startFocusSession,
     logWater, 
     logBreakfast, 
-    startSleep,
-    endSleep,
     skipTask,
     resetDay
   } = useQuillbyStore();
@@ -33,16 +34,42 @@ export default function HomeScreen() {
     return getTodaysSleepHours(userData.sleepSessions || []);
   }, [userData.sleepSessions]);
   
-  // Redirect to onboarding if not completed
+  // Check device-level onboarding completion
   useEffect(() => {
-    if (!userData.onboardingCompleted) {
-      const timer = setTimeout(() => {
+    const checkDeviceOnboarding = async () => {
+      try {
+        const completed = await isOnboardingCompleted();
+        setDeviceOnboardingCompleted(completed);
+        
+        if (!completed) {
+          console.log('[HomeScreen] Device onboarding not completed, redirecting to welcome');
+          const timer = setTimeout(() => {
+            router.replace('/onboarding/welcome');
+          }, 1000);
+          
+          return () => clearTimeout(timer);
+        } else {
+          console.log('[HomeScreen] Device onboarding completed, staying on home screen');
+        }
+      } catch (err) {
+        console.error('[HomeScreen] Error checking device onboarding:', err);
+        // On error, assume onboarding not completed
+        setDeviceOnboardingCompleted(false);
         router.replace('/onboarding/welcome');
-      }, 1000); // Increased to 1 second to prevent premature redirect
-      
-      return () => clearTimeout(timer);
-    }
-  }, [userData.onboardingCompleted]);
+      }
+    };
+    
+    checkDeviceOnboarding();
+  }, []);
+  
+  // Show loading while checking onboarding status
+  if (deviceOnboardingCompleted === null) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
   
   // Update energy periodically (just caps it, no drain)
   useEffect(() => {
@@ -234,6 +261,17 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#666',
+    fontWeight: '600',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',

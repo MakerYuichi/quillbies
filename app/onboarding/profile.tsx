@@ -17,7 +17,7 @@ import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fo
 import RNPickerSelect from 'react-native-picker-select';
 import * as Localization from 'expo-localization';
 import * as Location from 'expo-location';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 
 // Get screen dimensions for responsive layout
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');

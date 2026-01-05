@@ -6,27 +6,28 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface MealButtonProps {
   mealsLogged: number;
+  mealGoal?: number;
   portionDescription: string;
   onPress: () => void;
   disabled?: boolean;
 }
 
-export default function MealButton({ mealsLogged, portionDescription, onPress, disabled }: MealButtonProps) {
+export default function MealButton({ mealsLogged, mealGoal = 3, portionDescription, onPress, disabled }: MealButtonProps) {
   // Get color based on meal count
   const getColor = () => {
-    if (mealsLogged < 3) return '#FB8C00'; // Orange
-    if (mealsLogged === 3) return '#FFB300'; // Yellow warning
+    if (mealsLogged < mealGoal) return '#FB8C00'; // Orange
+    if (mealsLogged === mealGoal) return '#FFB300'; // Yellow warning
     return '#E53935'; // Red danger
   };
 
   const getEmoji = () => {
-    if (mealsLogged < 3) return '🍎';
-    if (mealsLogged === 3) return '🍽️';
+    if (mealsLogged < mealGoal) return '🍎';
+    if (mealsLogged === mealGoal) return '🍽️';
     return '⚠️';
   };
 
   const color = getColor();
-  const progress = Math.min(mealsLogged / 3, 1.33); // Allow overeating visual
+  const progress = Math.min(mealsLogged / mealGoal, 1.33); // Allow overeating visual
 
   return (
     <TouchableOpacity 
@@ -53,7 +54,7 @@ export default function MealButton({ mealsLogged, portionDescription, onPress, d
       </View>
       
       {/* Label */}
-      <Text style={styles.label}>{mealsLogged}/3</Text>
+      <Text style={styles.label}>{mealsLogged}/{mealGoal}</Text>
     </TouchableOpacity>
   );
 }

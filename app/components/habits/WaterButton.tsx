@@ -6,11 +6,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface WaterButtonProps {
   waterGlasses: number;
+  hydrationGoal?: number;
   onPress: () => void;
 }
 
-export default function WaterButton({ waterGlasses, onPress }: WaterButtonProps) {
-  const progress = Math.min(waterGlasses / 8, 1);
+export default function WaterButton({ waterGlasses, hydrationGoal = 8, onPress }: WaterButtonProps) {
+  const progress = Math.min(waterGlasses / hydrationGoal, 1);
   
   return (
     <TouchableOpacity 
@@ -37,7 +38,7 @@ export default function WaterButton({ waterGlasses, onPress }: WaterButtonProps)
       </View>
       
       {/* Label */}
-      <Text style={styles.label}>{waterGlasses}/8</Text>
+      <Text style={styles.label}>{waterGlasses}/{hydrationGoal}</Text>
     </TouchableOpacity>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, AppState, AppStateStatus, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuillbyStore } from './state/store';
+import { useQuillbyStore } from './state/store-modular';
 import InteractiveTooltip from './components/ui/InteractiveTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -376,50 +376,50 @@ export default function StudySessionScreen() {
       const remainingTotal = Math.max(0, maxBreak - totalBreakUsed);
       const remainingMinutes = Math.floor(remainingTotal / 60);
       
-      return `☕ ${buddyName} is recharging! Break: ${minutes}:${seconds.toString().padStart(2, '0')} | Total left: ${remainingMinutes}m ⭐`;
+      return `☕ Quick break! ${minutes}:${seconds.toString().padStart(2, '0')} left | Back in ${remainingMinutes}m`;
     }
     
     // Show return message for 4 seconds after user returns
     if (showReturnMessage && !session.isInGracePeriod) {
       if (session.distractionWarnings === 0 && session.distractionCount === 0) {
-        return `🎉 Welcome back ${buddyName}! Great job returning quickly! Let's keep the momentum going! 💪`;
+        return `Hey, welcome back! Missed you! 😊\nLet's keep the momentum going!`;
       } else {
-        return `😊 ${buddyName} is happy you're back! Let's refocus and finish strong together! 🌟`;
+        return `Glad you're back! Let's finish strong! 💪\nWe got this together!`;
       }
     }
     
     // Grace period active
     if (session.isInGracePeriod) {
-      return `⏰ ${buddyName} notices you left! Come back within 30 seconds to avoid a warning! 🏃‍♂️`;
+      return `You left? 🏃‍♂️ Come back quick to avoid penalty!\n${buddyName} is waiting!`;
     }
     
     // Has warnings but not in grace period
     if (session.distractionWarnings > 0) {
       const warningsLeft = 3 - session.distractionWarnings;
       if (warningsLeft === 0) {
-        return `😰 ${buddyName} is worried! Next distraction will hurt your focus score! Stay strong! 💪`;
+        return `😰 Next time we lose focus energy! Stay here!\n${buddyName} needs you to focus!`;
       }
-      return `⚠️ ${buddyName} says: "${warningsLeft} warning${warningsLeft > 1 ? 's' : ''} left before penalty!" Keep focusing! 🎯`;
+      return `⚠️ ${warningsLeft} warning${warningsLeft > 1 ? 's' : ''} left... stay with me! 🎯\nWe can do this!`;
     }
     
     // Has penalties applied
     if (session.distractionCount > 0) {
-      return `😔 ${buddyName} lost some focus energy... But we can still finish strong together! 🌟`;
+      return `😔 Lost some focus... but we can still do this! 🌟\n${buddyName} believes in you!`;
     }
     
     // Different messages based on session progress
     const progressPercent = (session.duration / (25 * 60)) * 100;
     
     if (progressPercent < 25) {
-      return `🚀 ${buddyName} is ready to focus! Let's build momentum together! 💫`;
+      return `🚀 Let's get started! First steps!\n${buddyName} is ready to focus!`;
     } else if (progressPercent < 50) {
-      return `🔥 ${buddyName} is in the zone! Great progress so far! Keep it up! ⭐`;
+      return `🔥 Getting into it! Nice flow!\n${buddyName} feels the momentum!`;
     } else if (progressPercent < 75) {
-      return `💪 ${buddyName} feels the flow! We're more than halfway there! 🎯`;
+      return `💪 Over halfway! We got this!\n${buddyName} is in the zone!`;
     } else if (progressPercent < 90) {
-      return `🏃‍♂️ ${buddyName} says "Almost there!" The finish line is in sight! 🏁`;
+      return `🏃‍♂️ Almost there! Push through!\nThe finish line is in sight!`;
     } else {
-      return `🎉 ${buddyName} is so proud! Just a few more minutes to victory! 🏆`;
+      return `🎉 So close! Final stretch!\n${buddyName} is so proud!`;
     }
   };
 

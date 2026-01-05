@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions, ImageBackground, TouchableOpacity, Text, 
 import { CleaningPlan, CleaningStage } from '../core/types';
 import { useRouter } from 'expo-router';
 
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 import { calculateFocusEnergyCost } from '../core/engine';
 import EnergyBar from '../components/progress/EnergyBar';
 import RoomLayers from '../components/room/RoomLayers';
@@ -19,12 +19,15 @@ import StudyProgress from '../components/progress/StudyProgress';
 import RealTimeClock from '../components/ui/RealTimeClock';
 import SessionCustomizationModal, { SessionConfig } from '../components/modals/SessionCustomizationModal';
 import ExerciseCustomizationModal from '../components/modals/ExerciseCustomizationModal';
+import SleepCustomizationModal from '../components/modals/SleepCustomizationModal';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
 import { useMealTracking } from '../hooks/useMealTracking';
 import { useExerciseTracking } from '../hooks/useExerciseTracking';
 import { useRandomReminders } from '../hooks/useRandomReminders';
 import { useIdleMessages } from '../hooks/useIdleMessages';
+import { useTimeBasedHabitFeedback } from '../hooks/useTimeBasedHabitFeedback';
+import { useFirstTimeWelcome } from '../hooks/useFirstTimeWelcome';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -40,6 +43,7 @@ export default function HomeScreen() {
   const [lastCheckpointCheck, setLastCheckpointCheck] = React.useState(Date.now());
   const [showSessionModal, setShowSessionModal] = React.useState(false);
   const [showExerciseModal, setShowExerciseModal] = React.useState(false);
+  const [showSleepModal, setShowSleepModal] = React.useState(false);
   
   // Get personalized data from onboarding
   const buddyName = userData.buddyName || 'Quillby';
@@ -57,6 +61,7 @@ export default function HomeScreen() {
   const {
     isSleeping,
     sleepDisplay,
+    sleepElapsedTime,
     handleSleepButton,
     handleWakeUpButton,
     sleepAnimation,
@@ -98,6 +103,19 @@ export default function HomeScreen() {
     resetIdleTimer,
   } = useIdleMessages(buddyName);
 
+  // Time-based habit feedback
+  const {
+    feedbackMessage,
+    feedbackTimestamp,
+  } = useTimeBasedHabitFeedback(buddyName);
+
+  // First-time welcome message
+  const {
+    welcomeMessage,
+    welcomeTimestamp,
+    isShowingWelcome,
+  } = useFirstTimeWelcome(userData.userName, buddyName, userData.onboardingCompleted);
+
   // Wrap handlers to reset idle timer on interaction
   const handleDrinkWaterWithReset = () => {
     resetIdleTimer();
@@ -116,6 +134,15 @@ export default function HomeScreen() {
 
   const handleExerciseStart = (duration: number | null, type: 'walk' | 'stretch' | 'cardio' | 'energizer') => {
     handleStartExercise(type, duration);
+  };
+
+  const handleStartSleepWithReset = () => {
+    resetIdleTimer();
+    setShowSleepModal(true);
+  };
+
+  const handleSleepStart = (duration: number | null) => {
+    handleSleepButton(duration);
   };
 
   const handleFinishExerciseWithReset = () => {
@@ -356,20 +383,136 @@ export default function HomeScreen() {
     }
   };
   
-  // Determine current animation based on priority: sleep > exercise > meal > water
-  const currentAnimation = sleepAnimation !== 'idle' ? sleepAnimation : 
-                          (exerciseAnimation !== 'idle' ? exerciseAnimation : 
-                          (mealAnimation !== 'idle' ? mealAnimation : waterAnimation));
+  // Check if all habits are completed according to current time of day
+  const areAllHabitsCompletedForCurrentTime = () => {
+    const enabledHabits = userData.enabledHabits || [];
+    const currentHour = new Date().getHours();
+    
+    // Check each enabled habit based on time expectations
+    for (const habit of enabledHabits) {
+      switch (habit) {
+        case 'study':
+          // Check study progress based on checkpoints
+          const studyHours = (userData.studyMinutesToday || 0) / 60;
+          const studyGoal = userData.studyGoalHours || 0;
+          
+          // Determine expected progress based on current time
+          let expectedProgress = 0;
+          if (currentHour >= 21) { // 9 PM - should be 100% done
+            expectedProgress = 1.0;
+          } else if (currentHour >= 18) { // 6 PM - should be ~75% done
+            expectedProgress = 0.75;
+          } else if (currentHour >= 12) { // 12 PM - should be ~33% done
+            expectedProgress = 0.33;
+          } else if (currentHour >= 9) { // 9 AM - should have started
+            expectedProgress = 0.1;
+          }
+          
+          const expectedHours = studyGoal * expectedProgress;
+          if (studyHours < expectedHours) return false;
+          break;
+          
+        case 'hydration':
+          // Water intake should be progressive throughout the day
+          const waterGoal = userData.hydrationGoalGlasses || 8;
+          let expectedWater = 0;
+          if (currentHour >= 22) expectedWater = waterGoal; // 10 PM - full goal
+          else if (currentHour >= 18) expectedWater = waterGoal * 0.8; // 6 PM - 80%
+          else if (currentHour >= 14) expectedWater = waterGoal * 0.6; // 2 PM - 60%
+          else if (currentHour >= 10) expectedWater = waterGoal * 0.4; // 10 AM - 40%
+          else if (currentHour >= 7) expectedWater = waterGoal * 0.2; // 7 AM - 20%
+          
+          if (userData.waterGlasses < expectedWater) return false;
+          break;
+          
+        case 'meals':
+          // Meals based on time of day
+          const mealGoal = userData.mealGoalCount || 3;
+          let expectedMeals = 0;
+          if (currentHour >= 20) expectedMeals = mealGoal; // 8 PM - all meals
+          else if (currentHour >= 14) expectedMeals = 2; // 2 PM - breakfast + lunch
+          else if (currentHour >= 10) expectedMeals = 1; // 10 AM - breakfast
+          
+          if (userData.mealsLogged < expectedMeals) return false;
+          break;
+          
+        case 'exercise':
+          // Exercise can be done anytime, but expect it by evening
+          const exerciseGoal = userData.exerciseGoalMinutes || 30;
+          if (currentHour >= 18) { // After 6 PM, should have some exercise
+            if (userData.exerciseMinutes < exerciseGoal * 0.5) return false;
+          }
+          break;
+          
+        case 'sleep':
+          // Sleep from previous night - only check in morning/afternoon
+          const sleepGoal = userData.sleepGoalHours || 7;
+          if (currentHour >= 6 && currentHour <= 14) { // Morning to afternoon
+            const todaysSleepHours = getTodaysSleepHours();
+            if (todaysSleepHours < sleepGoal * 0.8) return false; // At least 80% of sleep goal
+          }
+          break;
+      }
+    }
+    
+    return true; // All enabled habits are on track for current time
+  };
+
+  // Determine current animation based on priority: sleep > exercise > meal > water > habit completion
+  const getBaseAnimation = () => {
+    // First check activity animations (highest priority - these should always show for user feedback)
+    if (sleepAnimation !== 'idle') return sleepAnimation;
+    if (exerciseAnimation !== 'idle') return exerciseAnimation;
+    if (mealAnimation !== 'idle') return mealAnimation;
+    if (waterAnimation !== 'idle') return waterAnimation;
+    
+    // Show happy animation during welcome message
+    if (isShowingWelcome) return 'idle-sit-happy';
+    
+    // Then check if all habits are completed for current time for happy idle
+    if (areAllHabitsCompletedForCurrentTime()) return 'idle-sit-happy';
+    
+    // Default to regular idle
+    return 'idle-sit';
+  };
+  
+  const currentAnimation = getBaseAnimation();
+  
+  // Debug log to see what animation is being calculated
+  console.log('[HomeScreen] Animation Debug:', {
+    currentAnimation,
+    isShowingWelcome,
+    allHabitsCompleted: areAllHabitsCompletedForCurrentTime(),
+    sleepAnimation,
+    exerciseAnimation,
+    mealAnimation,
+    waterAnimation
+  });
   
   // Show the most recent message (highest timestamp)
-  let hamsterMessage = `Hi ${buddyName}! 👋\nLet's have a productive day!`;
+  const getDefaultWelcomeMessage = () => {
+    const currentHour = new Date().getHours();
+    const userName = userData.userName || 'there';
+    
+    if (currentHour < 12) {
+      return `Mornin', ${userName}! ☕️\nJust woke up... ${buddyName} is ready to chill and study!`;
+    } else if (currentHour < 17) {
+      return `Hey there, ${userName}! 😎\n${buddyName} is here - let's tackle some work together!`;
+    } else {
+      return `Evening, ${userName}! 🌙\nPerfect time for focus with some chill vibes!`;
+    }
+  };
+  
+  let hamsterMessage = getDefaultWelcomeMessage();
   
   // Find the most recent message among all features
   const messages = [
-    { text: waterMessage, timestamp: waterMessageTimestamp, priority: 3 }, // Action messages
-    { text: sleepMessage, timestamp: sleepMessageTimestamp, priority: 3 },
-    { text: mealMessage, timestamp: mealMessageTimestamp, priority: 3 },
-    { text: exerciseMessage, timestamp: exerciseMessageTimestamp, priority: 3 },
+    { text: waterMessage, timestamp: waterMessageTimestamp, priority: 5 }, // Action messages (highest)
+    { text: sleepMessage, timestamp: sleepMessageTimestamp, priority: 5 },
+    { text: mealMessage, timestamp: mealMessageTimestamp, priority: 5 },
+    { text: exerciseMessage, timestamp: exerciseMessageTimestamp, priority: 5 },
+    { text: welcomeMessage, timestamp: welcomeTimestamp, priority: 4 }, // First-time welcome
+    { text: feedbackMessage, timestamp: feedbackTimestamp, priority: 3 }, // Time-based concerns
     { text: reminderMessage, timestamp: reminderTimestamp, priority: 2 }, // Reminders
     { text: idleMessage, timestamp: idleTimestamp, priority: 1 }, // Idle messages (lowest priority)
   ].filter(msg => msg.text); // Only messages that exist
@@ -408,9 +551,8 @@ export default function HomeScreen() {
         
         if (result.shouldNotify && result.checkpoint && result.expected && result.actual && result.missing) {
           // Update hamster message with checkpoint notification
-          const checkpointMessage = `⚠️ Study Checkpoint: ${result.checkpoint}!\n` +
-                                   `Expected: ${result.expected.toFixed(1)}h, You: ${result.actual.toFixed(1)}h\n` +
-                                   `Behind by ${result.missing.toFixed(1)}h - Room getting messier! 📚`;
+          const checkpointMessage = `⚠️ Behind on study time... room's getting messy! 📚\n` +
+                                   `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
           
           // This will be picked up by the message system
           console.log('[Checkpoint]', checkpointMessage);
@@ -447,7 +589,7 @@ export default function HomeScreen() {
       style={styles.container}
       resizeMode="cover"
     >
-      {/* FIXED BACKGROUND LAYERS - Switch between room and exercise environment */}
+      {/* FIXED BACKGROUND LAYERS - Switch between room, exercise environment, and sleep timer */}
       {isExercising ? (
         <>
           <ExerciseEnvironment pointerEvents="none" />
@@ -460,7 +602,18 @@ export default function HomeScreen() {
           </View>
         </>
       ) : (
-        <RoomLayers pointerEvents="none" messPoints={userData.messPoints} isSleeping={isSleeping} qCoins={userData.qCoins} />
+        <>
+          <RoomLayers pointerEvents="none" messPoints={userData.messPoints} isSleeping={isSleeping} qCoins={userData.qCoins} />
+          {/* Sleep Timer Overlay - Show when sleeping */}
+          {isSleeping && (
+            <View style={styles.sleepTimerContainer}>
+              <Text style={styles.sleepTimerLabel}>
+                💤 {buddyName} is Sleeping
+              </Text>
+              <Text style={styles.sleepTimerValue}>{sleepElapsedTime}</Text>
+            </View>
+          )}
+        </>
       )}
       
       {/* FIXED HAMSTER */}
@@ -541,12 +694,14 @@ export default function HomeScreen() {
                 {/* Water Button - Only when NOT in any active mode */}
                 <WaterButton 
                   waterGlasses={waterGlasses}
+                  hydrationGoal={userData.hydrationGoalGlasses || 8}
                   onPress={handleDrinkWaterWithReset}
                 />
                 
                 {/* Meal Button - Only when NOT in any active mode */}
                 <MealButton 
                   mealsLogged={mealsLogged}
+                  mealGoal={userData.mealGoalCount || 3}
                   portionDescription={portionDescription}
                   onPress={handleLogMealWithReset}
                 />
@@ -572,7 +727,8 @@ export default function HomeScreen() {
                 <SleepButton 
                   isSleeping={false}
                   sleepDisplay={sleepDisplay}
-                  onSleep={handleSleepButtonWithReset}
+                  sleepElapsedTime={sleepElapsedTime}
+                  onSleep={handleStartSleepWithReset}
                   onWakeUp={handleWakeUpButtonWithReset}
                 />
               </>
@@ -582,7 +738,8 @@ export default function HomeScreen() {
                 <SleepButton 
                   isSleeping={true}
                   sleepDisplay={sleepDisplay}
-                  onSleep={handleSleepButtonWithReset}
+                  sleepElapsedTime={sleepElapsedTime}
+                  onSleep={handleStartSleepWithReset}
                   onWakeUp={handleWakeUpButtonWithReset}
                 />
               </>
@@ -652,6 +809,91 @@ export default function HomeScreen() {
             {renderTodaysDeadline()}
           </View>
         )}
+
+        {/* TEMPORARY TEST BUTTON - 10x Time Speed */}
+        <View style={styles.testButtonSection}>
+          <Text style={styles.testButtonTitle}>🧪 Debug Tools</Text>
+          <View style={styles.testButtonRow}>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                // Force daily reset to test mess points energy drain
+                const { resetDay } = useQuillbyStore.getState();
+                resetDay();
+                console.log('[TEST] Daily reset triggered - check energy drain from mess points');
+              }}
+            >
+              <Text style={styles.testButtonText}>⏰ Force Daily Reset</Text>
+              <Text style={styles.testButtonSubtext}>Test energy drain</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                // Add mess points for testing
+                const { skipTask } = useQuillbyStore.getState();
+                for (let i = 0; i < 5; i++) {
+                  skipTask();
+                }
+                console.log('[TEST] Added 5 mess points - check room visuals and energy drain');
+              }}
+            >
+              <Text style={styles.testButtonText}>🗑️ Add 5 Mess</Text>
+              <Text style={styles.testButtonSubtext}>Test mess system</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity
+            style={[styles.testButton, styles.testButtonWide]}
+            onPress={() => {
+              // Start 10x time acceleration
+              const startTimeAcceleration = () => {
+                let accelerationCount = 0;
+                const maxAccelerations = 144; // 144 * 10 minutes = 24 hours
+                
+                const accelerationInterval = setInterval(() => {
+                  const { userData, updateEnergy } = useQuillbyStore.getState();
+                  
+                  // Advance time by 10 minutes each tick (10x speed)
+                  const minutesToAdvance = 10;
+                  const millisecondsToAdvance = minutesToAdvance * 60 * 1000;
+                  
+                  // Update timestamp to simulate time passing
+                  useQuillbyStore.setState({
+                    userData: {
+                      ...userData,
+                      lastActiveTimestamp: userData.lastActiveTimestamp - millisecondsToAdvance
+                    }
+                  });
+                  
+                  // Force energy update to apply any time-based changes
+                  updateEnergy();
+                  
+                  accelerationCount++;
+                  
+                  // Log progress every hour (6 ticks)
+                  if (accelerationCount % 6 === 0) {
+                    const hoursAdvanced = (accelerationCount * 10) / 60;
+                    console.log(`[TEST] Time acceleration: ${hoursAdvanced.toFixed(1)} hours advanced`);
+                  }
+                  
+                  // Stop after 24 hours
+                  if (accelerationCount >= maxAccelerations) {
+                    clearInterval(accelerationInterval);
+                    console.log('[TEST] Time acceleration complete - 24 hours simulated');
+                  }
+                }, 100); // Update every 100ms for smooth acceleration
+                
+                console.log('[TEST] Starting 10x time acceleration - will simulate 24 hours in ~14 seconds');
+              };
+              
+              startTimeAcceleration();
+            }}
+          >
+            <Text style={styles.testButtonText}>⚡ 10x Time Speed (24h)</Text>
+            <Text style={styles.testButtonSubtext}>Accelerate time to test daily systems</Text>
+          </TouchableOpacity>
+        </View>
         
         {/* SPACER - Allow more scrolling space */}
         <View style={styles.contentSpacer} />
@@ -674,6 +916,13 @@ export default function HomeScreen() {
         visible={showExerciseModal}
         onClose={() => setShowExerciseModal(false)}
         onStartExercise={handleExerciseStart}
+      />
+
+      {/* Sleep Customization Modal */}
+      <SleepCustomizationModal
+        visible={showSleepModal}
+        onClose={() => setShowSleepModal(false)}
+        onStartSleep={handleSleepStart}
       />
 
     </ImageBackground>
@@ -933,6 +1182,64 @@ const styles = StyleSheet.create({
     color: '#1976D2',
   },
   
+  // Test Button Section (Temporary)
+  testButtonSection: {
+    width: '100%',
+    marginBottom: 15,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+    borderWidth: 1,
+    borderColor: '#FFC107',
+    borderRadius: (SCREEN_WIDTH * 12) / 393,
+    padding: (SCREEN_WIDTH * 12) / 393,
+  },
+  
+  testButtonTitle: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: (SCREEN_WIDTH * 14) / 393,
+    color: '#F57C00',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  
+  testButtonRow: {
+    flexDirection: 'row',
+    gap: (SCREEN_WIDTH * 8) / 393,
+    marginBottom: 8,
+  },
+  
+  testButton: {
+    flex: 1,
+    backgroundColor: '#FFF8E1',
+    borderWidth: 2,
+    borderColor: '#FFC107',
+    borderRadius: (SCREEN_WIDTH * 8) / 393,
+    paddingVertical: (SCREEN_WIDTH * 8) / 393,
+    paddingHorizontal: (SCREEN_WIDTH * 6) / 393,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  testButtonWide: {
+    width: '100%',
+    flex: 0,
+  },
+  
+  testButtonText: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: (SCREEN_WIDTH * 11) / 393,
+    color: '#E65100',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  
+  testButtonSubtext: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: (SCREEN_WIDTH * 9) / 393,
+    color: '#FF8F00',
+    textAlign: 'center',
+  },
+  
   // Exercise Timer Overlay
   exerciseTimerContainer: {
     position: 'absolute',
@@ -961,6 +1268,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   exerciseTimerValue: {
+    fontFamily: 'ChakraPetch_700Bold',
+    fontSize: (SCREEN_WIDTH * 28) / 393,
+    color: '#FFF',
+    letterSpacing: 2,
+  },
+
+  // Sleep Timer Overlay
+  sleepTimerContainer: {
+    position: 'absolute',
+    top: (SCREEN_HEIGHT * 80) / 852, // Position below "Quill's Room" text
+    left: (SCREEN_WIDTH * 20) / 393,
+    right: (SCREEN_WIDTH * 20) / 393,
+    backgroundColor: 'rgba(126, 87, 194, 0.95)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    alignItems: 'center',
+    zIndex: 15,
+  },
+  sleepTimerLabel: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: (SCREEN_WIDTH * 16) / 393,
+    color: '#FFF',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  sleepTimerValue: {
     fontFamily: 'ChakraPetch_700Bold',
     fontSize: (SCREEN_WIDTH * 28) / 393,
     color: '#FFF',

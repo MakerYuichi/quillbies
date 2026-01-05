@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 import ScrollablePicker from '../components/ui/ScrollablePicker';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -104,10 +104,9 @@ export default function GoalSetupScreen() {
 
     console.log('[Onboarding] Goals saved, device auth will handle user creation automatically');
 
-    // Complete onboarding immediately and go to main app
-    console.log('[Onboarding] Completing onboarding and going to main app');
-    completeOnboarding();
-    router.replace('/(tabs)');
+    // Navigate to tutorial instead of directly to main app
+    console.log('[Onboarding] Navigating to tutorial');
+    router.push('/onboarding/tutorial');
   };
 
   const CHECKPOINT_OPTIONS = [

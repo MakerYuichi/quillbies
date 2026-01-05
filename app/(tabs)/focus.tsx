@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ImageBackground } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 import { DeadlineFormData, Deadline } from '../core/types';
 import { calculateFocusEnergyCost } from '../core/engine';
 import CreateDeadlineModal from '../components/modals/CreateDeadlineModal';

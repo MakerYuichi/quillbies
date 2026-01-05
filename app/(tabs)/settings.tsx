@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 import ChangeHamsterModal from '../components/modals/ChangeHamsterModal';
 import ChangeNameModal from '../components/modals/ChangeNameModal';
 import ManageHabitsModal from '../components/modals/ManageHabitsModal';

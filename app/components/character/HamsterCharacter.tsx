@@ -12,6 +12,9 @@ interface HamsterCharacterProps {
 }
 
 export default function HamsterCharacter({ selectedCharacter, currentAnimation, isSleeping, pointerEvents = 'auto' }: HamsterCharacterProps) {
+  // Debug log to see what animation is being passed
+  console.log('[HamsterCharacter] Animation:', currentAnimation, 'Character:', selectedCharacter, 'Sleeping:', isSleeping);
+  
   // Get the correct hamster image/GIF based on selected character and animation
   const getCharacterImage = () => {
     // For casual character, check if we have the animation
@@ -90,6 +93,16 @@ export default function HamsterCharacter({ selectedCharacter, currentAnimation, 
           return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
+      // Happy idle animation
+      if (currentAnimation === 'idle-sit-happy') {
+        try {
+          return require('../../../assets/hamsters/casual/idle-sit-happy.png');
+        } catch {
+          // Fallback to regular idle if happy idle doesn't exist
+          return require('../../../assets/hamsters/casual/idle-sit.png');
+        }
+      }
+      // Regular idle animation (default)
       return require('../../../assets/hamsters/casual/idle-sit.png');
     }
     

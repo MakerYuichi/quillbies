@@ -1,6 +1,6 @@
 // Exercise tracking hook with timer functionality like sleep
 import { useState, useEffect } from 'react';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 
 export const useExerciseTracking = (buddyName: string) => {
   const { userData, logExercise, resetDay } = useQuillbyStore();
@@ -63,7 +63,7 @@ export const useExerciseTracking = (buddyName: string) => {
     };
     
     const durationText = duration ? `${duration} min` : 'stopwatch mode';
-    const newMessage = `🏃 ${buddyName} is ${exerciseNames[type].toLowerCase()} (${durationText})...\nTap "Finish" when done!`;
+    const newMessage = `🏃‍♂️ Alright, let's do this! ${exerciseNames[type].toLowerCase()} time...\nTap "Finish" when done!`;
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
   };
@@ -121,15 +121,21 @@ export const useExerciseTracking = (buddyName: string) => {
     
     let newMessage = '';
     if (sessionMinutes < 5) {
-      newMessage = `💪 ${exerciseNames[exerciseType]} ${durationText} (${totalText} today)\nQuick session! +${baseReward} Energy`;
+      newMessage = `💪 Quick ${durationText} session! Good little break!\n(${totalText} today)`;
     } else if (sessionMinutes >= 5 && sessionMinutes < 15) {
-      newMessage = `🎯 ${exerciseNames[exerciseType]} ${durationText} (${totalText} today)\nGood workout! +${baseReward} Energy, +${coinReward} Coins`;
+      newMessage = `🎯 Solid ${durationText} workout! Feeling energized!\n(${totalText} today)`;
     } else if (sessionMinutes >= 15) {
-      newMessage = `⭐ ${exerciseNames[exerciseType]} ${durationText} (${totalText} today)\nAmazing! Bonus +10 Energy! Total: +${baseReward + 10} Energy`;
+      newMessage = `⭐ Wow, ${durationText}! We crushed it! Bonus energy! ⚡\n(${totalText} today)`;
     }
     
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
+    
+    // Clear message after 3 seconds
+    setTimeout(() => {
+      setMessage('');
+      setMessageTimestamp(0);
+    }, 3000);
   };
 
   // Format accumulated exercise for display (with minutes)

@@ -1,82 +1,81 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, ImageBackground } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, ImageBackground, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
-import { useQuillbyStore } from '../state/store';
+import { useQuillbyStore } from '../state/store-modular';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const tutorialSteps = [
   {
-    title: "Welcome to Your Room! 🏠",
-    description: "This is your study space. Keep it clean by completing tasks and focus sessions!",
+    title: "Welcome to Quillby! 🎉",
+    description: "Your AI study companion is here to help you stay focused and productive!",
     icon: "🏠",
     tips: [
-      "Your hamster lives here with you",
-      "The room gets messy when you skip tasks",
-      "Clean it by completing focus sessions"
+      "Meet your hamster buddy who lives with you",
+      "Keep your room clean by staying productive",
+      "Build healthy study habits together"
     ]
   },
   {
     title: "Energy System ⚡",
-    description: "Energy powers your focus sessions. Manage it wisely!",
+    description: "Energy is your fuel for focus sessions. Use it wisely!",
     icon: "⚡",
     tips: [
-      "Start with 100 energy each day",
-      "Focus sessions cost 20 energy",
-      "Restore energy: drink water, eat meals, sleep well"
+      "Start each day with 100 energy points",
+      "Focus sessions cost 20 energy each",
+      "Restore energy: drink water 💧, eat meals 🍎, sleep well 😴"
     ]
   },
   {
     title: "Focus Sessions 📚",
-    description: "Your main tool for productive study time.",
+    description: "Your main tool for deep, productive study time.",
     icon: "📚",
     tips: [
-      "Tap 'Start Focus' to begin",
-      "Stay in the app to build focus score",
-      "Earn coins and reduce room mess"
+      "Tap 'Focus' button to start a session",
+      "Stay in the app to build your focus score",
+      "Earn coins and keep your room clean"
     ]
   },
   {
-    title: "During Study Sessions ☕🍎",
-    description: "Boost your focus with coffee and apples!",
+    title: "Study Boosts ☕🍎",
+    description: "Power up your focus with coffee and apples during sessions!",
     icon: "☕",
     tips: [
-      "Coffee: +6 focus for 3min (3 free/day)",
-      "Apple: +3 focus instantly (5 free/day)",
-      "Premium boosts available after free uses",
-      "Stay in app to maintain focus score"
+      "Coffee: +6 focus boost for 3 minutes (3 free daily)",
+      "Apple: +3 instant focus boost (5 free daily)",
+      "Premium boosts available after free uses"
     ]
   },
   {
     title: "Daily Habits 💧🍎😴",
-    description: "Track your healthy habits throughout the day.",
+    description: "Track healthy habits to keep your energy high.",
     icon: "💧",
     tips: [
-      "Log water: +5 energy per glass",
-      "Log meals: +10 energy each",
-      "Track sleep: Sets your morning energy"
+      "Water: +5 energy per glass (stay hydrated!)",
+      "Meals: +15 energy each (fuel your brain)",
+      "Sleep: Determines your morning energy level"
     ]
   },
   {
-    title: "Study Checkpoints ⏰",
-    description: "Stay on track with your daily study goals.",
+    title: "Study Goals & Checkpoints ⏰",
+    description: "Stay on track with personalized study reminders.",
     icon: "⏰",
     tips: [
-      "Checkpoints remind you to study",
-      "Missing them adds mess to your room",
-      "Check your progress in the Stats tab"
+      "Set daily study hour goals during onboarding",
+      "Get reminded at your chosen checkpoint times",
+      "Missing checkpoints makes your room messy!"
     ]
   },
   {
-    title: "Earn & Spend Coins",
-    description: "Earn Q-Coins and customize your space!",
-    icon: "qbies", // Special marker for image
+    title: "Earn & Spend Q-Coins! 💰",
+    description: "Customize your space with coins earned from good habits.",
+    icon: "qbies",
     tips: [
-      "Earn coins from habits and focus sessions",
-      "Visit the Shop to buy decorations",
-      "Unlock new lights and plants"
+      "Earn coins from focus sessions and habits",
+      "Visit the Shop tab to buy decorations",
+      "Unlock new lights, plants, and room items"
     ]
   }
 ];
@@ -85,33 +84,183 @@ export default function TutorialScreen() {
   const router = useRouter();
   const { completeOnboarding } = useQuillbyStore();
   const [currentStep, setCurrentStep] = useState(0);
+  const [showWelcome, setShowWelcome] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const iconBounceAnim = useRef(new Animated.Value(1)).current;
+  const welcomeAnim = useRef(new Animated.Value(1)).current;
   
   const [fontsLoaded] = useFonts({
     ChakraPetch_400Regular,
     ChakraPetch_600SemiBold,
   });
 
+  // Welcome animation sequence
+  useEffect(() => {
+    if (showWelcome) {
+      setTimeout(() => {
+        Animated.timing(welcomeAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowWelcome(false);
+        });
+      }, 2000); // Show welcome for 2 seconds
+    }
+  }, []);
+
+  // Animate in when component mounts or step changes
+  useEffect(() => {
+    if (!showWelcome) {
+      animateStepTransition();
+    }
+  }, [currentStep, showWelcome]);
+
+  // Initial animation on mount
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animate progress bar
+    Animated.timing(progressAnim, {
+      toValue: (currentStep + 1) / tutorialSteps.length,
+      duration: 500,
+      useNativeDriver: false,
+    }).start();
+
+    // Icon bounce animation
+    const bounceAnimation = () => {
+      Animated.sequence([
+        Animated.timing(iconBounceAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(iconBounceAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Repeat the bounce
+        setTimeout(bounceAnimation, 2000);
+      });
+    };
+    
+    bounceAnimation();
+  }, []);
+
+  const animateStepTransition = () => {
+    // Reset animations
+    fadeAnim.setValue(0);
+    slideAnim.setValue(30);
+    scaleAnim.setValue(0.9);
+
+    // Animate in new content
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 450,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Update progress bar
+    Animated.timing(progressAnim, {
+      toValue: (currentStep + 1) / tutorialSteps.length,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
   if (!fontsLoaded) return null;
 
   const handleNext = () => {
     if (currentStep < tutorialSteps.length - 1) {
-      const nextStep = currentStep + 1;
-      setCurrentStep(nextStep);
-      scrollViewRef.current?.scrollTo({ x: nextStep * SCREEN_WIDTH, animated: true });
+      // Animate out current content
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -30,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Update step and scroll
+        const nextStep = currentStep + 1;
+        setCurrentStep(nextStep);
+        scrollViewRef.current?.scrollTo({ x: nextStep * SCREEN_WIDTH, animated: true });
+      });
     } else {
       handleFinish();
     }
   };
 
   const handleSkip = () => {
-    handleFinish();
+    // Animate out with fade
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      handleFinish();
+    });
   };
 
   const handleFinish = () => {
     console.log('[Tutorial] Completed');
-    completeOnboarding();
-    router.replace('/(tabs)');
+    
+    // Final celebration animation
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1.2,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      completeOnboarding();
+      router.replace('/(tabs)');
+    });
   };
 
   const step = tutorialSteps[currentStep];
@@ -122,78 +271,204 @@ export default function TutorialScreen() {
       style={styles.container}
       resizeMode="cover"
     >
-      {/* Progress Dots */}
-      <View style={styles.progressContainer}>
-        {tutorialSteps.map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.progressDot,
-              index === currentStep && styles.progressDotActive
-            ]}
-          />
-        ))}
-      </View>
+      {/* Welcome Overlay */}
+      {showWelcome && (
+        <Animated.View 
+          style={[
+            styles.welcomeOverlay,
+            {
+              opacity: welcomeAnim,
+              transform: [{ scale: welcomeAnim }]
+            }
+          ]}
+        >
+          <Text style={styles.welcomeTitle}>Welcome to</Text>
+          <Text style={styles.welcomeBrand}>Quillby! 🐹</Text>
+          <Text style={styles.welcomeSubtitle}>Let's learn how to use your new study companion</Text>
+        </Animated.View>
+      )}
 
-      {/* Content */}
-      <ScrollView
-        ref={scrollViewRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEnabled={false}
-        style={styles.scrollView}
-      >
-        {tutorialSteps.map((stepData, index) => (
-          <View key={index} style={styles.stepContainer}>
-            {/* Icon */}
-            {stepData.icon === 'qbies' ? (
-              <Image
-                source={require('../../assets/overall/qbies.png')}
-                style={styles.qbiesIcon}
-                resizeMode="contain"
+      {!showWelcome && (
+        <>
+          {/* Animated Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBarBackground}>
+              <Animated.View 
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  }
+                ]} 
               />
-            ) : (
-              <Text style={styles.icon}>{stepData.icon}</Text>
-            )}
+            </View>
+            <Text style={styles.progressText}>
+              {currentStep + 1} of {tutorialSteps.length}
+            </Text>
+          </View>
 
-            {/* Title */}
-            <Text style={styles.title}>{stepData.title}</Text>
+          {/* Animated Progress Dots */}
+          <View style={styles.dotsContainer}>
+            {tutorialSteps.map((_, index) => (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.progressDot,
+                  index === currentStep && styles.progressDotActive,
+                  {
+                    transform: [{
+                      scale: index === currentStep ? 1.2 : 1
+                    }]
+                  }
+                ]}
+              />
+            ))}
+          </View>
 
-            {/* Description */}
-            <Text style={styles.description}>{stepData.description}</Text>
+          {/* Animated Content */}
+          <Animated.View 
+            style={[
+              styles.contentContainer,
+              {
+                opacity: fadeAnim,
+                transform: [
+                  { translateY: slideAnim },
+                  { scale: scaleAnim }
+                ]
+              }
+            ]}
+          >
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              scrollEnabled={false}
+              style={styles.scrollView}
+            >
+              {tutorialSteps.map((stepData, index) => (
+                <View key={index} style={styles.stepContainer}>
+                  {/* Animated Icon */}
+                  <Animated.View 
+                    style={[
+                      styles.iconContainer,
+                      {
+                        transform: [{ scale: iconBounceAnim }]
+                      }
+                    ]}
+                  >
+                    {stepData.icon === 'qbies' ? (
+                      <Image
+                        source={require('../../assets/overall/qbies.png')}
+                        style={styles.qbiesIcon}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <Text style={styles.icon}>{stepData.icon}</Text>
+                    )}
+                  </Animated.View>
 
-            {/* Tips */}
-            <View style={styles.tipsContainer}>
-              {stepData.tips.map((tip, tipIndex) => (
-                <View key={tipIndex} style={styles.tipRow}>
-                  <Text style={styles.tipBullet}>•</Text>
-                  <Text style={styles.tipText}>{tip}</Text>
+                  {/* Animated Title */}
+                  <Animated.Text 
+                    style={[
+                      styles.title,
+                      {
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }]
+                      }
+                    ]}
+                  >
+                    {stepData.title}
+                  </Animated.Text>
+
+                  {/* Animated Description */}
+                  <Animated.Text 
+                    style={[
+                      styles.description,
+                      {
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }]
+                      }
+                    ]}
+                  >
+                    {stepData.description}
+                  </Animated.Text>
+
+                  {/* Animated Tips Container */}
+                  <Animated.View 
+                    style={[
+                      styles.tipsContainer,
+                      {
+                        opacity: fadeAnim,
+                        transform: [{ scale: scaleAnim }]
+                      }
+                    ]}
+                  >
+                    {stepData.tips.map((tip, tipIndex) => (
+                      <Animated.View 
+                        key={tipIndex} 
+                        style={[
+                          styles.tipRow,
+                          {
+                            opacity: fadeAnim,
+                            transform: [{
+                              translateX: slideAnim.interpolate({
+                                inputRange: [-30, 0, 30],
+                                outputRange: [-20, 0, 20],
+                              })
+                            }]
+                          }
+                        ]}
+                      >
+                        <Text style={styles.tipBullet}>•</Text>
+                        <Text style={styles.tipText}>{tip}</Text>
+                      </Animated.View>
+                    ))}
+                  </Animated.View>
                 </View>
               ))}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+            </ScrollView>
+          </Animated.View>
 
-      {/* Navigation Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.skipButton}
-          onPress={handleSkip}
-        >
-          <Text style={styles.skipButtonText}>Skip</Text>
-        </TouchableOpacity>
+          {/* Animated Navigation Buttons */}
+          <Animated.View 
+            style={[
+              styles.buttonContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={handleSkip}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.skipButtonText}>Skip</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={handleNext}
-        >
-          <Text style={styles.nextButtonText}>
-            {currentStep === tutorialSteps.length - 1 ? "Let's Go! 🚀" : "Next"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                currentStep === tutorialSteps.length - 1 && styles.finishButton
+              ]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.nextButtonText,
+                currentStep === tutorialSteps.length - 1 && styles.finishButtonText
+              ]}>
+                {currentStep === tutorialSteps.length - 1 ? "Let's Go! 🚀" : "Next"}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </>
+      )}
     </ImageBackground>
   );
 }
@@ -202,22 +477,89 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  welcomeOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(76, 175, 80, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  welcomeTitle: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: 24,
+    color: '#FFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  welcomeBrand: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 48,
+    color: '#FFF',
+    textAlign: 'center',
+    marginBottom: 16,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  welcomeSubtitle: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    lineHeight: 22,
+  },
   progressContainer: {
+    alignItems: 'center',
+    paddingVertical: SCREEN_HEIGHT * 0.03,
+    paddingHorizontal: SCREEN_WIDTH * 0.08,
+  },
+  progressBarBackground: {
+    width: '100%',
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 3,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 3,
+  },
+  progressText: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 14,
+    color: '#666',
+  },
+  dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SCREEN_HEIGHT * 0.04,
+    paddingVertical: SCREEN_HEIGHT * 0.02,
     gap: 8,
   },
   progressDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#DDD',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
   },
   progressDotActive: {
     backgroundColor: '#4CAF50',
     width: 24,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  contentContainer: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
@@ -228,14 +570,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconContainer: {
+    marginBottom: SCREEN_HEIGHT * 0.03,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   icon: {
     fontSize: 80,
-    marginBottom: SCREEN_HEIGHT * 0.03,
   },
   qbiesIcon: {
     width: 80,
     height: 80,
-    marginBottom: SCREEN_HEIGHT * 0.03,
   },
   title: {
     fontFamily: 'ChakraPetch_600SemiBold',
@@ -243,6 +591,11 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     marginBottom: SCREEN_HEIGHT * 0.02,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   description: {
     fontFamily: 'ChakraPetch_400Regular',
@@ -254,9 +607,16 @@ const styles = StyleSheet.create({
   },
   tipsContainer: {
     width: '100%',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
     padding: SCREEN_WIDTH * 0.05,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
   },
   tipRow: {
     flexDirection: 'row',
@@ -288,8 +648,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
   },
   skipButtonText: {
     fontFamily: 'ChakraPetch_600SemiBold',
@@ -302,10 +664,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#4CAF50',
     alignItems: 'center',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   nextButtonText: {
     fontFamily: 'ChakraPetch_600SemiBold',
     fontSize: 16,
+    color: '#FFF',
+  },
+  finishButton: {
+    backgroundColor: '#FF9800',
+    shadowColor: '#FF9800',
+  },
+  finishButtonText: {
     color: '#FFF',
   },
 });
