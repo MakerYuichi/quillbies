@@ -49,7 +49,14 @@ export default function HomeScreen() {
           
           return () => clearTimeout(timer);
         } else {
-          console.log('[HomeScreen] Device onboarding completed, staying on home screen');
+          console.log('[HomeScreen] Device onboarding completed, checking if returning user');
+          // For returning users, show welcome back screen first
+          if (userData.buddyName && userData.userName) {
+            console.log('[HomeScreen] Returning user detected, showing welcome back');
+            router.replace('/welcome-back');
+          } else {
+            console.log('[HomeScreen] New user with completed onboarding, staying on home');
+          }
         }
       } catch (err) {
         console.error('[HomeScreen] Error checking device onboarding:', err);
@@ -62,6 +69,15 @@ export default function HomeScreen() {
     checkDeviceOnboarding();
   }, []);
   
+  // Update energy periodically (just caps it, no drain)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateEnergy();
+    }, 30000); // Update every 30 seconds instead of every second for better performance
+    
+    return () => clearInterval(interval);
+  }, []);
+  
   // Show loading while checking onboarding status
   if (deviceOnboardingCompleted === null) {
     return (
@@ -70,15 +86,6 @@ export default function HomeScreen() {
       </View>
     );
   }
-  
-  // Update energy periodically (just caps it, no drain)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      updateEnergy();
-    }, 1000); // Update every second
-    
-    return () => clearInterval(interval);
-  }, []);
   
   const handleStartSession = () => {
     const success = startFocusSession();

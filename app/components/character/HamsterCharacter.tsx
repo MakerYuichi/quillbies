@@ -84,6 +84,7 @@ export default function HamsterCharacter({ selectedCharacter, currentAnimation, 
           return require('../../../assets/hamsters/casual/idle-sit.png');
         }
       }
+      
       // Study animation - focused studying pose
       if (currentAnimation === 'studying') {
         try {

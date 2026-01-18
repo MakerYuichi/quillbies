@@ -104,6 +104,14 @@ export default function RootLayout() {
           }} 
         />
         
+        {/* Welcome Back Screen for returning users */}
+        <Stack.Screen 
+          name="welcome-back" 
+          options={{ 
+            headerShown: false,
+          }} 
+        />
+        
         {/* Main App Screens */}
         <Stack.Screen 
           name="index" 

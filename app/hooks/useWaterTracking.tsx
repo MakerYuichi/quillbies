@@ -78,7 +78,7 @@ export const useWaterTracking = (buddyName: string) => {
     setTimeout(() => {
       const shouldBeHappy = areAllHabitsCompletedForCurrentTime();
       setCurrentAnimation(shouldBeHappy ? 'idle-sit-happy' : 'idle');
-    }, 2000); // Back to appropriate idle after 2s
+    }, 3000); // Increased to 3s to match message duration
     
     // Log water in store
     logWater();
@@ -101,12 +101,12 @@ export const useWaterTracking = (buddyName: string) => {
       clearTimeout(messageTimer);
     }
     
-    // Set timer to clear message after 3 seconds
+    // Set timer to clear message after 3 seconds (same as animation)
     const timer = setTimeout(() => {
       setMessage('');
       setMessageTimestamp(0);
       setMessageTimer(null);
-    }, 3000);
+    }, 3000); // Matches animation duration
     
     setMessageTimer(timer);
   };

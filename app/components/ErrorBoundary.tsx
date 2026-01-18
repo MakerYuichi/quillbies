@@ -23,22 +23,19 @@ export class ErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary] Caught error:', error);
     console.error('[ErrorBoundary] Error info:', errorInfo);
+    
+    // Auto-recover after 2 seconds instead of showing error screen
+    setTimeout(() => {
+      this.setState({ hasError: false, error: undefined });
+    }, 2000);
   }
 
   render() {
     if (this.state.hasError) {
+      // Show minimal loading instead of error screen
       return (
         <View style={styles.container}>
-          <Text style={styles.title}>Oops! Something went wrong</Text>
-          <Text style={styles.message}>
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => this.setState({ hasError: false, error: undefined })}
-          >
-            <Text style={styles.buttonText}>Try Again</Text>
-          </TouchableOpacity>
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       );
     }
@@ -52,32 +49,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  message: {
-    fontSize: 16,
+  loadingText: {
+    fontSize: 18,
     color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  button: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
     fontWeight: '600',
   },
 });

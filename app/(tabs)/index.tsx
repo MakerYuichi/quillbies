@@ -858,7 +858,7 @@ export default function HomeScreen() {
                   const minutesToAdvance = 10;
                   const millisecondsToAdvance = minutesToAdvance * 60 * 1000;
                   
-                  // Update timestamp to simulate time passing
+                  // Update timestamp to simulate time passing backwards (making it seem like time passed)
                   useQuillbyStore.setState({
                     userData: {
                       ...userData,

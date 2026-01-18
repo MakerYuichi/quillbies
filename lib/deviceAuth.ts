@@ -78,12 +78,14 @@ export const authenticateDevice = async () => {
     });
     
     if (signInError) {
-      console.error('[DeviceAuth] Anonymous sign in error:', signInError);
-      throw signInError;
+      console.warn('[DeviceAuth] Anonymous sign in failed (offline mode):', signInError.message);
+      // Return a mock user ID for offline mode
+      return { userId: `offline_${deviceId}`, deviceId, offline: true };
     }
     
     if (!user) {
-      throw new Error('No user returned from anonymous sign in');
+      console.warn('[DeviceAuth] No user returned from anonymous sign in, using offline mode');
+      return { userId: `offline_${deviceId}`, deviceId, offline: true };
     }
     
     const userId = user.id;
@@ -92,8 +94,9 @@ export const authenticateDevice = async () => {
     
     return { userId, deviceId };
   } catch (err) {
-    console.error('[DeviceAuth] Authentication failed:', err);
-    throw err;
+    console.warn('[DeviceAuth] Authentication failed, using offline mode:', err);
+    const deviceId = await getOrCreateDeviceId();
+    return { userId: `offline_${deviceId}`, deviceId, offline: true };
   }
 };
 
@@ -119,17 +122,21 @@ export const getDeviceUser = async () => {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     console.log('[DeviceAuth] getDeviceUser called');
-    console.log('[DeviceAuth] Supabase auth response:', { user: user ? { id: user.id, is_anonymous: user.is_anonymous } : null, error });
     
-    if (error || !user) {
-      console.log('[DeviceAuth] No user or error, returning null');
+    if (error) {
+      console.warn('[DeviceAuth] Error getting user (offline mode):', error.message);
+      return null;
+    }
+    
+    if (!user) {
+      console.log('[DeviceAuth] No user found');
       return null;
     }
     
     console.log('[DeviceAuth] Returning user with ID:', user.id);
     return user;
   } catch (err) {
-    console.error('[DeviceAuth] Error getting device user:', err);
+    console.warn('[DeviceAuth] Error getting device user (offline mode):', err);
     return null;
   }
 };

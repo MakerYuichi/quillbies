@@ -89,13 +89,80 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
   },
 
   updateEnergy: () => {
-    // Implementation moved from main store
-    // ... (energy update logic)
+    const { userData } = get();
+    const now = Date.now();
+    const minutesElapsed = Math.floor((now - userData.lastActiveTimestamp) / (1000 * 60));
+    
+    if (minutesElapsed < 1) return; // Don't update if less than 1 minute has passed
+    
+    let newEnergy = userData.energy;
+    let newMaxCap = userData.maxEnergyCap;
+    
+    // Calculate mess penalty on energy cap
+    const messEnergyCapPenalty = Math.floor(userData.messPoints / 3) * 5;
+    newMaxCap = Math.max(50, 100 - messEnergyCapPenalty);
+    
+    // Natural energy regeneration (1 energy per 2 minutes when not at cap)
+    if (newEnergy < newMaxCap) {
+      const energyToAdd = Math.floor(minutesElapsed / 2);
+      newEnergy = Math.min(newMaxCap, newEnergy + energyToAdd);
+    }
+    
+    // Cap energy at max capacity
+    newEnergy = Math.min(newMaxCap, newEnergy);
+    
+    // Only update if there are actual changes
+    if (userData.energy === newEnergy && userData.maxEnergyCap === newMaxCap) {
+      // Just update timestamp without triggering re-renders
+      set({ 
+        userData: { 
+          ...userData, 
+          lastActiveTimestamp: now 
+        } 
+      });
+      return;
+    }
+    
+    // Update state
+    const updatedUserData = {
+      ...userData,
+      energy: newEnergy,
+      maxEnergyCap: newMaxCap,
+      lastActiveTimestamp: now
+    };
+    
+    set({ userData: updatedUserData });
+    
+    // Sync to database only for significant changes (throttled)
+    if (Math.abs(userData.energy - newEnergy) >= 5 || userData.maxEnergyCap !== newMaxCap) {
+      syncToDatabase(updatedUserData);
+    }
   },
 
   resetDay: () => {
-    // Implementation moved from main store
-    // ... (daily reset logic)
+    const { userData } = get();
+    const today = new Date().toDateString();
+    
+    const updatedUserData = {
+      ...userData,
+      ateBreakfast: false,
+      waterGlasses: 0,
+      mealsLogged: 0,
+      exerciseMinutes: 0,
+      studyMinutesToday: 0,
+      appleTapsToday: 0,
+      coffeeTapsToday: 0,
+      lastCheckInDate: today,
+      lastSleepReset: today,
+      lastExerciseReset: today,
+      lastStudyReset: today,
+      lastConsumableReset: today,
+    };
+    
+    set({ userData: updatedUserData });
+    syncToDatabase(updatedUserData);
+    
+    console.log('[Daily] Daily habits reset for testing');
   },
 
   // Onboarding actions
@@ -108,6 +175,14 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     
     set({ userData: updatedUserData });
     syncToDatabase(updatedUserData);
+    
+    // Save offline data for offline mode
+    try {
+      const { saveOfflineUserData } = await import('../../../lib/offlineMode');
+      await saveOfflineUserData(updatedUserData);
+    } catch (err) {
+      console.warn('[Onboarding] Could not save offline data:', err);
+    }
     
     // Also mark device-level onboarding as completed
     try {
