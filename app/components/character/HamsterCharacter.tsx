@@ -1,5 +1,4 @@
-// Hamster character display component
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Image, StyleSheet, Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -11,128 +10,171 @@ interface HamsterCharacterProps {
   pointerEvents?: 'none' | 'auto' | 'box-none' | 'box-only';
 }
 
-export default function HamsterCharacter({ selectedCharacter, currentAnimation, isSleeping, pointerEvents = 'auto' }: HamsterCharacterProps) {
+const HamsterCharacter = memo(function HamsterCharacter({ selectedCharacter, currentAnimation, isSleeping, pointerEvents = 'auto' }: HamsterCharacterProps) {
   // Debug log to see what animation is being passed
   console.log('[HamsterCharacter] Animation:', currentAnimation, 'Character:', selectedCharacter, 'Sleeping:', isSleeping);
   
+  // Simple loading state
+  const [showCharacter, setShowCharacter] = React.useState(false);
+  
+  React.useEffect(() => {
+    // Small delay to ensure character loads with room
+    const timer = setTimeout(() => {
+      setShowCharacter(true);
+    }, 150);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
   // Get the correct hamster image/GIF based on selected character and animation
   const getCharacterImage = () => {
-    // For casual character, check if we have the animation
-    if (selectedCharacter === 'casual') {
-      // Water drinking animation (only for water button)
-      if (currentAnimation === 'eating') {
-        try {
-          return require('../../../assets/hamsters/casual/drinking.png');
-        } catch {
-          return require('../../../assets/hamsters/casual/idle-sit.png');
-        }
-      }
-      // Normal eating animation (for maintain weight goal)
-      if (currentAnimation === 'eating-normal') {
-        try {
-          return require('../../../assets/hamsters/casual/eating-normal.png');
-        } catch {
-          // Fallback to idle
-          return require('../../../assets/hamsters/casual/idle-sit.png');
-        }
-      }
-      // Light eating animation (for lose weight goal)
-      if (currentAnimation === 'eating-light') {
-        try {
-          return require('../../../assets/hamsters/casual/eating-small.png');
-        } catch {
-          // Fallback to normal eating
+    try {
+      // For casual character, check if we have the animation
+      if (selectedCharacter === 'casual') {
+        // Water drinking animation (only for water button)
+        if (currentAnimation === 'eating') {
           try {
-            return require('../../../assets/hamsters/casual/eating-normal.png');
+            return require('../../../assets/hamsters/casual/drinking.png');
           } catch {
             return require('../../../assets/hamsters/casual/idle-sit.png');
           }
         }
-      }
-      // Heavy eating animation (for gain weight goal)
-      if (currentAnimation === 'eating-heavy') {
-        try {
-          return require('../../../assets/hamsters/casual/eating-large.png');
-        } catch {
-          // Fallback to normal eating
+        // Normal eating animation (for maintain weight goal)
+        if (currentAnimation === 'eating-normal') {
           try {
             return require('../../../assets/hamsters/casual/eating-normal.png');
+          } catch {
+            // Fallback to idle
+            return require('../../../assets/hamsters/casual/idle-sit.png');
+          }
+        }
+        // Light eating animation (for lose weight goal)
+        if (currentAnimation === 'eating-light') {
+          try {
+            return require('../../../assets/hamsters/casual/eating-small.png');
+          } catch {
+            // Fallback to normal eating
+            try {
+              return require('../../../assets/hamsters/casual/eating-normal.png');
+            } catch {
+              return require('../../../assets/hamsters/casual/idle-sit.png');
+            }
+          }
+        }
+        // Heavy eating animation (for gain weight goal)
+        if (currentAnimation === 'eating-heavy') {
+          try {
+            return require('../../../assets/hamsters/casual/eating-large.png');
+          } catch {
+            // Fallback to normal eating
+            try {
+              return require('../../../assets/hamsters/casual/eating-normal.png');
+            } catch {
+              return require('../../../assets/hamsters/casual/idle-sit.png');
+            }
+          }
+        }
+        if (currentAnimation === 'sleeping' || isSleeping) {
+          try {
+            return require('../../../assets/hamsters/casual/sleeping.png');
           } catch {
             return require('../../../assets/hamsters/casual/idle-sit.png');
           }
         }
-      }
-      if (currentAnimation === 'sleeping' || isSleeping) {
-        try {
-          return require('../../../assets/hamsters/casual/sleeping.png');
-        } catch {
-          return require('../../../assets/hamsters/casual/idle-sit.png');
+        if (currentAnimation === 'wake-up') {
+          try {
+            return require('../../../assets/hamsters/casual/wake-up.png');
+          } catch {
+            return require('../../../assets/hamsters/casual/idle-sit.png');
+          }
         }
-      }
-      if (currentAnimation === 'wake-up') {
-        try {
-          return require('../../../assets/hamsters/casual/wake-up.png');
-        } catch {
-          return require('../../../assets/hamsters/casual/idle-sit.png');
+        // Exercise animations - using jumping GIF for all exercise types
+        if (currentAnimation === 'exercising' || currentAnimation === 'exercise-complete') {
+          try {
+            return require('../../../assets/hamsters/casual/jumping.gif');
+          } catch {
+            return require('../../../assets/hamsters/casual/idle-sit.png');
+          }
         }
-      }
-      // Exercise animations - using jumping GIF for all exercise types
-      if (currentAnimation === 'exercising' || currentAnimation === 'exercise-complete') {
-        try {
-          return require('../../../assets/hamsters/casual/jumping.gif');
-        } catch {
-          return require('../../../assets/hamsters/casual/idle-sit.png');
+        
+        // Study animation - focused studying pose
+        if (currentAnimation === 'studying') {
+          try {
+            return require('../../../assets/hamsters/casual/studying.png');
+          } catch {
+            // Fallback to idle if studying image doesn't exist
+            return require('../../../assets/hamsters/casual/idle-sit.png');
+          }
         }
+        // Happy idle animation
+        if (currentAnimation === 'idle-sit-happy') {
+          try {
+            return require('../../../assets/hamsters/casual/idle-sit-happy.png');
+          } catch {
+            // Fallback to regular idle if happy idle doesn't exist
+            return require('../../../assets/hamsters/casual/idle-sit.png');
+          }
+        }
+        // Regular idle animation (default)
+        return require('../../../assets/hamsters/casual/idle-sit.png');
       }
       
-      // Study animation - focused studying pose
-      if (currentAnimation === 'studying') {
-        try {
-          return require('../../../assets/hamsters/casual/studying.png');
-        } catch {
-          // Fallback to idle if studying image doesn't exist
+      // Other characters
+      switch (selectedCharacter) {
+        case 'energetic':
+          try {
+            return require('../../../assets/onboarding/hamster-energetic.png');
+          } catch {
+            return require('../../../assets/hamsters/casual/idle-sit.png');
+          }
+        case 'scholar':
+          try {
+            return require('../../../assets/onboarding/hamster-scholar.png');
+          } catch {
+            return require('../../../assets/hamsters/casual/idle-sit.png');
+          }
+        default:
           return require('../../../assets/hamsters/casual/idle-sit.png');
-        }
       }
-      // Happy idle animation
-      if (currentAnimation === 'idle-sit-happy') {
-        try {
-          return require('../../../assets/hamsters/casual/idle-sit-happy.png');
-        } catch {
-          // Fallback to regular idle if happy idle doesn't exist
-          return require('../../../assets/hamsters/casual/idle-sit.png');
-        }
-      }
-      // Regular idle animation (default)
+    } catch (error) {
+      console.warn('[HamsterCharacter] Error loading character image:', error);
+      // Ultimate fallback
       return require('../../../assets/hamsters/casual/idle-sit.png');
-    }
-    
-    // Other characters
-    switch (selectedCharacter) {
-      case 'energetic':
-        return require('../../../assets/onboarding/hamster-energetic.png');
-      case 'scholar':
-        return require('../../../assets/onboarding/hamster-scholar.png');
-      default:
-        return require('../../../assets/hamsters/casual/idle-sit.png');
     }
   };
 
-  return (
-    <View pointerEvents={pointerEvents}>
-      {/* Small white background for hamster belly */}
-      <View style={styles.hamsterBellyBg} pointerEvents="none" />
-      
-      <View style={styles.petContainer} pointerEvents="none">
-        <Image 
-          source={getCharacterImage()}
-          style={styles.characterImage}
-          resizeMode="contain"
-        />
+  try {
+    return (
+      <View pointerEvents={pointerEvents}>
+        {/* Small white background for hamster belly */}
+        {showCharacter && <View style={styles.hamsterBellyBg} pointerEvents="none" />}
+        
+        <View style={styles.petContainer} pointerEvents="none">
+          {showCharacter && (
+            <Image 
+              source={getCharacterImage()}
+              style={styles.characterImage}
+              resizeMode="contain"
+              onError={(error) => {
+                console.warn('[HamsterCharacter] Image load error:', error);
+              }}
+            />
+          )}
+        </View>
       </View>
-    </View>
-  );
-}
+    );
+  } catch (error) {
+    console.error('[HamsterCharacter] Render error:', error);
+    // Return minimal fallback component
+    return (
+      <View pointerEvents={pointerEvents}>
+        <View style={styles.petContainer} pointerEvents="none">
+          <View style={[styles.characterImage, { backgroundColor: '#DDD', borderRadius: 50 }]} />
+        </View>
+      </View>
+    );
+  }
+});
 
 const styles = StyleSheet.create({
   hamsterBellyBg: {
@@ -160,3 +202,5 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 });
+
+export default HamsterCharacter;

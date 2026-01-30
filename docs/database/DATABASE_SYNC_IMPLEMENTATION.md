@@ -77,15 +77,16 @@ Created `lib/sleepSessions.ts` with functions:
 ## Testing Database Sync
 
 ### Settings Screen Test
-1. Go to **Settings** tab
-2. Find "🗄️ Database Sync" section
-3. Tap "🧪 Test Database Sync" - adds +5 coins and syncs
-4. Tap "📥 Load from Database" - refreshes data from server
-5. Check your Supabase dashboard to verify data was saved
+### Testing Database Sync
+Database sync happens automatically when you:
+- Log water or meals
+- Complete sleep or exercise sessions  
+- Purchase shop items
+- Complete focus sessions
 
 ### Manual Testing
 1. Log water, complete sleep sessions, purchase shop items
-2. Check Supabase dashboard tables:
+2. Check your Supabase dashboard tables:
    - `user_profiles` - should show updated coins, energy
    - `daily_data` - should show water glasses, meals
    - `sleep_sessions` - should show sleep records

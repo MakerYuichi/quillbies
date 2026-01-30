@@ -332,11 +332,18 @@ Room: ${roomState}`;
       
       onRehydrateStorage: () => {
         console.log('[Storage] Starting data rehydration...');
-        return (_state, error) => {
+        return (state, error) => {
           if (error) {
             console.error('[Storage] Failed to rehydrate:', error);
           } else {
             console.log('[Storage] Data rehydration completed');
+            // Automatically load from database after rehydration
+            if (state) {
+              console.log('[Storage] Auto-loading from database after rehydration...');
+              state.loadFromDatabase().catch((err) => {
+                console.warn('[Storage] Auto-load from database failed:', err);
+              });
+            }
           }
         };
       }

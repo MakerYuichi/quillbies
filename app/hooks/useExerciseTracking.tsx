@@ -6,7 +6,7 @@ export const useExerciseTracking = (buddyName: string) => {
   const { userData, logExercise, resetDay } = useQuillbyStore();
   const [isExercising, setIsExercising] = useState(false);
   const [exerciseStartTime, setExerciseStartTime] = useState<number | null>(null);
-  const [exerciseType, setExerciseType] = useState<'walk' | 'stretch' | 'cardio' | 'energizer'>('walk');
+  const [exerciseType, setExerciseType] = useState<'walk' | 'stretch' | 'cardio' | 'energizer' | 'custom'>('walk');
   const [exerciseDuration, setExerciseDuration] = useState<number | null>(null); // null = stopwatch, number = countdown
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
   const [message, setMessage] = useState<string>('');
@@ -47,7 +47,7 @@ export const useExerciseTracking = (buddyName: string) => {
     }
   }, [userData.lastExerciseReset, userData.lastCheckInDate, resetDay]);
 
-  const handleStartExercise = (type: 'walk' | 'stretch' | 'cardio' | 'energizer' = 'walk', duration: number | null = null) => {
+  const handleStartExercise = (type: 'walk' | 'stretch' | 'cardio' | 'energizer' | 'custom' = 'walk', duration: number | null = null) => {
     // Start exercising
     setIsExercising(true);
     setExerciseType(type);

@@ -8,6 +8,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  isKeepAwakeError?: boolean;
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
@@ -17,22 +18,54 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    const errorMessage = error?.message || '';
+    const isKeepAwakeError = errorMessage.includes('keep awake') || 
+                            errorMessage.includes('KeepAwake') ||
+                            errorMessage.includes('Unable to activate keep awake');
+    
+    return { 
+      hasError: true, 
+      error,
+      isKeepAwakeError
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary] Caught error:', error);
     console.error('[ErrorBoundary] Error info:', errorInfo);
     
-    // Auto-recover after 2 seconds instead of showing error screen
+    // Handle keep awake errors specifically
+    const errorMessage = error?.message || '';
+    if (errorMessage.includes('keep awake') || 
+        errorMessage.includes('KeepAwake') ||
+        errorMessage.includes('Unable to activate keep awake')) {
+      console.warn('[ErrorBoundary] Keep awake error caught, auto-recovering...');
+      
+      // Auto-recover from keep awake errors after 1 second
+      setTimeout(() => {
+        this.setState({ hasError: false, error: undefined, isKeepAwakeError: false });
+      }, 1000);
+      return;
+    }
+    
+    // Auto-recover from other errors after 2 seconds
     setTimeout(() => {
-      this.setState({ hasError: false, error: undefined });
+      this.setState({ hasError: false, error: undefined, isKeepAwakeError: false });
     }, 2000);
   }
 
   render() {
     if (this.state.hasError) {
-      // Show minimal loading instead of error screen
+      if (this.state.isKeepAwakeError) {
+        // Show minimal loading for keep awake errors
+        return (
+          <View style={styles.container}>
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        );
+      }
+      
+      // Show minimal loading for other errors
       return (
         <View style={styles.container}>
           <Text style={styles.loadingText}>Loading...</Text>

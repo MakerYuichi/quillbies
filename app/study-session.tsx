@@ -5,9 +5,26 @@ import { useQuillbyStore } from './state/store-modular';
 import InteractiveTooltip from './components/ui/InteractiveTooltip';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Conditional import for keep awake to prevent crashes
+let activateKeepAwakeAsync: any = null;
+let deactivateKeepAwake: any = null;
+
+try {
+  const keepAwakeModule = require('expo-keep-awake');
+  activateKeepAwakeAsync = keepAwakeModule.activateKeepAwakeAsync;
+  deactivateKeepAwake = keepAwakeModule.deactivateKeepAwake;
+  console.log('[KeepAwake] Module loaded successfully');
+} catch (error) {
+  console.warn('[KeepAwake] Module failed to load, continuing without keep awake:', error);
+}
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function StudySessionScreen() {
+  return <StudySessionContent />;
+}
+
+function StudySessionContent() {
   const router = useRouter();
   const { 
     userData, 
@@ -24,6 +41,67 @@ export default function StudySessionScreen() {
   } = useQuillbyStore();
   
   console.log('[StudySession] Render - session exists:', !!session);
+  
+  // Keep awake management with enhanced error handling
+  useEffect(() => {
+    let keepAwakeTag = 'study-session';
+    
+    const activateKeepAwake = async () => {
+      if (!activateKeepAwakeAsync) {
+        console.log('[KeepAwake] Module not available, skipping activation');
+        return;
+      }
+      
+      try {
+        // Multiple layers of error handling
+        await Promise.resolve(activateKeepAwakeAsync(keepAwakeTag)).catch((error) => {
+          console.warn('[KeepAwake] Promise-level error caught:', error);
+          throw error; // Re-throw to be caught by outer try-catch
+        });
+        console.log('[KeepAwake] Activated for study session');
+      } catch (error) {
+        console.warn('[KeepAwake] Failed to activate:', error);
+        // Don't throw - keep awake is not critical for app functionality
+        
+        // Also disable the module to prevent future attempts
+        activateKeepAwakeAsync = null;
+        deactivateKeepAwake = null;
+      }
+    };
+    
+    const deactivateKeepAwakeOnExit = () => {
+      if (!deactivateKeepAwake) {
+        console.log('[KeepAwake] Module not available, skipping deactivation');
+        return;
+      }
+      
+      try {
+        deactivateKeepAwake(keepAwakeTag);
+        console.log('[KeepAwake] Deactivated');
+      } catch (error) {
+        console.warn('[KeepAwake] Failed to deactivate:', error);
+      }
+    };
+    
+    // Activate keep awake when component mounts (with multiple error handling layers)
+    try {
+      activateKeepAwake().catch((error) => {
+        console.warn('[KeepAwake] Promise rejection caught:', error);
+        // Silently handle the error - keep awake is not essential
+      });
+    } catch (syncError) {
+      console.warn('[KeepAwake] Synchronous error caught:', syncError);
+    }
+    
+    // Deactivate when component unmounts
+    return () => {
+      try {
+        deactivateKeepAwakeOnExit();
+      } catch (error) {
+        console.warn('[KeepAwake] Cleanup error:', error);
+      }
+    };
+  }, []);
   
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
   const [speechKey, setSpeechKey] = useState(0); // Force re-render of speech bubble
@@ -308,14 +386,30 @@ export default function StudySessionScreen() {
       clearInterval(breakTimer);
     }
     
-    endFocusSession();
+    // Deactivate keep awake before ending session (with error handling)
+    if (deactivateKeepAwake) {
+      try {
+        deactivateKeepAwake('study-session');
+        console.log('[KeepAwake] Deactivated on session end');
+      } catch (error) {
+        console.warn('[KeepAwake] Failed to deactivate on session end:', error);
+      }
+    }
     
-    // Navigate based on session type
-    if (selectedDeadlineId) {
-      // Deadline-focused session - return to focus screen
-      router.push('/(tabs)/focus');
-    } else {
-      // Generic focus session - return to home
+    try {
+      endFocusSession();
+      
+      // Navigate based on session type
+      if (selectedDeadlineId) {
+        // Deadline-focused session - return to focus screen
+        router.push('/(tabs)/focus');
+      } else {
+        // Generic focus session - return to home
+        router.push('/(tabs)/');
+      }
+    } catch (error) {
+      console.error('[StudySession] Error ending session:', error);
+      // Fallback navigation
       router.push('/(tabs)/');
     }
   };

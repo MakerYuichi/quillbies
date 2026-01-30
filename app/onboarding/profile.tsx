@@ -10,11 +10,11 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
-import RNPickerSelect from 'react-native-picker-select';
 import * as Localization from 'expo-localization';
 import * as Location from 'expo-location';
 import { useQuillbyStore } from '../state/store-modular';
@@ -104,6 +104,33 @@ const TIMEZONE_NAMES: Record<string, string> = {
   'UTC': 'Coordinated Universal Time (UTC)',
 };
 
+// Picker data arrays
+const STUDENT_LEVELS = [
+  { label: '👨‍🎓 High School Student', value: 'highschool' },
+  { label: '👩‍🎓 University Student', value: 'university' },
+  { label: '👨‍🎓 Graduate Student', value: 'graduate' },
+  { label: '📚 Lifelong Learner', value: 'learner' },
+];
+
+const COUNTRIES = [
+  { label: '🇺🇸 United States', value: 'US' },
+  { label: '🇬🇧 United Kingdom', value: 'UK' },
+  { label: '🇨🇦 Canada', value: 'CA' },
+  { label: '🇦🇺 Australia', value: 'AU' },
+  { label: '🇮🇳 India', value: 'IN' },
+  { label: '🇩🇪 Germany', value: 'DE' },
+  { label: '🇫🇷 France', value: 'FR' },
+  { label: '🇯🇵 Japan', value: 'JP' },
+  { label: '🇰🇷 South Korea', value: 'KR' },
+  { label: '🇧🇷 Brazil', value: 'BR' },
+  { label: '🇲🇽 Mexico', value: 'MX' },
+  { label: '🇪🇸 Spain', value: 'ES' },
+  { label: '🇮🇹 Italy', value: 'IT' },
+  { label: '🇳🇱 Netherlands', value: 'NL' },
+  { label: '🇸🇪 Sweden', value: 'SE' },
+  { label: '🌍 Other', value: 'OTHER' },
+];
+
 export default function ProfileScreen() {
   const router = useRouter();
   const setProfile = useQuillbyStore((state) => state.setProfile);
@@ -112,6 +139,11 @@ export default function ProfileScreen() {
   const [studentLevel, setStudentLevel] = useState('');
   const [country, setCountry] = useState('');
   const [timezone, setTimezone] = useState('');
+
+  // Custom picker modal states
+  const [showStudentLevelPicker, setShowStudentLevelPicker] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [showTimezonePicker, setShowTimezonePicker] = useState(false);
 
   // Load custom fonts
   const [fontsLoaded] = useFonts({
@@ -284,6 +316,66 @@ export default function ProfileScreen() {
   };
 
   const isFormValid = studentLevel && country && timezone; // All three required
+
+  // Custom Picker Component
+  const CustomPicker = ({ 
+    visible, 
+    onClose, 
+    title, 
+    options, 
+    selectedValue, 
+    onSelect 
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    title: string;
+    options: { label: string; value: string }[];
+    selectedValue: string;
+    onSelect: (value: string) => void;
+  }) => (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.pickerModalOverlay}>
+        <View style={styles.pickerModalContainer}>
+          <View style={styles.pickerModalHeader}>
+            <Text style={styles.pickerModalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.pickerModalCloseButton}>
+              <Text style={styles.pickerModalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.pickerModalScrollView}>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.pickerModalOption,
+                  selectedValue === option.value && styles.pickerModalOptionSelected
+                ]}
+                onPress={() => {
+                  onSelect(option.value);
+                  onClose();
+                }}
+              >
+                <Text style={[
+                  styles.pickerModalOptionText,
+                  selectedValue === option.value && styles.pickerModalOptionTextSelected
+                ]}>
+                  {option.label}
+                </Text>
+                {selectedValue === option.value && (
+                  <Text style={styles.pickerModalCheckmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
   
   // Get timezone options based on selected country
   const getTimezoneOptions = () => {
@@ -294,6 +386,23 @@ export default function ProfileScreen() {
       label: TIMEZONE_NAMES[tz] || tz,
       value: tz,
     }));
+  };
+
+  // Helper functions to get display labels
+  const getStudentLevelLabel = () => {
+    const level = STUDENT_LEVELS.find(l => l.value === studentLevel);
+    return level ? level.label : 'Select your level...';
+  };
+
+  const getCountryLabel = () => {
+    const countryData = COUNTRIES.find(c => c.value === country);
+    return countryData ? countryData.label : 'Select your country...';
+  };
+
+  const getTimezoneLabel = () => {
+    const timezoneOptions = getTimezoneOptions();
+    const timezoneData = timezoneOptions.find(t => t.value === timezone);
+    return timezoneData ? timezoneData.label : (country ? 'Select timezone...' : 'Select country first');
   };
 
   return (
@@ -330,52 +439,36 @@ export default function ProfileScreen() {
           {/* 2. Student Level Picker */}
           <View style={styles.inputCard}>
             <Text style={styles.inputLabel}>You are a...</Text>
-            <View style={styles.pickerContainer}>
-              <RNPickerSelect
-                onValueChange={setStudentLevel}
-                items={[
-                  { label: '👨‍🎓 High School Student', value: 'highschool' },
-                  { label: '👩‍🎓 University Student', value: 'university' },
-                  { label: '👨‍🎓 Graduate Student', value: 'graduate' },
-                  { label: '📚 Lifelong Learner', value: 'learner' },
-                ]}
-                placeholder={{ label: 'Select your level...', value: null }}
-                style={pickerSelectStyles}
-                value={studentLevel}
-              />
-            </View>
+            <TouchableOpacity 
+              style={styles.customPickerButton}
+              onPress={() => setShowStudentLevelPicker(true)}
+            >
+              <Text style={[
+                styles.customPickerButtonText,
+                !studentLevel && styles.customPickerButtonTextPlaceholder
+              ]}>
+                {getStudentLevelLabel()}
+              </Text>
+              <Text style={styles.customPickerButtonArrow}>▼</Text>
+            </TouchableOpacity>
           </View>
 
           {/* 3. Country Picker (Simplified) */}
           <View style={styles.inputCard}>
             <Text style={styles.inputLabel}>Your country</Text>
             <Text style={styles.inputHint}>(For academic calendars & holidays)</Text>
-            <View style={styles.pickerContainer}>
-              <RNPickerSelect
-                onValueChange={setCountry}
-                items={[
-                  { label: '🇺🇸 United States', value: 'US' },
-                  { label: '🇬🇧 United Kingdom', value: 'UK' },
-                  { label: '🇨🇦 Canada', value: 'CA' },
-                  { label: '🇦🇺 Australia', value: 'AU' },
-                  { label: '🇮🇳 India', value: 'IN' },
-                  { label: '🇩🇪 Germany', value: 'DE' },
-                  { label: '🇫🇷 France', value: 'FR' },
-                  { label: '🇯🇵 Japan', value: 'JP' },
-                  { label: '🇰🇷 South Korea', value: 'KR' },
-                  { label: '🇧🇷 Brazil', value: 'BR' },
-                  { label: '🇲🇽 Mexico', value: 'MX' },
-                  { label: '🇪🇸 Spain', value: 'ES' },
-                  { label: '🇮🇹 Italy', value: 'IT' },
-                  { label: '🇳🇱 Netherlands', value: 'NL' },
-                  { label: '🇸🇪 Sweden', value: 'SE' },
-                  { label: '🌍 Other', value: 'OTHER' },
-                ]}
-                placeholder={{ label: 'Select your country...', value: null }}
-                style={pickerSelectStyles}
-                value={country}
-              />
-            </View>
+            <TouchableOpacity 
+              style={styles.customPickerButton}
+              onPress={() => setShowCountryPicker(true)}
+            >
+              <Text style={[
+                styles.customPickerButtonText,
+                !country && styles.customPickerButtonTextPlaceholder
+              ]}>
+                {getCountryLabel()}
+              </Text>
+              <Text style={styles.customPickerButtonArrow}>▼</Text>
+            </TouchableOpacity>
           </View>
 
           {/* 4. Timezone Picker (Auto-filled based on country) */}
@@ -386,19 +479,26 @@ export default function ProfileScreen() {
                 ? '(Auto-selected, but you can change it)' 
                 : '(Select country first)'}
             </Text>
-            <View style={styles.pickerContainer}>
-              <RNPickerSelect
-                onValueChange={setTimezone}
-                items={getTimezoneOptions()}
-                placeholder={{ 
-                  label: country ? 'Select timezone...' : 'Select country first', 
-                  value: null 
-                }}
-                style={pickerSelectStyles}
-                value={timezone}
-                disabled={!country}
-              />
-            </View>
+            <TouchableOpacity 
+              style={[
+                styles.customPickerButton,
+                !country && styles.customPickerButtonDisabled
+              ]}
+              onPress={() => country && setShowTimezonePicker(true)}
+              disabled={!country}
+            >
+              <Text style={[
+                styles.customPickerButtonText,
+                !timezone && styles.customPickerButtonTextPlaceholder,
+                !country && styles.customPickerButtonTextDisabled
+              ]}>
+                {getTimezoneLabel()}
+              </Text>
+              <Text style={[
+                styles.customPickerButtonArrow,
+                !country && styles.customPickerButtonArrowDisabled
+              ]}>▼</Text>
+            </TouchableOpacity>
             
             {/* Auto-detect button (only show if no country selected) */}
             {!country && (
@@ -429,6 +529,34 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+
+      {/* Custom Picker Modals */}
+      <CustomPicker
+        visible={showStudentLevelPicker}
+        onClose={() => setShowStudentLevelPicker(false)}
+        title="Select Your Level"
+        options={STUDENT_LEVELS}
+        selectedValue={studentLevel}
+        onSelect={setStudentLevel}
+      />
+
+      <CustomPicker
+        visible={showCountryPicker}
+        onClose={() => setShowCountryPicker(false)}
+        title="Select Your Country"
+        options={COUNTRIES}
+        selectedValue={country}
+        onSelect={setCountry}
+      />
+
+      <CustomPicker
+        visible={showTimezonePicker}
+        onClose={() => setShowTimezonePicker(false)}
+        title="Select Your Timezone"
+        options={getTimezoneOptions()}
+        selectedValue={timezone}
+        onSelect={setTimezone}
+      />
     </ImageBackground>
   );
 }
@@ -508,12 +636,111 @@ const styles = StyleSheet.create({
     padding: SCREEN_WIDTH * 0.03,
     backgroundColor: '#FFF',
   },
-  pickerContainer: {
+  // Custom Picker Button Styles
+  customPickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#DDD',
     borderRadius: 10,
     backgroundColor: '#FFF',
-    paddingHorizontal: SCREEN_WIDTH * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.03,
+    paddingVertical: SCREEN_HEIGHT * 0.018,
+    minHeight: 55,
+  },
+  customPickerButtonDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#CCC',
+  },
+  customPickerButtonText: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: SCREEN_WIDTH * 0.045,
+    color: '#333',
+    flex: 1,
+  },
+  customPickerButtonTextPlaceholder: {
+    color: '#999',
+  },
+  customPickerButtonTextDisabled: {
+    color: '#CCC',
+  },
+  customPickerButtonArrow: {
+    fontSize: SCREEN_WIDTH * 0.05,
+    color: '#666',
+    marginLeft: SCREEN_WIDTH * 0.02,
+  },
+  customPickerButtonArrowDisabled: {
+    color: '#CCC',
+  },
+  // Custom Picker Modal Styles
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerModalContainer: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: SCREEN_HEIGHT * 0.7,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SCREEN_WIDTH * 0.05,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  pickerModalTitle: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: SCREEN_WIDTH * 0.045,
+    color: '#333',
+    flex: 1,
+  },
+  pickerModalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerModalCloseText: {
+    fontSize: SCREEN_WIDTH * 0.04,
+    color: '#666',
+    fontWeight: '600',
+  },
+  pickerModalScrollView: {
+    maxHeight: SCREEN_HEIGHT * 0.5,
+  },
+  pickerModalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  pickerModalOptionSelected: {
+    backgroundColor: '#E8F5E9',
+  },
+  pickerModalOptionText: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: SCREEN_WIDTH * 0.04,
+    color: '#333',
+    flex: 1,
+  },
+  pickerModalOptionTextSelected: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    color: '#2E7D32',
+  },
+  pickerModalCheckmark: {
+    fontSize: SCREEN_WIDTH * 0.045,
+    color: '#4CAF50',
+    fontWeight: 'bold',
   },
   // Next Button
   nextButton: {
@@ -595,23 +822,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-const pickerSelectStyles = {
-  inputIOS: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
-    paddingVertical: SCREEN_HEIGHT * 0.015,
-    paddingHorizontal: SCREEN_WIDTH * 0.02,
-  },
-  inputAndroid: {
-    fontFamily: 'ChakraPetch_400Regular',
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
-    paddingVertical: SCREEN_HEIGHT * 0.01,
-    paddingHorizontal: SCREEN_WIDTH * 0.02,
-  },
-  placeholder: {
-    color: '#999',
-  },
-};

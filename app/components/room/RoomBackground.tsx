@@ -21,7 +21,7 @@ export default function RoomBackground({ messPoints }: RoomBackgroundProps) {
   
   const getRoomDescription = () => {
     switch (roomState) {
-      case 'clean': return '✨ Spotless Room';
+      case 'clean': return ''; // Removed "Spotless Room" text
       case 'messy': return '📚 A few books scattered';
       case 'dirty': return '🗑️ Getting messy...';
       case 'disaster': return '🕸️ Disaster zone!';

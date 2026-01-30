@@ -21,6 +21,13 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [lastNotificationCheck, setLastNotificationCheck] = useState(Date.now());
   
+  // Debug logging (reduced to prevent spam)
+  useEffect(() => {
+    console.log('[useNotifications] Hook initialized');
+    console.log('[useNotifications] Study checkpoints enabled:', !!userData.studyCheckpoints?.length);
+    console.log('[useNotifications] Deadlines count:', deadlines.length);
+  }, []); // Only run once on mount
+  
   // Track which notifications have been sent to prevent duplicates
   const sentCheckpointNotificationsRef = useRef<Set<string>>(new Set());
   const sentDeadlineNotificationsRef = useRef<Set<string>>(new Set());
@@ -29,19 +36,27 @@ export function useNotifications() {
 
   // Check for checkpoint and deadline notifications
   useEffect(() => {
+    console.log('[useNotifications] Starting notification check interval...');
+    
     const checkInterval = setInterval(() => {
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      const currentTime = currentHour + (currentMinute / 60);
+      try {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTime = currentHour + (currentMinute / 60);
 
-      const checkpointTimes = {
-        '9 AM': 9,
-        '12 PM': 12,
-        '3 PM': 15,
-        '6 PM': 18,
-        '9 PM': 21
-      };
+        // Only log every 10 minutes to reduce spam
+        if (currentMinute % 10 === 0) {
+          console.log('[useNotifications] Checking notifications at:', now.toLocaleTimeString());
+        }
+
+        const checkpointTimes = {
+          '9 AM': 9,
+          '12 PM': 12,
+          '3 PM': 15,
+          '6 PM': 18,
+          '9 PM': 21
+        };
 
       // === CHECKPOINT NOTIFICATIONS ===
       if (userData.enabledHabits?.includes('study') && userData.studyCheckpoints) {
@@ -215,25 +230,31 @@ export function useNotifications() {
       }
 
       setLastNotificationCheck(Date.now());
-    }, 60000); // Check every minute
+      } catch (error) {
+        console.error('[useNotifications] Error in notification check:', error);
+      }
+    }, 300000); // Check every 5 minutes instead of every minute
 
-    return () => clearInterval(checkInterval);
-  }, [userData.enabledHabits, userData.studyCheckpoints, userData.studyGoalHours, checkStudyCheckpoints, deadlines]);
+    return () => {
+      console.log('[useNotifications] Cleaning up notification interval');
+      clearInterval(checkInterval);
+    };
+  }, [userData.enabledHabits, userData.studyGoalHours]); // Removed frequently changing objects from dependencies
 
-  // Auto-dismiss notifications after 5 seconds
+  // Auto-dismiss notifications after 10 seconds (increased from 5 to reduce timer churn)
   useEffect(() => {
     if (notifications.length === 0) return;
 
     const timers = notifications.map(notification => {
       return setTimeout(() => {
         dismissNotification(notification.id);
-      }, 5000); // 5 seconds
+      }, 10000); // 10 seconds instead of 5
     });
 
     return () => {
       timers.forEach(timer => clearTimeout(timer));
     };
-  }, [notifications]);
+  }, [notifications.length]); // Only depend on length, not the full array
 
   const dismissNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -243,9 +264,24 @@ export function useNotifications() {
     setNotifications([]);
   };
 
+  // Add test notification function for debugging
+  const addTestNotification = () => {
+    const testNotification: NotificationData = {
+      id: `test-${Date.now()}`,
+      type: 'checkpoint-reminder',
+      title: '🔔 Test Notification',
+      message: 'This is a test notification to verify the system is working!',
+      timestamp: Date.now()
+    };
+    
+    console.log('[useNotifications] Adding test notification:', testNotification);
+    setNotifications(prev => [...prev, testNotification]);
+  };
+
   return {
     notifications,
     dismissNotification,
-    clearAllNotifications
+    clearAllNotifications,
+    addTestNotification
   };
 }

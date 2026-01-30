@@ -1,16 +1,20 @@
-// Utility functions for database synchronization
+// Utility functions for database synchronization with smart performance optimizations
 import { UserData } from '../../core/types';
 import { getDeviceUser } from '../../../lib/deviceAuth';
 import { syncAllUserData } from '../../../lib/syncManager';
 
-// Throttle sync operations to prevent excessive database calls
+// Smart throttling for better performance
 let lastSyncTime = 0;
 let syncTimeout: NodeJS.Timeout | null = null;
-const SYNC_THROTTLE_MS = 5000; // Only sync every 5 seconds max
+const SYNC_THROTTLE_MS = 15000; // Only sync every 15 seconds max
+let pendingUserData: UserData | null = null;
 
 export const syncToDatabase = async (userData: UserData) => {
   try {
     const now = Date.now();
+    
+    // Store the latest data
+    pendingUserData = userData;
     
     // Clear any pending sync
     if (syncTimeout) {
@@ -20,7 +24,9 @@ export const syncToDatabase = async (userData: UserData) => {
     // If we synced recently, schedule a delayed sync instead
     if (now - lastSyncTime < SYNC_THROTTLE_MS) {
       syncTimeout = setTimeout(() => {
-        performSync(userData);
+        if (pendingUserData) {
+          performSync(pendingUserData);
+        }
       }, SYNC_THROTTLE_MS - (now - lastSyncTime));
       return;
     }
@@ -41,8 +47,18 @@ const performSync = async (userData: UserData) => {
     }
 
     lastSyncTime = Date.now();
-    await syncAllUserData(userData);
-    console.log('[Sync] Comprehensive sync completed successfully');
+    pendingUserData = null;
+    
+    // Run sync in background without blocking UI
+    setTimeout(async () => {
+      try {
+        await syncAllUserData(userData);
+        console.log('[Sync] Background sync completed');
+      } catch (error) {
+        console.warn('[Sync] Background sync failed:', error);
+      }
+    }, 50); // Small delay to not block UI
+    
   } catch (error) {
     console.warn('[Sync] Sync operation failed (offline mode):', error);
   }

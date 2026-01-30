@@ -55,6 +55,16 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
   },
 
   initializeUser: () => {
+    // Only initialize if userData is completely empty or missing critical fields
+    const { userData } = get();
+    
+    // Check if user data already exists (from persistence)
+    if (userData && userData.signupDate && userData.lastActiveTimestamp) {
+      console.log('[User] User data already exists, skipping initialization');
+      return;
+    }
+    
+    console.log('[User] Initializing new user data');
     const now = Date.now();
     const today = new Date().toDateString();
     set({
@@ -143,6 +153,64 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     const { userData } = get();
     const today = new Date().toDateString();
     
+    // END-OF-DAY EVALUATION - Check for bad day consequences
+    const studyGoal = userData.studyGoalHours || 3;
+    const studyHours = (userData.studyMinutesToday || 0) / 60;
+    const waterGoal = userData.hydrationGoalGlasses || 8;
+    const mealGoal = userData.mealGoalCount || 3;
+    
+    // Determine if this was a terrible day
+    const isTerribleDay = studyHours === 0; // No studying at all
+    const isBadDay = studyHours < (studyGoal * 0.3); // Less than 30% of study goal
+    const isPoorHabits = userData.waterGlasses < (waterGoal * 0.5) || userData.mealsLogged < (mealGoal * 0.5);
+    
+    let streakBroken = false;
+    let newStreak = userData.currentStreak;
+    let qCoinsPenalty = 0;
+    
+    if (isTerribleDay) {
+      // TERRIBLE DAY: No studying at all
+      console.log('[Daily] 😔 TERRIBLE DAY DETECTED - No studying completed');
+      console.log(`[Daily] Study: ${studyHours.toFixed(1)}h/${studyGoal}h, Water: ${userData.waterGlasses}/${waterGoal}, Meals: ${userData.mealsLogged}/${mealGoal}`);
+      
+      // Break streak and apply penalties
+      streakBroken = true;
+      newStreak = 0;
+      qCoinsPenalty = 20; // Lose 20 Q-Coins for terrible day
+      
+      console.log('[Daily] 💔 Streak broken! No Q-Coins earned today');
+      console.log('[Daily] 🎭 Quillby will show disappointed message');
+      
+    } else if (isBadDay && isPoorHabits) {
+      // BAD DAY: Poor study + poor habits
+      console.log('[Daily] 😟 BAD DAY DETECTED - Poor study and habits');
+      console.log(`[Daily] Study: ${studyHours.toFixed(1)}h/${studyGoal}h, Water: ${userData.waterGlasses}/${waterGoal}, Meals: ${userData.mealsLogged}/${mealGoal}`);
+      
+      // Break streak but smaller penalty
+      streakBroken = true;
+      newStreak = 0;
+      qCoinsPenalty = 10; // Lose 10 Q-Coins for bad day
+      
+      console.log('[Daily] 💔 Streak broken! Reduced Q-Coins earned today');
+      
+    } else if (studyHours >= (studyGoal * 0.8) && userData.waterGlasses >= (waterGoal * 0.7) && userData.mealsLogged >= (mealGoal * 0.7)) {
+      // GOOD DAY: Met most goals
+      newStreak = userData.currentStreak + 1;
+      console.log(`[Daily] ✨ GOOD DAY! Streak continued: ${newStreak} days`);
+      
+    } else {
+      // MEDIOCRE DAY: Some progress but not great
+      // Keep streak but don't increase it
+      console.log('[Daily] 😐 Mediocre day - streak maintained but not increased');
+    }
+    
+    // Apply Q-Coins penalty if applicable
+    let newQCoins = userData.qCoins;
+    if (qCoinsPenalty > 0) {
+      newQCoins = Math.max(0, userData.qCoins - qCoinsPenalty);
+      console.log(`[Daily] 💰 Q-Coins penalty: -${qCoinsPenalty} (${userData.qCoins} → ${newQCoins})`);
+    }
+    
     const updatedUserData = {
       ...userData,
       ateBreakfast: false,
@@ -152,49 +220,101 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
       studyMinutesToday: 0,
       appleTapsToday: 0,
       coffeeTapsToday: 0,
+      missedCheckpoints: 0, // Reset missed checkpoints for new day
+      currentStreak: newStreak,
+      qCoins: newQCoins,
       lastCheckInDate: today,
       lastSleepReset: today,
       lastExerciseReset: today,
       lastStudyReset: today,
       lastConsumableReset: today,
+      // Store evaluation results for message system
+      lastDayEvaluation: {
+        date: today,
+        wasTerribleDay: isTerribleDay,
+        wasBadDay: isBadDay && isPoorHabits,
+        streakBroken,
+        qCoinsPenalty,
+        studyHours: studyHours.toFixed(1),
+        studyGoal: studyGoal.toString(),
+        waterCount: userData.waterGlasses,
+        waterGoal,
+        mealCount: userData.mealsLogged,
+        mealGoal
+      }
     };
     
     set({ userData: updatedUserData });
     syncToDatabase(updatedUserData);
     
-    console.log('[Daily] Daily habits reset for testing');
+    if (isTerribleDay) {
+      console.log('[Daily] 😔 Daily reset complete - Terrible day consequences applied');
+    } else if (isBadDay && isPoorHabits) {
+      console.log('[Daily] 😟 Daily reset complete - Bad day consequences applied');
+    } else {
+      console.log('[Daily] Daily habits reset for new day');
+    }
   },
 
   // Onboarding actions
   completeOnboarding: async () => {
-    const { userData } = get();
-    const updatedUserData = {
-      ...userData,
-      onboardingCompleted: true
-    };
-    
-    set({ userData: updatedUserData });
-    syncToDatabase(updatedUserData);
-    
-    // Save offline data for offline mode
     try {
-      const { saveOfflineUserData } = await import('../../../lib/offlineMode');
-      await saveOfflineUserData(updatedUserData);
-    } catch (err) {
-      console.warn('[Onboarding] Could not save offline data:', err);
-    }
-    
-    // Also mark device-level onboarding as completed
-    try {
-      const { markOnboardingCompleted } = await import('../../../lib/deviceOnboarding');
-      const success = await markOnboardingCompleted();
-      if (success) {
-        console.log('[Onboarding] Device-level onboarding marked as completed');
-      } else {
-        console.warn('[Onboarding] Failed to mark device-level onboarding as completed');
+      const { userData } = get();
+      const updatedUserData = {
+        ...userData,
+        onboardingCompleted: true
+      };
+      
+      console.log('[Onboarding] Setting onboarding completed in state...');
+      set({ userData: updatedUserData });
+      
+      // Try to sync to database but don't fail if it doesn't work
+      try {
+        console.log('[Onboarding] Syncing to database...');
+        syncToDatabase(updatedUserData);
+      } catch (syncError) {
+        console.warn('[Onboarding] Database sync failed, continuing anyway:', syncError);
       }
-    } catch (err) {
-      console.error('[Onboarding] Error marking device-level onboarding:', err);
+      
+      // Save offline data for offline mode
+      try {
+        console.log('[Onboarding] Saving offline data...');
+        const { saveOfflineUserData } = await import('../../../lib/offlineMode');
+        await saveOfflineUserData(updatedUserData);
+        console.log('[Onboarding] Offline data saved successfully');
+      } catch (offlineError) {
+        console.warn('[Onboarding] Could not save offline data:', offlineError);
+      }
+      
+      // Also mark device-level onboarding as completed
+      try {
+        console.log('[Onboarding] Marking device-level onboarding...');
+        const { markOnboardingCompleted } = await import('../../../lib/deviceOnboarding');
+        const success = await markOnboardingCompleted();
+        if (success) {
+          console.log('[Onboarding] Device-level onboarding marked as completed');
+        } else {
+          console.warn('[Onboarding] Failed to mark device-level onboarding as completed');
+        }
+      } catch (deviceError) {
+        console.warn('[Onboarding] Error marking device-level onboarding:', deviceError);
+      }
+      
+      console.log('[Onboarding] Completion process finished successfully');
+    } catch (error) {
+      console.error('[Onboarding] Critical error during completion:', error);
+      
+      // At minimum, set the onboarding completed flag
+      const { userData } = get();
+      set({ 
+        userData: { 
+          ...userData, 
+          onboardingCompleted: true 
+        } 
+      });
+      
+      // Re-throw the error so the caller can handle it
+      throw error;
     }
   },
 

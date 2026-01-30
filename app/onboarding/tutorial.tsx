@@ -242,25 +242,44 @@ export default function TutorialScreen() {
     });
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     console.log('[Tutorial] Completed');
     
-    // Final celebration animation
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.2,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      completeOnboarding();
+    try {
+      // Final celebration animation
+      await new Promise<void>((resolve) => {
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.2,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => resolve());
+      });
+      
+      // Complete onboarding with error handling
+      console.log('[Tutorial] Starting onboarding completion...');
+      await completeOnboarding();
+      console.log('[Tutorial] Onboarding completion successful');
+      
+      // Small delay before navigation to ensure state is updated
+      setTimeout(() => {
+        console.log('[Tutorial] Navigating to home screen...');
+        router.replace('/(tabs)');
+      }, 100);
+      
+    } catch (error) {
+      console.error('[Tutorial] Error during completion:', error);
+      
+      // Fallback: navigate anyway but log the error
+      console.log('[Tutorial] Navigating despite error...');
       router.replace('/(tabs)');
-    });
+    }
   };
 
   const step = tutorialSteps[currentStep];

@@ -113,69 +113,89 @@ export const useMealTracking = (buddyName: string) => {
     setTimeout(() => {
       const shouldBeHappy = areAllHabitsCompletedForCurrentTime();
       setCurrentAnimation(shouldBeHappy ? 'idle-sit-happy' : 'idle');
-    }, 2000); // Back to appropriate idle after 2s
+    }, 3000); // Changed to 3 seconds to match water animation duration
     
     // Log meal in store (handles energy calculation)
     logMeal();
     
-    // Generate appropriate message based on meal count and weight goal
+    // Generate appropriate message based on meal count, time, and weight goal
     const newMealCount = currentMeals + 1;
+    const currentHour = new Date().getHours();
     let newMessage = '';
     
     if (newMealCount <= mealGoal) {
-      // Normal meals (1-goal) - Positive messages
-      const normalMessages = {
-        lose: [
-          "🍎 Light snack? Nice self-control!",
-          "Feeling good with that portion!",
-          "Perfect amount - not too full!"
-        ],
-        maintain: [
-          "🍔 Good balanced meal! Ready to focus!",
-          "Nice fuel for our brain power!",
-          "That hit the spot! 😋"
-        ],
-        gain: [
-          "🥩 Solid meal! Building up our energy!",
-          "Good nutrition for growing strong!",
-          "Feeling full and ready to work!"
-        ]
+      // Normal meals (1-goal) - Time and goal-based messages
+      const timeBasedMessages = {
+        lose: {
+          morning: "🍳 Light breakfast logged! Perfect portion for your goals!",
+          lunch: "🥗 Healthy lunch! Staying on track with smaller portions!",
+          dinner: "🍽️ Smart dinner choice! Light and satisfying!",
+          snack: "🍎 Light snack logged! Good self-control!"
+        },
+        maintain: {
+          morning: "🍳 Good breakfast! Balanced start to the day!",
+          lunch: "🥪 Nice lunch! Perfect fuel for afternoon focus!",
+          dinner: "🍽️ Solid dinner! Just the right amount!",
+          snack: "🍪 Snack time! Keeping energy steady!"
+        },
+        gain: {
+          morning: "🥞 Hearty breakfast! Building up our energy stores!",
+          lunch: "🍔 Good lunch! Fueling up for growth!",
+          dinner: "🍖 Solid dinner! Perfect for building strength!",
+          snack: "🥜 Power snack! Extra nutrition for our goals!"
+        }
       };
       
-      const mealNames = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Extra'];
-      const mealIndex = Math.min(currentMeals, normalMessages[weightGoal].length - 1);
-      const mealName = mealNames[currentMeals] || 'Meal';
-      const baseMessage = normalMessages[weightGoal][mealIndex] || normalMessages[weightGoal][2];
+      // Determine meal type based on time and count
+      let mealType = 'snack';
+      if (currentHour >= 6 && currentHour < 11 && newMealCount === 1) {
+        mealType = 'morning';
+      } else if (currentHour >= 11 && currentHour < 16 && newMealCount <= 2) {
+        mealType = 'lunch';
+      } else if (currentHour >= 16 && currentHour < 21 && newMealCount <= 3) {
+        mealType = 'dinner';
+      }
+      
+      const baseMessage = timeBasedMessages[weightGoal][mealType];
       
       // Calculate energy for display
       const baseEnergy = 15;
       const portionMultiplier = userData.mealPortionSize || 1.0;
       const energyGained = Math.round(baseEnergy * portionMultiplier);
       
-      newMessage = `🍽️ ${mealName} logged!\n${baseMessage}\n+${energyGained} Energy`;
+      newMessage = `${baseMessage}\n+${energyGained} Energy • Meal ${newMealCount}/${mealGoal}`;
+      
+      // Add completion message if this completes the goal
+      if (newMealCount === mealGoal) {
+        newMessage += `\n🎉 Daily meal goal complete! Well done!`;
+      }
       
     } else {
-      // Overeating (goal+1) - Consequence messages
-      const overeatingMessages = {
+      // Overeating (goal+1) - Time-aware consequence messages
+      const timeAwareOvereating = {
         lose: {
-          4: "😅 Whoa, maybe a bit too much... feeling stuffed!",
-          5: "🤢 Oof, stomach's protesting...",
-          6: "Let's take it easy next meal!"
+          early: "😅 Extra meal early in the day... maybe save room for later?",
+          late: "🌙 Late night eating... your body might not love this tomorrow!",
+          normal: "😅 That's one more than planned... feeling a bit stuffed!"
         },
         maintain: {
-          4: "😅 Whoa, maybe a bit too much... feeling stuffed!",
-          5: "🤢 Oof, stomach's protesting...",
-          6: "Let's take it easy next meal!"
+          early: "😅 Extra meal early on... might feel too full later!",
+          late: "🌙 Late night munchies got us... tomorrow's a new day!",
+          normal: "😅 One more than usual... stomach's definitely full!"
         },
         gain: {
-          4: "😅 Whoa, maybe a bit too much... feeling stuffed!",
-          5: "🤢 Oof, stomach's protesting...",
-          6: "Let's take it easy next meal!"
+          early: "😅 Extra fuel early... might be too much even for our goals!",
+          late: "🌙 Late night eating... even for gaining, this might be much!",
+          normal: "😅 That's quite a bit... even for building up!"
         }
       };
       
-      const messageKey = newMealCount > 6 ? 6 : newMealCount;
-      newMessage = overeatingMessages[weightGoal][messageKey] || overeatingMessages[weightGoal][6];
+      let timeCategory = 'normal';
+      if (currentHour < 14) timeCategory = 'early';
+      else if (currentHour >= 21) timeCategory = 'late';
+      
+      newMessage = timeAwareOvereating[weightGoal][timeCategory];
+      newMessage += `\nMeal ${newMealCount}/${mealGoal} • Maybe take it easy next time!`;
     }
     
     setMessage(newMessage);

@@ -15,6 +15,28 @@ interface RoomLayersProps {
 export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, qCoins = 0 }: RoomLayersProps) {
   const { userData } = useQuillbyStore();
   const roomCustomization = userData.roomCustomization;
+  
+  // Simple loading state - show all images at once after a brief delay
+  const [showRoom, setShowRoom] = React.useState(false);
+  
+  React.useEffect(() => {
+    // Small delay to ensure all images load together
+    const timer = setTimeout(() => {
+      setShowRoom(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Show loading state briefly
+  if (!showRoom) {
+    return (
+      <View style={styles.loadingContainer} pointerEvents={pointerEvents}>
+        <View style={styles.loadingPlaceholder} />
+      </View>
+    );
+  }
+  
   // Determine which room wall to show based on mess points
   const getRoomWall = () => {
     if (messPoints <= 5) {
@@ -161,6 +183,18 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    position: 'absolute',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    backgroundColor: '#F5F5F5',
+  },
+  loadingPlaceholder: {
+    position: 'absolute',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    backgroundColor: '#E8E8E8',
+  },
   wallLayer: {
     position: 'absolute',
     width: SCREEN_WIDTH,

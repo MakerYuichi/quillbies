@@ -95,6 +95,21 @@ export interface UserData {
   // Meal tracking
   mealGoalCount?: number; // Daily meal goal count
   
+  // End-of-day evaluation
+  lastDayEvaluation?: {
+    date: string;
+    wasTerribleDay: boolean;
+    wasBadDay: boolean;
+    streakBroken: boolean;
+    qCoinsPenalty: number;
+    studyHours: string;
+    studyGoal: string;
+    waterCount: number;
+    waterGoal: number;
+    mealCount: number;
+    mealGoal: number;
+  };
+  
   // Room Customization
   roomCustomization?: {
     lightType: 'lamp' | 'colored-fairy-lights'; // Default: 'lamp'
