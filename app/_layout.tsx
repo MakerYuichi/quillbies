@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, Text, StatusBar } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useQuillbyStore } from './state/store-modular';
 import { authenticateDevice, isDeviceAuthenticated } from '../lib/deviceAuth';
 import { requestNotificationPermissions } from '../lib/notifications';
@@ -61,7 +62,10 @@ const setupGlobalErrorHandlers = () => {
 };
 
 export default function RootLayout() {
-  const initializeUser = useQuillbyStore((state) => state.initializeUser);
+  const { initializeUser, loadFromDatabase } = useQuillbyStore((state) => ({ 
+    initializeUser: state.initializeUser,
+    loadFromDatabase: state.loadFromDatabase 
+  }));
   const [isReady, setIsReady] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   
@@ -92,12 +96,21 @@ export default function RootLayout() {
         }
       }
       
-      // Initialize local user data
+      // Initialize local user data (only if needed)
       try {
         initializeUser();
         console.log('[App] User data initialized');
       } catch (userError) {
         console.warn('[App] User initialization failed:', userError);
+      }
+      
+      // Load data from database after initialization
+      try {
+        console.log('[App] Loading data from database...');
+        await loadFromDatabase();
+        console.log('[App] Database data loaded');
+      } catch (dbError) {
+        console.warn('[App] Database load failed, continuing with local data:', dbError);
       }
       
       // Request notification permissions
@@ -141,6 +154,7 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
+        <StatusBar style="light" hidden={true} />
         <Stack
           screenOptions={{
             headerShown: false, // Hide header for all screens (onboarding needs full screen)

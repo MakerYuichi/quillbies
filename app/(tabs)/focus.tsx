@@ -54,8 +54,11 @@ export default function FocusScreen() {
   const handleSessionStart = (config: SessionConfig) => {
     const success = startFocusSession(pendingDeadlineId);
     if (success) {
+      console.log('[Focus] Session started successfully, navigating to study-session');
       // Store session config in session data if needed
       router.push('/study-session');
+    } else {
+      console.error('[Focus] Failed to start session');
     }
     setPendingDeadlineId(undefined);
   };

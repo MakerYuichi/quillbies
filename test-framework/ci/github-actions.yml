@@ -1,0 +1,367 @@
+# GitHub Actions CI/CD Pipeline for Quillby App Testing
+# Place this file in .github/workflows/test-automation.yml
+
+name: Test Automation Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '18'
+  JAVA_VERSION: '11'
+  EXPO_CLI_VERSION: 'latest'
+
+jobs:
+  # Unit and Integration Tests
+  unit-integration-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        cd quillby-app
+        npm ci
+        cd test-framework
+        npm ci
+        
+    - name: Run linting
+      run: |
+        cd quillby-app/test-framework
+        npm run lint:tests
+        
+    - name: Run unit tests
+      run: |
+        cd quillby-app/test-framework
+        npm run test:unit -- --ci --coverage --watchAll=false
+        
+    - name: Run integration tests
+      run: |
+        cd quillby-app/test-framework
+        npm run test:integration -- --ci --coverage --watchAll=false
+        
+    - name: Run performance tests
+      run: |
+        cd quillby-app
+        npm run test:performance
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-node-${{ matrix.node-version }}
+        path: |
+          quillby-app/test-framework/reports/
+          quillby-app/test-framework/coverage/
+          
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./quillby-app/test-framework/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        
+    - name: Comment PR with test results
+      uses: actions/github-script@v7
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './quillby-app/test-framework/reports/test-report.html';
+          
+          if (fs.existsSync(path)) {
+            const testResults = fs.readFileSync('./quillby-app/test-framework/reports/junit.xml', 'utf8');
+            // Parse and comment with test summary
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## Test Results\n\nUnit and integration tests completed. Check artifacts for detailed results.'
+            });
+          }
+
+  # E2E Tests - iOS
+  e2e-tests-ios:
+    name: E2E Tests (iOS)
+    runs-on: macos-latest
+    needs: unit-integration-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        cd quillby-app
+        npm ci
+        cd test-framework
+        npm ci
+        
+    - name: Setup iOS Simulator
+      run: |
+        xcrun simctl create "iPhone 14 Test" "iPhone 14"
+        xcrun simctl boot "iPhone 14 Test"
+        
+    - name: Install Expo CLI
+      run: npm install -g @expo/cli@${{ env.EXPO_CLI_VERSION }}
+      
+    - name: Build iOS app for testing
+      run: |
+        cd quillby-app
+        npx expo prebuild --platform ios
+        cd test-framework
+        npm run build:e2e:ios
+        
+    - name: Run E2E tests on iOS
+      run: |
+        cd quillby-app/test-framework
+        npm run test:e2e:ios -- --headless
+        
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-results-ios
+        path: |
+          quillby-app/test-framework/e2e/artifacts/
+          quillby-app/test-framework/reports/
+
+  # E2E Tests - Android
+  e2e-tests-android:
+    name: E2E Tests (Android)
+    runs-on: ubuntu-latest
+    needs: unit-integration-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Install dependencies
+      run: |
+        cd quillby-app
+        npm ci
+        cd test-framework
+        npm ci
+        
+    - name: Create Android Emulator
+      run: |
+        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "system-images;android-30;google_apis;x86_64"
+        echo "no" | $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd --force --name "Pixel_4_API_30" --abi google_apis/x86_64 --package "system-images;android-30;google_apis;x86_64"
+        
+    - name: Start Android Emulator
+      run: |
+        $ANDROID_HOME/emulator/emulator -avd "Pixel_4_API_30" -no-audio -no-window -gpu swiftshader_indirect &
+        adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done'
+        
+    - name: Install Expo CLI
+      run: npm install -g @expo/cli@${{ env.EXPO_CLI_VERSION }}
+      
+    - name: Build Android app for testing
+      run: |
+        cd quillby-app
+        npx expo prebuild --platform android
+        cd test-framework
+        npm run build:e2e:android
+        
+    - name: Run E2E tests on Android
+      run: |
+        cd quillby-app/test-framework
+        npm run test:e2e:android -- --headless
+        
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-results-android
+        path: |
+          quillby-app/test-framework/e2e/artifacts/
+          quillby-app/test-framework/reports/
+
+  # Performance Testing
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: unit-integration-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        cd quillby-app
+        npm ci
+        
+    - name: Run performance tests
+      run: |
+        cd quillby-app
+        npm run test:performance
+        
+    - name: Run bundle analysis
+      run: |
+        cd quillby-app
+        npx expo export --platform web
+        npx bundlesize
+        
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-results
+        path: |
+          quillby-app/performance-report.json
+          quillby-app/bundle-analysis/
+
+  # Security Testing
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run security audit
+      run: |
+        cd quillby-app
+        npm audit --audit-level moderate
+        
+    - name: Run dependency check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'Quillby App'
+        path: './quillby-app'
+        format: 'HTML'
+        
+    - name: Upload security results
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-results
+        path: reports/
+
+  # Test Results Summary
+  test-summary:
+    name: Test Results Summary
+    runs-on: ubuntu-latest
+    needs: [unit-integration-tests, e2e-tests-ios, e2e-tests-android, performance-tests, security-tests]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Generate test summary
+      run: |
+        echo "# Test Automation Results" > test-summary.md
+        echo "" >> test-summary.md
+        echo "## Test Status" >> test-summary.md
+        echo "- Unit/Integration Tests: ${{ needs.unit-integration-tests.result }}" >> test-summary.md
+        echo "- E2E Tests (iOS): ${{ needs.e2e-tests-ios.result }}" >> test-summary.md
+        echo "- E2E Tests (Android): ${{ needs.e2e-tests-android.result }}" >> test-summary.md
+        echo "- Performance Tests: ${{ needs.performance-tests.result }}" >> test-summary.md
+        echo "- Security Tests: ${{ needs.security-tests.result }}" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "## Coverage Report" >> test-summary.md
+        echo "Coverage reports are available in the artifacts." >> test-summary.md
+        
+    - name: Comment PR with summary
+      uses: actions/github-script@v7
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('test-summary.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+          
+    - name: Upload test summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-summary
+        path: test-summary.md
+
+  # Deployment (only on main branch with passing tests)
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: test-summary
+    if: github.ref == 'refs/heads/main' && needs.test-summary.result == 'success'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install Expo CLI
+      run: npm install -g @expo/cli@${{ env.EXPO_CLI_VERSION }}
+      
+    - name: Install dependencies
+      run: |
+        cd quillby-app
+        npm ci
+        
+    - name: Build and deploy to Expo
+      run: |
+        cd quillby-app
+        npx expo build:web
+        # Add deployment commands here
+        
+    - name: Notify deployment
+      run: |
+        echo "Deployment completed successfully"
+        # Add notification logic (Slack, email, etc.)

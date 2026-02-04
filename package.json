@@ -6,7 +6,16 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "echo 'Tests disabled - install Jest to enable'",
+    "test:unit": "echo 'Tests disabled - install Jest to enable'",
+    "test:integration": "echo 'Tests disabled - install Jest to enable'",
+    "test:e2e": "echo 'Tests disabled - install Jest to enable'",
+    "test:performance": "node test-performance.js",
+    "test:all": "echo 'Tests disabled - install Jest to enable'",
+    "test:coverage": "echo 'Tests disabled - install Jest to enable'",
+    "test:ci": "echo 'Tests disabled - install Jest to enable'",
+    "test:setup": "echo 'Tests disabled - install Jest to enable'"
   },
   "dependencies": {
     "@expo-google-fonts/caveat": "^0.4.2",

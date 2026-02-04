@@ -42,7 +42,7 @@ function StudySessionContent() {
   
   console.log('[StudySession] Render - session exists:', !!session);
   
-  // Keep awake management with enhanced error handling
+  // Keep awake management with simplified error handling
   useEffect(() => {
     let keepAwakeTag = 'study-session';
     
@@ -53,25 +53,15 @@ function StudySessionContent() {
       }
       
       try {
-        // Multiple layers of error handling
-        await Promise.resolve(activateKeepAwakeAsync(keepAwakeTag)).catch((error) => {
-          console.warn('[KeepAwake] Promise-level error caught:', error);
-          throw error; // Re-throw to be caught by outer try-catch
-        });
+        await activateKeepAwakeAsync(keepAwakeTag);
         console.log('[KeepAwake] Activated for study session');
       } catch (error) {
-        console.warn('[KeepAwake] Failed to activate:', error);
-        // Don't throw - keep awake is not critical for app functionality
-        
-        // Also disable the module to prevent future attempts
-        activateKeepAwakeAsync = null;
-        deactivateKeepAwake = null;
+        console.warn('[KeepAwake] Failed to activate, continuing without keep awake:', error);
       }
     };
     
     const deactivateKeepAwakeOnExit = () => {
       if (!deactivateKeepAwake) {
-        console.log('[KeepAwake] Module not available, skipping deactivation');
         return;
       }
       
@@ -83,23 +73,12 @@ function StudySessionContent() {
       }
     };
     
-    // Activate keep awake when component mounts (with multiple error handling layers)
-    try {
-      activateKeepAwake().catch((error) => {
-        console.warn('[KeepAwake] Promise rejection caught:', error);
-        // Silently handle the error - keep awake is not essential
-      });
-    } catch (syncError) {
-      console.warn('[KeepAwake] Synchronous error caught:', syncError);
-    }
+    // Activate keep awake when component mounts
+    activateKeepAwake();
     
     // Deactivate when component unmounts
     return () => {
-      try {
-        deactivateKeepAwakeOnExit();
-      } catch (error) {
-        console.warn('[KeepAwake] Cleanup error:', error);
-      }
+      deactivateKeepAwakeOnExit();
     };
   }, []);
   
@@ -415,9 +394,19 @@ function StudySessionContent() {
   };
   
   if (!session) {
+    console.log('[StudySession] No active session found, redirecting to focus screen');
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>No active session</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>No active session found</Text>
+          <Text style={styles.errorSubtext}>Please start a focus session from the Focus tab</Text>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.push('/(tabs)/focus')}
+          >
+            <Text style={styles.backButtonText}>Go to Focus</Text>
+          </TouchableOpacity>
+        </View>
         
         {/* Interactive Tooltip for first-time users - show even without session */}
         <InteractiveTooltip
@@ -1302,5 +1291,33 @@ const styles = StyleSheet.create({
     color: '#FF0000',
     textAlign: 'center',
     marginTop: 50,
+  },
+  
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  errorSubtext: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  
+  backButton: {
+    backgroundColor: '#6200EA',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+  },
+  
+  backButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
