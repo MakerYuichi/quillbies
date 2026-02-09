@@ -329,7 +329,8 @@ function StudySessionContent() {
       
       // Calculate available break time
       const availableBreakTime = session ? session.maxBreakTime - session.totalBreakTime : 5 * 60;
-      const breakDuration = Math.min(5 * 60, availableBreakTime); // 5 minutes or remaining time
+      const configuredBreakDuration = session?.config?.breakDuration ? session.config.breakDuration * 60 : 5 * 60; // Convert minutes to seconds
+      const breakDuration = Math.min(configuredBreakDuration, availableBreakTime); // Use configured duration or remaining time
       
       // Start break
       setIsOnBreak(true);
@@ -378,18 +379,18 @@ function StudySessionContent() {
     try {
       endFocusSession();
       
-      // Navigate based on session type
+      // Navigate based on session type - use replace to avoid visual glitch on iOS
       if (selectedDeadlineId) {
         // Deadline-focused session - return to focus screen
-        router.push('/(tabs)/focus');
+        router.replace('/(tabs)/focus');
       } else {
         // Generic focus session - return to home
-        router.push('/(tabs)/');
+        router.replace('/(tabs)/');
       }
     } catch (error) {
       console.error('[StudySession] Error ending session:', error);
       // Fallback navigation
-      router.push('/(tabs)/');
+      router.replace('/(tabs)/');
     }
   };
   
@@ -455,7 +456,7 @@ function StudySessionContent() {
       const minutes = Math.floor(breakTimeRemaining / 60);
       const seconds = breakTimeRemaining % 60;
       const totalBreakUsed = session ? session.totalBreakTime : 0;
-      const maxBreak = session ? session.maxBreakTime : 5 * 60;
+      const maxBreak = session ? session.maxBreakTime : (session?.config?.breakDuration ? session.config.breakDuration * 60 : 5 * 60);
       const remainingTotal = Math.max(0, maxBreak - totalBreakUsed);
       const remainingMinutes = Math.floor(remainingTotal / 60);
       
@@ -491,7 +492,8 @@ function StudySessionContent() {
     }
     
     // Different messages based on session progress
-    const progressPercent = (session.duration / (25 * 60)) * 100;
+    const sessionDurationSeconds = session?.config?.duration ? session.config.duration * 60 : 25 * 60;
+    const progressPercent = (session.duration / sessionDurationSeconds) * 100;
     
     if (progressPercent < 25) {
       return `🚀 Let's get started! First steps!\n${buddyName} is ready to focus!`;
@@ -608,12 +610,12 @@ function StudySessionContent() {
             <View 
               style={[
                 styles.timerBar, 
-                { width: `${Math.max(100 - (session.duration / (25 * 60)) * 100, 0)}%` }
+                { width: `${Math.max(100 - (session.duration / (session?.config?.duration ? session.config.duration * 60 : 25 * 60)) * 100, 0)}%` }
               ]} 
             />
           </View>
           <Text style={styles.timerText}>
-            {formatTime(Math.max((25 * 60) - session.duration, 0))} remaining
+            {formatTime(Math.max((session?.config?.duration ? session.config.duration * 60 : 25 * 60) - session.duration, 0))} remaining
           </Text>
         </View>
         
@@ -663,7 +665,7 @@ function StudySessionContent() {
               ? 'Skip Break' 
               : session && session.totalBreakTime >= session.maxBreakTime
               ? 'No Break'
-              : `${Math.floor((session ? session.maxBreakTime - session.totalBreakTime : 5 * 60) / 60)}m Break`
+              : `${Math.floor((session ? session.maxBreakTime - session.totalBreakTime : (session?.config?.breakDuration ? session.config.breakDuration * 60 : 5 * 60)) / 60)}m Break`
             }
           </Text>
         </TouchableOpacity>

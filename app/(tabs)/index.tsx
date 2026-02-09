@@ -31,6 +31,7 @@ import { useFirstTimeWelcome } from '../hooks/useFirstTimeWelcome';
 import { useDayEvaluationMessages } from '../hooks/useDayEvaluationMessages';
 import { useNotifications } from '../hooks/useNotifications';
 import NotificationBanner from '../components/ui/NotificationBanner';
+import { useImageLoading } from '../components/ImagePreloader';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -51,6 +52,7 @@ export default function HomeScreen() {
 
 function HomeScreenContent() {
   const router = useRouter();
+  const { imagesLoaded } = useImageLoading();
   
   // Wrap store access in try-catch to prevent crashes
   let storeData;
@@ -79,6 +81,11 @@ function HomeScreenContent() {
         </Text>
       </View>
     );
+  }
+  
+  // Wait for images to load before showing content
+  if (!imagesLoaded) {
+    return null; // ImagePreloader will show loading overlay
   }
   const [isCleaning, setIsCleaning] = React.useState(false);
   const [cleaningStage, setCleaningStage] = React.useState(1);
@@ -550,7 +557,7 @@ function HomeScreenContent() {
   };
 
   const handleSessionStart = (config: SessionConfig) => {
-    const success = startFocusSession();
+    const success = startFocusSession(undefined, config);
     if (success) {
       router.push('/study-session');
     }
@@ -841,40 +848,40 @@ function HomeScreenContent() {
       style={styles.container}
       resizeMode="cover"
     >
-      {/* FIXED BACKGROUND LAYERS - Switch between room, exercise environment, and sleep timer */}
-      {isExercising ? (
-        <>
-          <ExerciseEnvironment pointerEvents="none" />
-          {/* Exercise Timer Overlay */}
-          <View style={styles.exerciseTimerContainer}>
-            <Text style={styles.exerciseTimerLabel}>
-              {buddyName}'s {exerciseType === 'walk' ? 'Walking' : exerciseType === 'stretch' ? 'Stretching' : exerciseType === 'cardio' ? 'Cardio' : 'Energizer'} Session
-            </Text>
-            <Text style={styles.exerciseTimerValue}>{exerciseElapsedTime}</Text>
-          </View>
-        </>
-      ) : (
-        <>
-          <RoomLayers pointerEvents="none" messPoints={userData.messPoints} isSleeping={isSleeping} qCoins={userData.qCoins} />
-          {/* Sleep Timer Overlay - Show when sleeping */}
-          {isSleeping && (
-            <View style={styles.sleepTimerContainer}>
-              <Text style={styles.sleepTimerLabel}>
-                💤 {buddyName} is Sleeping
-              </Text>
-              <Text style={styles.sleepTimerValue}>{sleepElapsedTime}</Text>
-            </View>
-          )}
-        </>
-      )}
+      {/* FIXED BACKGROUND LAYERS - Keep both mounted, just hide/show for instant switching */}
+      <View style={[styles.environmentContainer, !isExercising && styles.hidden]}>
+        <ExerciseEnvironment pointerEvents="none" />
+        {/* Exercise Timer Overlay */}
+        <View style={styles.exerciseTimerContainer}>
+          <Text style={styles.exerciseTimerLabel}>
+            {buddyName}'s {exerciseType === 'walk' ? 'Walking' : exerciseType === 'stretch' ? 'Stretching' : exerciseType === 'cardio' ? 'Cardio' : 'Energizer'} Session
+          </Text>
+          <Text style={styles.exerciseTimerValue}>{exerciseElapsedTime}</Text>
+        </View>
+      </View>
       
-      {/* FIXED HAMSTER */}
-      <HamsterCharacter 
-        selectedCharacter={selectedCharacter}
-        currentAnimation={currentAnimation}
-        isSleeping={isSleeping}
-        pointerEvents="none"
-      />
+      <View style={[styles.environmentContainer, isExercising && styles.hidden]}>
+        <RoomLayers pointerEvents="none" messPoints={userData.messPoints} isSleeping={isSleeping} qCoins={userData.qCoins} />
+        {/* Sleep Timer Overlay - Show when sleeping */}
+        {isSleeping && (
+          <View style={styles.sleepTimerContainer}>
+            <Text style={styles.sleepTimerLabel}>
+              💤 {buddyName} is Sleeping
+            </Text>
+            <Text style={styles.sleepTimerValue}>{sleepElapsedTime}</Text>
+          </View>
+        )}
+      </View>
+      
+      {/* FIXED HAMSTER - Must be above environment layers */}
+      <View style={styles.hamsterContainer}>
+        <HamsterCharacter 
+          selectedCharacter={selectedCharacter}
+          currentAnimation={currentAnimation}
+          isSleeping={isSleeping}
+          pointerEvents="none"
+        />
+      </View>
 
       {/* Time Acceleration Timer Overlay */}
       {timeAccelerationActive && (
@@ -1558,7 +1565,7 @@ function HomeScreenContent() {
       {isSleeping && (
         <View style={styles.dimOverlay} pointerEvents="none" />
       )}
-      
+
       {/* Session Customization Modal */}
       <SessionCustomizationModal
         visible={showSessionModal}
@@ -1590,6 +1597,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+  },
+  // Environment container - keeps both environments mounted
+  environmentContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  // Hidden state - use opacity for instant switching while keeping images in memory
+  hidden: {
+    opacity: 0,
+    pointerEvents: 'none',
+  },
+  // Hamster container - must be above environment layers
+  hamsterContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10, // Above environment layers (zIndex: 1)
+    pointerEvents: 'none',
   },
   // Speech bubble container - now in top area (where energy bar was)
   speechBubbleContainer: {

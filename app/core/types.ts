@@ -139,6 +139,17 @@ export interface SessionData {
   coffeeBoostEndTime: number | null; // When coffee boost expires
   coffeeBoostStartTime: number | null; // When coffee boost started
   interactionBoosts: number; // Total points from apple/coffee taps
+  // Session configuration
+  config?: {
+    duration: number; // in minutes
+    breakDuration: number; // in minutes
+    sessionType: 'pomodoro' | 'custom' | 'flow' | 'premium';
+    autoBreak: boolean;
+    soundEnabled: boolean;
+    customName?: string;
+    backgroundMusic?: boolean;
+    strictMode?: boolean;
+  };
 }
 
 export interface EnergyModifiers {

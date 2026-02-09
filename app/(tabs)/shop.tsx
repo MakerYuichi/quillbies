@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useQuillbyStore } from '../state/store-modular';
 import QuillbyPlusModal from '../components/shop/QuillbyPlusSection';
+import { useImageLoading } from '../components/ImagePreloader';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ShopScreen() {
   const { userData, getShopItems, purchaseItem, updateRoomCustomization } = useQuillbyStore();
+  const { imagesLoaded } = useImageLoading();
   const [selectedCategory, setSelectedCategory] = useState<'light' | 'plant'>('light');
   const [previewLight, setPreviewLight] = useState<string>(userData.roomCustomization?.lightType || 'fairy-lights');
   const [previewPlant, setPreviewPlant] = useState<string>(userData.roomCustomization?.plantType || 'plant');
@@ -98,9 +100,13 @@ export default function ShopScreen() {
     setPreviewPlant('plant'); // Reset to default plant
   };
 
+  // Wait for images to load before showing content
+  if (!imagesLoaded) {
+    return null; // ImagePreloader will show loading overlay
+  }
+
   return (
     <View style={styles.container}>
-
       {/* Room Preview - Exact CSS Layout */}
       <View style={styles.roomPreviewContainer}>
         {/* Header Text */}

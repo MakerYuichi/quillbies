@@ -54,6 +54,7 @@ export default function CharacterSelectScreen() {
         source={require('../../assets/backgrounds/theme.png')}
         style={styles.themeBackground}
         resizeMode="cover"
+        defaultSource={require('../../assets/backgrounds/theme.png')}
       >
         {/* Main Content */}
         <View style={styles.content}>

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ImageBackground } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store-modular';
 import { DeadlineFormData, Deadline } from '../core/types';
@@ -26,7 +25,6 @@ export default function FocusScreen() {
   
   const buddyName = userData.buddyName || 'Quillby';
 
-  // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(false);
@@ -52,13 +50,9 @@ export default function FocusScreen() {
   };
 
   const handleSessionStart = (config: SessionConfig) => {
-    const success = startFocusSession(pendingDeadlineId);
+    const success = startFocusSession(pendingDeadlineId, config);
     if (success) {
-      console.log('[Focus] Session started successfully, navigating to study-session');
-      // Store session config in session data if needed
       router.push('/study-session');
-    } else {
-      console.error('[Focus] Failed to start session');
     }
     setPendingDeadlineId(undefined);
   };
@@ -133,12 +127,13 @@ export default function FocusScreen() {
 
 
   return (
-    <ImageBackground
-      source={require('../../assets/backgrounds/theme.png')}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
+      <ImageBackground
+        source={require('../../assets/backgrounds/theme.png')}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Header with Energy Icon */}
         <View style={styles.header}>
           <View style={styles.titleSection}>
@@ -294,6 +289,7 @@ export default function FocusScreen() {
 
 
       </ScrollView>
+      </ImageBackground>
 
       {/* Create / Edit Deadline Modal */}
       <CreateDeadlineModal
@@ -326,8 +322,9 @@ export default function FocusScreen() {
           setPendingDeadlineId(undefined);
         }}
         onStartSession={handleSessionStart}
+        isPremium={userData.purchasedItems?.includes('premium') || false}
       />
-    </ImageBackground>
+    </>
   );
 }
 

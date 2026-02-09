@@ -55,47 +55,55 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
   },
 
   initializeUser: () => {
-    // Only initialize if userData is completely empty or missing critical fields
     const { userData } = get();
     
-    // Check if user data already exists (from persistence)
-    if (userData && userData.signupDate && userData.lastActiveTimestamp) {
-      console.log('[User] User data already exists, skipping initialization');
+    // Check if user data already exists and is properly initialized
+    if (userData && 
+        userData.signupDate && 
+        userData.lastActiveTimestamp && 
+        typeof userData.energy === 'number' &&
+        typeof userData.qCoins === 'number') {
+      console.log('[User] User data already properly initialized, skipping');
       return;
     }
     
     console.log('[User] Initializing new user data');
     const now = Date.now();
     const today = new Date().toDateString();
-    set({
-      userData: {
-        energy: 100,
-        maxEnergyCap: 100,
-        qCoins: 100,
-        messPoints: 0,
-        lastActiveTimestamp: now,
-        onboardingCompleted: false,
-        sleepSessions: [],
-        ateBreakfast: false,
-        waterGlasses: 0,
-        mealsLogged: 0,
-        weightGoal: 'maintain',
-        mealPortionSize: 1.0,
-        currentStreak: 0,
-        lastCheckInDate: today,
-        lastSleepReset: today,
-        exerciseMinutes: 0,
-        lastExerciseReset: today,
-        studyMinutesToday: 0,
-        lastStudyReset: today,
-        missedCheckpoints: 0,
-        appleTapsToday: 0,
-        coffeeTapsToday: 0,
-        lastConsumableReset: today,
-        purchasedItems: [],
-        signupDate: today
-      }
-    });
+    
+    // Create new user data, preserving any existing values
+    const newUserData = {
+      energy: userData?.energy ?? 100,
+      maxEnergyCap: userData?.maxEnergyCap ?? 100,
+      qCoins: userData?.qCoins ?? 100,
+      messPoints: userData?.messPoints ?? 0,
+      lastActiveTimestamp: now,
+      onboardingCompleted: userData?.onboardingCompleted ?? false,
+      sleepSessions: userData?.sleepSessions ?? [],
+      ateBreakfast: userData?.ateBreakfast ?? false,
+      waterGlasses: userData?.waterGlasses ?? 0,
+      mealsLogged: userData?.mealsLogged ?? 0,
+      weightGoal: userData?.weightGoal ?? 'maintain',
+      mealPortionSize: userData?.mealPortionSize ?? 1.0,
+      currentStreak: userData?.currentStreak ?? 0,
+      lastCheckInDate: userData?.lastCheckInDate ?? today,
+      lastSleepReset: userData?.lastSleepReset ?? today,
+      exerciseMinutes: userData?.exerciseMinutes ?? 0,
+      lastExerciseReset: userData?.lastExerciseReset ?? today,
+      studyMinutesToday: userData?.studyMinutesToday ?? 0,
+      lastStudyReset: userData?.lastStudyReset ?? today,
+      missedCheckpoints: userData?.missedCheckpoints ?? 0,
+      appleTapsToday: userData?.appleTapsToday ?? 0,
+      coffeeTapsToday: userData?.coffeeTapsToday ?? 0,
+      lastConsumableReset: userData?.lastConsumableReset ?? today,
+      purchasedItems: userData?.purchasedItems ?? [],
+      signupDate: userData?.signupDate ?? today,
+      // Preserve any other existing fields
+      ...userData
+    };
+    
+    set({ userData: newUserData });
+    console.log('[User] User initialization completed');
   },
 
   updateEnergy: () => {

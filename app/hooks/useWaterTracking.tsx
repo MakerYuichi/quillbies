@@ -4,7 +4,7 @@ import { useQuillbyStore } from '../state/store-modular';
 
 export const useWaterTracking = (buddyName: string) => {
   const { userData, logWater } = useQuillbyStore();
-  const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
+  const [currentAnimation, setCurrentAnimation] = useState<string>('idle-sit');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
 
@@ -30,13 +30,17 @@ export const useWaterTracking = (buddyName: string) => {
     const hydrationGoal = userData.hydrationGoalGlasses || 8;
     const currentHour = new Date().getHours();
     
+    console.log('[WaterTracking] Drinking water - setting animation to drinking');
+    
     // Show drinking animation
-    setCurrentAnimation('eating');
+    setCurrentAnimation('drinking');
     
     // Return to appropriate idle after 3s
     setTimeout(() => {
       const shouldBeHappy = areAllHabitsCompletedForCurrentTime();
-      setCurrentAnimation(shouldBeHappy ? 'idle-sit-happy' : 'idle');
+      const newAnim = shouldBeHappy ? 'idle-sit-happy' : 'idle-sit';
+      console.log('[WaterTracking] Returning to idle animation:', newAnim);
+      setCurrentAnimation(newAnim);
     }, 3000);
     
     // Log water in store

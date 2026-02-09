@@ -53,6 +53,7 @@ export default function WelcomeScreen() {
       source={require('../../assets/backgrounds/welcome-bg.png')}
       style={styles.background}
       resizeMode="cover"
+      defaultSource={require('../../assets/backgrounds/welcome-bg.png')}
     >
       {/* Semi-transparent overlay for text readability */}
       <View style={styles.overlay}>

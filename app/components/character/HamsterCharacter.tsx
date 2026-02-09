@@ -14,25 +14,13 @@ const HamsterCharacter = memo(function HamsterCharacter({ selectedCharacter, cur
   // Debug log to see what animation is being passed
   console.log('[HamsterCharacter] Animation:', currentAnimation, 'Character:', selectedCharacter, 'Sleeping:', isSleeping);
   
-  // Simple loading state
-  const [showCharacter, setShowCharacter] = React.useState(false);
-  
-  React.useEffect(() => {
-    // Small delay to ensure character loads with room
-    const timer = setTimeout(() => {
-      setShowCharacter(true);
-    }, 150);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
   // Get the correct hamster image/GIF based on selected character and animation
   const getCharacterImage = () => {
     try {
       // For casual character, check if we have the animation
       if (selectedCharacter === 'casual') {
-        // Water drinking animation (only for water button)
-        if (currentAnimation === 'eating') {
+        // Water drinking animation
+        if (currentAnimation === 'drinking') {
           try {
             return require('../../../assets/hamsters/casual/drinking.png');
           } catch {
@@ -147,19 +135,17 @@ const HamsterCharacter = memo(function HamsterCharacter({ selectedCharacter, cur
     return (
       <View pointerEvents={pointerEvents}>
         {/* Small white background for hamster belly */}
-        {showCharacter && <View style={styles.hamsterBellyBg} pointerEvents="none" />}
+        <View style={styles.hamsterBellyBg} pointerEvents="none" />
         
         <View style={styles.petContainer} pointerEvents="none">
-          {showCharacter && (
-            <Image 
-              source={getCharacterImage()}
-              style={styles.characterImage}
-              resizeMode="contain"
-              onError={(error) => {
-                console.warn('[HamsterCharacter] Image load error:', error);
-              }}
-            />
-          )}
+          <Image 
+            source={getCharacterImage()}
+            style={styles.characterImage}
+            resizeMode="contain"
+            onError={(error) => {
+              console.warn('[HamsterCharacter] Image load error:', error);
+            }}
+          />
         </View>
       </View>
     );

@@ -1,22 +1,26 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet, Image, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store-modular';
+import { useImageLoading } from './components/ImagePreloader';
 
 export default function WelcomeBackScreen() {
   const router = useRouter();
   const { userData } = useQuillbyStore();
+  const { imagesLoaded } = useImageLoading();
   
   const selectedCharacter = userData.selectedCharacter || 'casual';
   
-  // Auto-redirect to home with a minimal delay
+  // Navigate to home when images are loaded
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace('/(tabs)');
-    }, 200); // Reduced to 200ms for faster transition
-    
-    return () => clearTimeout(timer);
-  }, [router]);
+    if (imagesLoaded) {
+      console.log('[WelcomeBack] Images ready, navigating to home');
+      // Small delay to show "Ready!" message
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 300);
+    }
+  }, [imagesLoaded, router]);
   
   const getCharacterImage = () => {
     switch (selectedCharacter) {
@@ -33,13 +37,24 @@ export default function WelcomeBackScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {/* Only show the character image */}
+        {/* Character image */}
         <View style={styles.characterContainer}>
           <Image 
             source={getCharacterImage()}
             style={styles.characterImage}
             resizeMode="contain"
           />
+        </View>
+        
+        {/* Loading indicator */}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF9800" />
+          <Text style={styles.loadingText}>
+            {imagesLoaded ? 'Ready!' : 'Loading assets...'}
+          </Text>
+          <Text style={styles.loadingSubtext}>
+            Preparing your study companion
+          </Text>
         </View>
       </View>
     </View>
@@ -65,9 +80,25 @@ const styles = StyleSheet.create({
     borderColor: '#FF9800',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 40,
   },
   characterImage: {
     width: 160,
     height: 160,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 16,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
   },
 });

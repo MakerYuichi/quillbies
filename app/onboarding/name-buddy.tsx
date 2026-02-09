@@ -144,64 +144,64 @@ export default function NameBuddyScreen() {
     console.log('[Hatching] Starting final hatch sequence!');
     setEggStage('hatching');
     
-    // 1. Fade to black screen
+    // 1. Fade to black screen (faster)
     setShowBlackScreen(true);
     Animated.timing(blackScreenOpacity, {
       toValue: 1,
-      duration: 400,
+      duration: 200, // Reduced from 400ms
       useNativeDriver: true,
     }).start(() => {
-      // 2. Egg glows intensely and shakes
+      // 2. Egg glows intensely and shakes (faster)
       Animated.parallel([
         // Intense glow
         Animated.timing(glowScale, {
           toValue: 2.5,
-          duration: 600,
+          duration: 400, // Reduced from 600ms
           useNativeDriver: true,
         }),
-        // Shake sequence
+        // Shake sequence (faster)
         Animated.sequence([
-          Animated.timing(shakeAnim, { toValue: -15, duration: 80, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 15, duration: 80, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: -15, duration: 80, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 15, duration: 80, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: -10, duration: 80, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 10, duration: 80, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 0, duration: 80, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -15, duration: 50, useNativeDriver: true }), // Reduced from 80ms
+          Animated.timing(shakeAnim, { toValue: 15, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -15, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 15, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
         ]),
       ]).start(() => {
         // 3. Egg fully cracks
         setEggStage('crack3');
         
-        // 4. Wait, then show hamster
+        // 4. Show hamster immediately (reduced delay)
         setTimeout(() => {
           setEggStage('hatched');
           Animated.timing(hamsterOpacity, {
             toValue: 1,
-            duration: 600,
+            duration: 400, // Reduced from 600ms
             useNativeDriver: true,
           }).start();
           
-          // 5. Wait, then fade out black screen
+          // 5. Fade out black screen faster
           setTimeout(() => {
             Animated.timing(blackScreenOpacity, {
               toValue: 0,
-              duration: 600,
+              duration: 400, // Reduced from 600ms
               useNativeDriver: true,
             }).start(() => {
               setShowBlackScreen(false);
               
-              // 6. Show title and input
+              // 6. Show title and input immediately
               setShowTitle(true);
               setShowInput(true);
               Animated.timing(titleOpacity, {
                 toValue: 1,
-                duration: 400,
+                duration: 300, // Reduced from 400ms
                 useNativeDriver: true,
               }).start();
             });
-          }, 1200);
-        }, 500);
+          }, 600); // Reduced from 1200ms
+        }, 300); // Reduced from 500ms
       });
     });
   };
@@ -225,6 +225,7 @@ export default function NameBuddyScreen() {
         source={require('../../assets/backgrounds/theme.png')}
         style={styles.background}
         resizeMode="cover"
+        defaultSource={require('../../assets/backgrounds/theme.png')}
       >
         {/* Title - Only shows after hatching */}
         {showTitle && (
@@ -342,6 +343,7 @@ export default function NameBuddyScreen() {
             source={require('../../assets/backgrounds/orange-theme.png')}
             style={styles.orangeBackground}
             resizeMode="cover"
+            defaultSource={require('../../assets/backgrounds/orange-theme.png')}
           >
             {/* Only show input after hatching */}
             {showInput && (

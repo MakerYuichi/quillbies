@@ -3,13 +3,24 @@ import { StateCreator } from 'zustand';
 import { SessionData } from '../../core/types';
 import { UserSlice } from './userSlice';
 
+export interface SessionConfig {
+  duration: number; // in minutes
+  breakDuration: number; // in minutes
+  sessionType: 'pomodoro' | 'custom' | 'flow' | 'premium';
+  autoBreak: boolean;
+  soundEnabled: boolean;
+  customName?: string;
+  backgroundMusic?: boolean;
+  strictMode?: boolean;
+}
+
 export interface SessionSlice {
   session: SessionData | null;
   currentSessionId: string | null;
   selectedDeadlineId: string | null;
   
   // Session actions
-  startFocusSession: (deadlineId?: string) => boolean;
+  startFocusSession: (deadlineId?: string, config?: SessionConfig) => boolean;
   endFocusSession: () => void;
   updateFocusDuringSession: () => void;
   handleDistraction: () => void;
@@ -31,7 +42,7 @@ export const createSessionSlice: StateCreator<
   currentSessionId: null,
   selectedDeadlineId: null,
 
-  startFocusSession: (deadlineId?: string) => {
+  startFocusSession: (deadlineId?: string, config?: SessionConfig) => {
     const { userData } = get();
     
     // Check energy requirements
@@ -47,6 +58,17 @@ export const createSessionSlice: StateCreator<
       energy: newEnergy
     };
     
+    // Use config values or defaults
+    const sessionDuration = config ? config.duration * 60 : 25 * 60; // Convert minutes to seconds
+    const maxBreakTime = config ? (sessionDuration * 0.2) : (25 * 60 * 0.2); // 20% of session duration
+    
+    console.log(`[Session] Starting with config:`, {
+      duration: config?.duration || 25,
+      breakDuration: config?.breakDuration || 5,
+      sessionType: config?.sessionType || 'pomodoro',
+      maxBreakTime: Math.floor(maxBreakTime / 60)
+    });
+    
     set({
       userData: updatedUserData,
       selectedDeadlineId: deadlineId || null,
@@ -61,12 +83,20 @@ export const createSessionSlice: StateCreator<
         distractionWarnings: 0,
         isInGracePeriod: false,
         totalBreakTime: 0,
-        maxBreakTime: 25 * 60 * 0.2,
+        maxBreakTime: maxBreakTime,
         applePremiumUsedThisSession: false,
         coffeePremiumUsedThisSession: false,
         coffeeBoostEndTime: null,
         coffeeBoostStartTime: null,
-        interactionBoosts: 0
+        interactionBoosts: 0,
+        // Store session config for reference
+        config: config || {
+          duration: 25,
+          breakDuration: 5,
+          sessionType: 'pomodoro',
+          autoBreak: true,
+          soundEnabled: true
+        }
       }
     });
     
@@ -255,7 +285,8 @@ export const createSessionSlice: StateCreator<
       },
       userData: {
         ...userData,
-        qCoins: userData.qCoins - cost
+        qCoins: userData.qCoins - cost,
+        appleTapsToday: isPremium ? userData.appleTapsToday : userData.appleTapsToday + 1
       }
     });
     
@@ -287,7 +318,8 @@ export const createSessionSlice: StateCreator<
       },
       userData: {
         ...userData,
-        qCoins: userData.qCoins - cost
+        qCoins: userData.qCoins - cost,
+        coffeeTapsToday: isPremium ? userData.coffeeTapsToday : userData.coffeeTapsToday + 1
       }
     });
     

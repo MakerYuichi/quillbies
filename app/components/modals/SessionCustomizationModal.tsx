@@ -44,14 +44,14 @@ const PRESET_SESSIONS = [
     isPremium: false
   },
   {
-    name: 'Custom Time',
+    name: '⭐ Custom Time',
     duration: 30,
     breakDuration: 5,
     sessionType: 'custom' as const,
     autoBreak: true,
     description: 'Set your own focus and break time',
     isCustom: true,
-    isPremium: false
+    isPremium: true
   },
   {
     name: 'Deep Focus',
@@ -101,6 +101,15 @@ export default function SessionCustomizationModal({
   onStartSession,
   isPremium = false
 }: SessionCustomizationModalProps) {
+  // Debug visibility
+  React.useEffect(() => {
+    console.log('[SessionModal] Visibility changed to:', visible);
+    if (visible) {
+      console.log('[SessionModal] Modal should be visible now!');
+      console.log('[SessionModal] isPremium:', isPremium);
+    }
+  }, [visible, isPremium]);
+  
   const [selectedPreset, setSelectedPreset] = useState(() => {
     // Ensure non-premium users start with a free preset
     const defaultIndex = 0; // Pomodoro Classic
@@ -150,31 +159,17 @@ export default function SessionCustomizationModal({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      transparent={true}
+      transparent
+      animationType="fade"
       onRequestClose={onClose}
-      presentationStyle="overFullScreen"
     >
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.overlay}>
-          <View style={styles.modalContainer}>
-            <ScrollView 
-              style={styles.scrollContainer}
-              contentContainerStyle={styles.scrollContentContainer}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-            >
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>🎯 Customize Your Focus Session</Text>
-              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.title}>🎯 Focus Session</Text>
 
             {/* Session Presets */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Choose Your Session Type</Text>
+            <Text style={styles.sectionTitle}>Choose Your Session Type:</Text>
               {availablePresets.map((preset, index) => {
                 const isLocked = preset.isPremium && !isPremium;
                 return (
@@ -228,11 +223,10 @@ export default function SessionCustomizationModal({
                   </TouchableOpacity>
                 );
               })}
-            </View>
 
-            {/* Custom Time Inputs - Only show when Custom Time is selected */}
-            {isCustomSelected && !isPremiumSelected && (
-              <View style={styles.section}>
+            {/* Custom Time Inputs - Only for Premium Users */}
+            {isCustomSelected && isPremium && (
+              <>
                 <Text style={styles.sectionTitle}>⏱️ Set Custom Times</Text>
                 
                 <View style={styles.customTimeContainer}>
@@ -297,299 +291,83 @@ export default function SessionCustomizationModal({
                   <Text style={styles.timeHint}>💡 Focus: 5-180 minutes</Text>
                   <Text style={styles.timeHint}>💡 Break: 1-30 minutes</Text>
                 </View>
-              </View>
-            )}
-
-            {/* Premium Custom Session - Enhanced Custom Time + Premium Features */}
-            {isPremium && isPremiumSelected && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>⭐ Premium Custom Session</Text>
-                
-                {/* Custom Session Name */}
-                <View style={styles.premiumFeature}>
-                  <Text style={styles.premiumLabel}>Session Name:</Text>
-                  <TextInput
-                    style={styles.premiumInput}
-                    value={customSessionName}
-                    onChangeText={setCustomSessionName}
-                    placeholder="e.g., Math Study, Project Work..."
-                    placeholderTextColor="#999"
-                    maxLength={25}
-                  />
-                </View>
-
-                {/* Custom Times */}
-                <View style={styles.customTimeContainer}>
-                  <View style={styles.timeInputGroup}>
-                    <Text style={styles.premiumTimeLabel}>⭐ Focus Time (minutes)</Text>
-                    <View style={styles.timeInputContainer}>
-                      <TouchableOpacity 
-                        style={[styles.timeButton, styles.premiumTimeButton]}
-                        onPress={() => setCustomDuration(Math.max(5, customDuration - 5))}
-                      >
-                        <Text style={styles.timeButtonText}>-</Text>
-                      </TouchableOpacity>
-                      <TextInput
-                        style={[styles.timeInput, styles.premiumTimeInput]}
-                        value={customDuration.toString()}
-                        onChangeText={(text) => {
-                          const num = parseInt(text) || 5;
-                          setCustomDuration(Math.min(300, Math.max(5, num))); // Premium: up to 5 hours
-                        }}
-                        keyboardType="numeric"
-                        maxLength={3}
-                      />
-                      <TouchableOpacity 
-                        style={[styles.timeButton, styles.premiumTimeButton]}
-                        onPress={() => setCustomDuration(Math.min(300, customDuration + 5))}
-                      >
-                        <Text style={styles.timeButtonText}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.timeInputGroup}>
-                    <Text style={styles.premiumTimeLabel}>⭐ Break Time (minutes)</Text>
-                    <View style={styles.timeInputContainer}>
-                      <TouchableOpacity 
-                        style={[styles.timeButton, styles.premiumTimeButton]}
-                        onPress={() => setCustomBreak(Math.max(1, customBreak - 1))}
-                      >
-                        <Text style={styles.timeButtonText}>-</Text>
-                      </TouchableOpacity>
-                      <TextInput
-                        style={[styles.timeInput, styles.premiumTimeInput]}
-                        value={customBreak.toString()}
-                        onChangeText={(text) => {
-                          const num = parseInt(text) || 1;
-                          setCustomBreak(Math.min(60, Math.max(1, num))); // Premium: up to 1 hour break
-                        }}
-                        keyboardType="numeric"
-                        maxLength={2}
-                      />
-                      <TouchableOpacity 
-                        style={[styles.timeButton, styles.premiumTimeButton]}
-                        onPress={() => setCustomBreak(Math.min(60, customBreak + 1))}
-                      >
-                        <Text style={styles.timeButtonText}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Premium Features */}
-                <View style={styles.premiumFeature}>
-                  <Text style={styles.premiumLabel}>🎵 Background Music</Text>
-                  <TouchableOpacity
-                    style={[styles.toggle, backgroundMusic && styles.toggleActive]}
-                    onPress={() => setBackgroundMusic(!backgroundMusic)}
-                  >
-                    <Text style={styles.toggleText}>
-                      {backgroundMusic ? 'ON' : 'OFF'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.premiumFeature}>
-                  <Text style={styles.premiumLabel}>🔒 Strict Mode</Text>
-                  <TouchableOpacity
-                    style={[styles.toggle, strictMode && styles.toggleActive]}
-                    onPress={() => setStrictMode(!strictMode)}
-                  >
-                    <Text style={styles.toggleText}>
-                      {strictMode ? 'ON' : 'OFF'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.timeHints}>
-                  <Text style={styles.premiumHint}>⭐ Premium: Focus up to 5 hours, Break up to 1 hour</Text>
-                  <Text style={styles.premiumHint}>🔒 Strict mode prevents app switching during sessions</Text>
-                </View>
-              </View>
+              </>
             )}
 
             {/* Settings */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Session Settings</Text>
-              
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>🔔 Sound Notifications</Text>
-                <TouchableOpacity
-                  style={[styles.toggle, soundEnabled && styles.toggleActive]}
-                  onPress={() => setSoundEnabled(!soundEnabled)}
-                >
-                  <Text style={styles.toggleText}>
-                    {soundEnabled ? 'ON' : 'OFF'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>⏰ Auto Break</Text>
-                <Text style={styles.settingValue}>
-                  {PRESET_SESSIONS[selectedPreset].autoBreak ? 'Enabled' : 'Manual'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Session Preview */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Session Preview</Text>
-              <View style={styles.previewCard}>
-                {isPremiumSelected && customSessionName && (
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>Session Name:</Text>
-                    <Text style={styles.previewValue}>{customSessionName}</Text>
-                  </View>
-                )}
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>Focus Time:</Text>
-                  <Text style={styles.previewValue}>
-                    {isCustomSelected ? customDuration : availablePresets[selectedPreset].duration} minutes
-                  </Text>
-                </View>
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>Break Time:</Text>
-                  <Text style={styles.previewValue}>
-                    {isCustomSelected ? customBreak : availablePresets[selectedPreset].breakDuration} minutes
-                  </Text>
-                </View>
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>Session Type:</Text>
-                  <Text style={styles.previewValue}>
-                    {availablePresets[selectedPreset].sessionType}
-                  </Text>
-                </View>
-                {isPremiumSelected && (
-                  <>
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>Background Music:</Text>
-                      <Text style={styles.previewValue}>{backgroundMusic ? 'Enabled' : 'Disabled'}</Text>
-                    </View>
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>Strict Mode:</Text>
-                      <Text style={styles.previewValue}>{strictMode ? 'Enabled' : 'Disabled'}</Text>
-                    </View>
-                  </>
-                )}
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity 
-                style={styles.startButton}
-                onPress={handleStartSession}
+            <Text style={styles.sectionTitle}>Session Settings:</Text>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>🔔 Sound Notifications</Text>
+              <TouchableOpacity
+                style={[styles.toggle, soundEnabled && styles.toggleActive]}
+                onPress={() => setSoundEnabled(!soundEnabled)}
               >
-                <Text style={styles.startButtonText}>
-                  🚀 Start {isCustomSelected ? customDuration : availablePresets[selectedPreset].duration}min Session
+                <Text style={styles.toggleText}>
+                  {soundEnabled ? 'ON' : 'OFF'}
                 </Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
             </View>
-            </ScrollView>
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.startButton} onPress={handleStartSession}>
+              <Text style={styles.startButtonText}>
+                🚀 Start {isCustomSelected ? customDuration : availablePresets[selectedPreset].duration}min Session
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-    paddingTop: Platform.OS === 'ios' ? 44 : 0, // Status bar height for iOS
-  },
-  
-  modalContainer: {
-    width: SCREEN_WIDTH,
-    maxHeight: Platform.OS === 'ios' ? SCREEN_HEIGHT * 0.75 : SCREEN_HEIGHT * 0.85,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  
-  scrollContainer: {
-    flex: 1,
-  },
-  
-  scrollContentContainer: {
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20, // Extra padding for iOS home indicator
-  },
-  
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: Platform.OS === 'ios' ? 20 : 16, // Extra top padding for iOS
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#FFFFFF',
-  },
-  
-  title: {
-    fontSize: SCREEN_WIDTH * 0.045, // Responsive font size
-    fontWeight: '700',
-    color: '#333',
-    flex: 1,
-  },
-  
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  closeButtonText: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#666',
-    fontWeight: '600',
+  modalContainer: {
+    width: SCREEN_WIDTH * 0.9,
+    maxHeight: SCREEN_HEIGHT * 0.8,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  
-  section: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  
-  sectionTitle: {
-    fontSize: SCREEN_WIDTH * 0.04, // Responsive font size
-    fontWeight: '600',
+  title: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 24,
     color: '#333',
-    marginBottom: 15,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 16,
+    color: '#555',
+    marginTop: 16,
+    marginBottom: 12,
   },
   
   presetCard: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F5F5F5',
     padding: 15,
     borderRadius: 12,
     marginBottom: 10,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#E0E0E0',
   },
   
   presetCardSelected: {
@@ -605,7 +383,8 @@ const styles = StyleSheet.create({
   },
   
   presetName: {
-    fontSize: SCREEN_WIDTH * 0.04, // Responsive font size
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },
@@ -630,7 +409,8 @@ const styles = StyleSheet.create({
   },
   
   presetDescription: {
-    fontSize: SCREEN_WIDTH * 0.035, // Responsive font size
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: 14,
     color: '#666',
   },
   presetDescriptionLocked: {
@@ -652,12 +432,14 @@ const styles = StyleSheet.create({
   },
   
   settingLabel: {
-    fontSize: SCREEN_WIDTH * 0.04, // Responsive font size
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 16,
     color: '#333',
   },
   
   settingValue: {
-    fontSize: SCREEN_WIDTH * 0.04, // Responsive font size
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: 16,
     color: '#666',
   },
   
@@ -680,63 +462,41 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  previewCard: {
-    backgroundColor: '#F8F9FA',
-    padding: 15,
-    borderRadius: 12,
-  },
-  
-  previewRow: {
+  buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  
-  previewLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  
-  previewValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  
-  buttonContainer: {
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20, // Extra bottom padding for iOS home indicator
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    gap: 10,
+    marginTop: 20,
   },
   
   startButton: {
+    flex: 1,
     backgroundColor: '#6200EA',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 10,
   },
   
   startButtonText: {
     color: '#FFFFFF',
-    fontSize: SCREEN_WIDTH * 0.04, // Responsive font size
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 14,
     fontWeight: '700',
   },
   
   cancelButton: {
+    flex: 1,
     backgroundColor: 'transparent',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E0E0E0',
   },
   
   cancelButtonText: {
     color: '#666',
-    fontSize: SCREEN_WIDTH * 0.04, // Responsive font size
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 14,
     fontWeight: '600',
   },
 
