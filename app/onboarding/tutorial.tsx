@@ -289,6 +289,7 @@ export default function TutorialScreen() {
       source={require('../../assets/backgrounds/theme.png')}
       style={styles.container}
       resizeMode="cover"
+      defaultSource={require('../../assets/backgrounds/theme.png')}
     >
       {/* Welcome Overlay */}
       {showWelcome && (

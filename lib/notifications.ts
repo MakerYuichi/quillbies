@@ -203,3 +203,53 @@ export async function scheduleDeadlineReminder(
     'deadline-alerts'
   );
 }
+
+// Schedule daily study reminders (morning, afternoon, evening)
+export async function scheduleDailyStudyReminders(): Promise<void> {
+  try {
+    console.log('[Notifications] Setting up daily study reminders...');
+    
+    // Cancel existing reminders first
+    await cancelAllNotifications();
+    
+    // Morning reminder (9 AM)
+    await scheduleNotification(
+      '☀️ Good Morning!',
+      'Time to start your study session! Your hamster is waiting! 📚',
+      {
+        repeats: true,
+        hour: 9,
+        minute: 0,
+      },
+      'study-reminders'
+    );
+    
+    // Afternoon reminder (2 PM)
+    await scheduleNotification(
+      '📚 Afternoon Study Time',
+      'Keep up the momentum! Time for an afternoon study session! 💪',
+      {
+        repeats: true,
+        hour: 14,
+        minute: 0,
+      },
+      'study-reminders'
+    );
+    
+    // Evening reminder (7 PM)
+    await scheduleNotification(
+      '🌙 Evening Study Session',
+      'Finish strong! One more study session before bed! 🎯',
+      {
+        repeats: true,
+        hour: 19,
+        minute: 0,
+      },
+      'study-reminders'
+    );
+    
+    console.log('[Notifications] Daily study reminders scheduled successfully');
+  } catch (error) {
+    console.error('[Notifications] Error scheduling daily reminders:', error);
+  }
+}

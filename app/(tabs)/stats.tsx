@@ -89,6 +89,7 @@ export default function StatsScreen() {
       source={require('../../assets/backgrounds/theme.png')}
       style={styles.background}
       resizeMode="cover"
+      defaultSource={require('../../assets/backgrounds/theme.png')}
     >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Header */}

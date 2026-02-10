@@ -133,6 +133,7 @@ export default function GoalSetupScreen() {
       source={require('../../assets/backgrounds/theme.png')}
       style={styles.background}
       resizeMode="cover"
+      defaultSource={require('../../assets/backgrounds/theme.png')}
     >
       {/* Back Button */}
       <TouchableOpacity 

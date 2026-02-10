@@ -847,6 +847,7 @@ function HomeScreenContent() {
       source={require('../../assets/backgrounds/theme.png')}
       style={styles.container}
       resizeMode="cover"
+      defaultSource={require('../../assets/backgrounds/theme.png')}
     >
       {/* FIXED BACKGROUND LAYERS - Keep both mounted, just hide/show for instant switching */}
       <View style={[styles.environmentContainer, !isExercising && styles.hidden]}>

@@ -168,6 +168,11 @@ export default function RootLayout() {
         const notificationPermission = await requestNotificationPermissions();
         if (notificationPermission) {
           console.log('[App] Notification permissions granted');
+          
+          // Schedule daily study reminders
+          const { scheduleDailyStudyReminders } = await import('../lib/notifications');
+          await scheduleDailyStudyReminders();
+          console.log('[App] Daily study reminders scheduled');
         } else {
           console.log('[App] Notification permissions denied');
         }

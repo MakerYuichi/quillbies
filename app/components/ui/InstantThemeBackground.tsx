@@ -12,6 +12,7 @@ export default function InstantThemeBackground({ children }: InstantThemeBackgro
       source={require('../../../assets/backgrounds/theme.png')}
       style={styles.background}
       resizeMode="cover"
+      defaultSource={require('../../../assets/backgrounds/theme.png')}
     >
       {children}
     </ImageBackground>

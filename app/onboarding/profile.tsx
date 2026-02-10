@@ -410,6 +410,7 @@ export default function ProfileScreen() {
       source={require('../../assets/backgrounds/theme.png')}
       style={styles.background}
       resizeMode="cover"
+      defaultSource={require('../../assets/backgrounds/theme.png')}
     >
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}

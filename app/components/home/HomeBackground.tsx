@@ -11,6 +11,7 @@ export default function HomeBackground({ children }: HomeBackgroundProps) {
       source={require('../../../assets/backgrounds/theme.png')}
       style={styles.container}
       resizeMode="cover"
+      defaultSource={require('../../../assets/backgrounds/theme.png')}
     >
       {children}
     </ImageBackground>
