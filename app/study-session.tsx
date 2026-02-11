@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, AppState, AppStateStatus, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, AppState, AppStateStatus, Dimensions, Modal, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store-modular';
 import InteractiveTooltip from './components/ui/InteractiveTooltip';
+import SessionCompletionModal from './components/modals/SessionCompletionModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Conditional import for keep awake to prevent crashes
@@ -88,6 +89,14 @@ function StudySessionContent() {
   const [returnMessageTimer, setReturnMessageTimer] = useState<NodeJS.Timeout | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipStep, setTooltipStep] = useState(0);
+  
+  // Session completion state
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionData, setCompletionData] = useState<any>(null);
+  
+  // Confirmation dialog state
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
   
   // Session control states
   const [isOnBreak, setIsOnBreak] = useState(false);
@@ -213,18 +222,107 @@ function StudySessionContent() {
     }
   };
   
+  // Handle session completion (auto or manual)
+  const handleSessionComplete = () => {
+    if (!session) return;
+    
+    // Calculate coins earned based on focus score
+    const coinsEarned = Math.floor(session.focusScore / 10);
+    
+    // Get target duration from session config
+    const targetDuration = session.config?.duration ? session.config.duration * 60 : undefined;
+    
+    // Prepare completion data
+    const data = {
+      duration: session.duration,
+      targetDuration,
+      focusScore: session.focusScore,
+      coinsEarned,
+      buddyName: userData.buddyName || 'Hammy',
+    };
+    
+    setCompletionData(data);
+    
+    // DON'T end session yet - keep it until modal closes
+    // This prevents "No active session" error
+    
+    // Show completion modal
+    setShowCompletionModal(true);
+  };
+  
+  // Handle completion modal close
+  const handleCompletionClose = () => {
+    // Clean up any active timers
+    if (breakTimer) {
+      clearInterval(breakTimer);
+    }
+    
+    // Deactivate keep awake before ending session (with error handling)
+    if (deactivateKeepAwake) {
+      try {
+        deactivateKeepAwake('study-session');
+        console.log('[KeepAwake] Deactivated on session end');
+      } catch (error) {
+        console.warn('[KeepAwake] Failed to deactivate on session end:', error);
+      }
+    }
+    
+    // NOW end the session when modal closes
+    endFocusSession();
+    
+    setShowCompletionModal(false);
+    setCompletionData(null);
+    router.replace('/(tabs)');
+  };
+  
+  // Handle "Done" button click - pause timer and show confirmation
+  const handleDoneButtonClick = () => {
+    setIsTimerPaused(true); // Pause the timer
+    setShowExitConfirmation(true);
+  };
+  
+  // Confirm early exit
+  const handleConfirmExit = () => {
+    setShowExitConfirmation(false);
+    setIsTimerPaused(false); // Resume timer (though session will end)
+    handleSessionComplete();
+  };
+  
+  // Cancel exit - resume timer
+  const handleCancelExit = () => {
+    setShowExitConfirmation(false);
+    setIsTimerPaused(false); // Resume the timer
+  };
+  
   // Update focus score and speech bubble every second
   useEffect(() => {
     const interval = setInterval(() => {
+      // Skip updates if timer is paused
+      if (isTimerPaused) {
+        return;
+      }
+      
       // Only update focus if not on break
       if (!isOnBreak) {
         updateFocusDuringSession();
       }
       setSpeechKey(prev => prev + 1); // Update speech bubble every second
+      
+      // Check if session time is complete
+      if (session && session.isActive) {
+        const targetDuration = session.config?.duration ? session.config.duration * 60 : 25 * 60;
+        const timeRemaining = targetDuration - session.duration;
+        
+        // Auto-end when timer reaches 0
+        if (timeRemaining <= 0) {
+          console.log('[Session] Time complete! Auto-ending session...');
+          handleSessionComplete();
+        }
+      }
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isOnBreak]);
+  }, [isOnBreak, session, isTimerPaused]);
   
   // Detect when user leaves the app (distraction)
   useEffect(() => {
@@ -360,41 +458,9 @@ function StudySessionContent() {
     setSpeechKey(prev => prev + 1); // Update speech bubble
   };
 
-  const handleEndSession = () => {
-    // Clean up any active timers
-    if (breakTimer) {
-      clearInterval(breakTimer);
-    }
-    
-    // Deactivate keep awake before ending session (with error handling)
-    if (deactivateKeepAwake) {
-      try {
-        deactivateKeepAwake('study-session');
-        console.log('[KeepAwake] Deactivated on session end');
-      } catch (error) {
-        console.warn('[KeepAwake] Failed to deactivate on session end:', error);
-      }
-    }
-    
-    try {
-      endFocusSession();
-      
-      // Navigate based on session type - use replace to avoid visual glitch on iOS
-      if (selectedDeadlineId) {
-        // Deadline-focused session - return to focus screen
-        router.replace('/(tabs)/focus');
-      } else {
-        // Generic focus session - return to home
-        router.replace('/(tabs)/');
-      }
-    } catch (error) {
-      console.error('[StudySession] Error ending session:', error);
-      // Fallback navigation
-      router.replace('/(tabs)/');
-    }
-  };
   
-  if (!session) {
+  // Allow showing completion modal even if session is ending
+  if (!session && !showCompletionModal) {
     console.log('[StudySession] No active session found, redirecting to focus screen');
     return (
       <View style={styles.container}>
@@ -515,6 +581,7 @@ function StudySessionContent() {
         source={require('../assets/backgrounds/bluebg.png')}
         style={styles.blueBgDecor}
         resizeMode="cover"
+        defaultSource={require('../assets/backgrounds/bluebg.png')}
       />
       
       {/* Background Walls */}
@@ -522,6 +589,7 @@ function StudySessionContent() {
         source={require('../assets/rooms/walls.png')}
         style={styles.wallsBackground}
         resizeMode="cover"
+        defaultSource={require('../assets/rooms/walls.png')}
       />
       
       {/* Floor */}
@@ -529,6 +597,7 @@ function StudySessionContent() {
         source={require('../assets/rooms/floor.png')}
         style={styles.floorBackground}
         resizeMode="cover"
+        defaultSource={require('../assets/rooms/floor.png')}
       />
       
       {/* Blue Background - Sky/Top Decoration */}
@@ -536,6 +605,7 @@ function StudySessionContent() {
         source={require('../assets/backgrounds/bluebg.png')}
         style={styles.blueBgDecor}
         resizeMode="cover"
+        defaultSource={require('../assets/backgrounds/bluebg.png')}
       />
 
 
@@ -670,7 +740,7 @@ function StudySessionContent() {
           </Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.doneButton} onPress={handleEndSession}>
+        <TouchableOpacity style={styles.doneButton} onPress={handleDoneButtonClick}>
           <Text style={styles.doneIcon}>✅</Text>
           <Text style={styles.buttonLabel}>Done</Text>
         </TouchableOpacity>
@@ -811,6 +881,128 @@ function StudySessionContent() {
         onNext={handleTooltipNext}
         onSkip={handleTooltipSkip}
       />
+      
+      {/* Exit Confirmation Modal */}
+      <Modal
+        visible={showExitConfirmation}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelExit}
+      >
+        <View style={styles.confirmationOverlay}>
+          <View style={styles.confirmationContainer}>
+            {session && (() => {
+              const targetDuration = session.config?.duration ? session.config.duration * 60 : 25 * 60;
+              const completionPercent = Math.round((session.duration / targetDuration) * 100);
+              const timeRemaining = targetDuration - session.duration;
+              const minutesRemaining = Math.floor(timeRemaining / 60);
+              const secondsRemaining = timeRemaining % 60;
+              
+              // Determine Quillby's reaction based on completion percentage
+              let quillbyImage;
+              let quillbyMessage = '';
+              let titleColor = '#333';
+              let emoji = '';
+              
+              if (completionPercent >= 90) {
+                quillbyImage = require('../assets/hamsters/casual/idle-sit-happy.png');
+                emoji = '🎉';
+                quillbyMessage = `${userData.buddyName || 'Hammy'} is so proud! You're almost done!`;
+                titleColor = '#4CAF50';
+              } else if (completionPercent >= 70) {
+                quillbyImage = require('../assets/hamsters/casual/idle-sit-happy.png');
+                emoji = '😊';
+                quillbyMessage = `${userData.buddyName || 'Hammy'} thinks you're doing great!`;
+                titleColor = '#4CAF50';
+              } else if (completionPercent >= 50) {
+                quillbyImage = require('../assets/hamsters/casual/idle-sit.png');
+                emoji = '🙂';
+                quillbyMessage = `${userData.buddyName || 'Hammy'} believes you can finish!`;
+                titleColor = '#FF9800';
+              } else if (completionPercent >= 25) {
+                quillbyImage = require('../assets/hamsters/casual/idle-sit.png');
+                emoji = '😟';
+                quillbyMessage = `${userData.buddyName || 'Hammy'} hopes you'll stay a bit longer...`;
+                titleColor = '#FF9800';
+              } else {
+                quillbyImage = require('../assets/hamsters/casual/idle-sit.png');
+                emoji = '😢';
+                quillbyMessage = `${userData.buddyName || 'Hammy'} is sad you're leaving so soon...`;
+                titleColor = '#F44336';
+              }
+              
+              return (
+                <>
+                  {/* Quillby Image */}
+                  <View style={styles.quillbyImageContainer}>
+                    <Image
+                      source={quillbyImage}
+                      style={styles.quillbyImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  
+                  <Text style={[styles.confirmationTitle, { color: titleColor }]}>
+                    {emoji} {completionPercent}% Complete
+                  </Text>
+                  
+                  <Text style={styles.quillbyMessage}>{quillbyMessage}</Text>
+                  
+                  <View style={styles.confirmationStats}>
+                    <Text style={styles.confirmationText}>
+                      ⏱️ Time studied: {Math.floor(session.duration / 60)}m {session.duration % 60}s
+                    </Text>
+                    <Text style={styles.confirmationText}>
+                      🎯 Focus score: {session.focusScore}
+                    </Text>
+                    {timeRemaining > 0 && (
+                      <Text style={[styles.confirmationWarning, { color: titleColor }]}>
+                        ⏰ {minutesRemaining}m {secondsRemaining}s remaining
+                      </Text>
+                    )}
+                    {timeRemaining <= 0 && (
+                      <Text style={[styles.confirmationWarning, { color: '#4CAF50' }]}>
+                        ✅ Session complete!
+                      </Text>
+                    )}
+                  </View>
+                  
+                  <Text style={styles.confirmationQuestion}>
+                    {timeRemaining > 0 ? 'Leave early?' : 'End session?'}
+                  </Text>
+                </>
+              );
+            })()}
+            
+            <View style={styles.confirmationButtons}>
+              <TouchableOpacity
+                style={[styles.confirmationButton, styles.cancelButton]}
+                onPress={handleCancelExit}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelButtonText}>Keep Studying</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.confirmationButton, styles.confirmButton]}
+                onPress={handleConfirmExit}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmButtonText}>End Session</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Session Completion Modal */}
+      {completionData && (
+        <SessionCompletionModal
+          visible={showCompletionModal}
+          onClose={handleCompletionClose}
+          sessionData={completionData}
+        />
+      )}
     </View>
   );
 }
@@ -1318,6 +1510,121 @@ const styles = StyleSheet.create({
   },
   
   backButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Confirmation Modal Styles
+  confirmationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  confirmationContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
+  quillbyImageContainer: {
+    width: 100,
+    height: 100,
+    marginBottom: 12,
+  },
+  
+  quillbyImage: {
+    width: '100%',
+    height: '100%',
+  },
+  
+  confirmationTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  
+  quillbyMessage: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  
+  confirmationStats: {
+    width: '100%',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  
+  confirmationText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  
+  confirmationWarning: {
+    fontSize: 16,
+    color: '#FF9800',
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  
+  confirmationQuestion: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  
+  confirmationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  
+  confirmationButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  
+  cancelButton: {
+    backgroundColor: '#E0E0E0',
+  },
+  
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  confirmButtonText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: '600',

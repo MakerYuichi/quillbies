@@ -75,9 +75,7 @@ export default function ImagePreloader({ children }: { children: React.ReactNode
       {!allLoaded && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#FF9800" />
-          <Text style={styles.loadingText}>
-            Loading assets...
-          </Text>
+          <Text style={styles.loadingText}>Loading assets...</Text>
         </View>
       )}
 

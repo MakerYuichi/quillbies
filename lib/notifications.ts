@@ -168,9 +168,10 @@ export async function scheduleStudyCheckpointReminder(
     '⏰ Study Checkpoint Reminder',
     `Your ${checkpointTime} study checkpoint is in 30 minutes! Time to focus! 📚`,
     {
-      repeats: true,
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour: time.hour,
       minute: time.minute,
+      repeats: true,
     },
     'study-reminders'
   );
@@ -198,6 +199,7 @@ export async function scheduleDeadlineReminder(
     `📝 Deadline ${daysLabel}!`,
     `${deadlineTitle} is due ${daysLabel}. Time to work on it! 💪`,
     {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: reminderDate,
     },
     'deadline-alerts'
@@ -208,47 +210,77 @@ export async function scheduleDeadlineReminder(
 export async function scheduleDailyStudyReminders(): Promise<void> {
   try {
     console.log('[Notifications] Setting up daily study reminders...');
-    
+
     // Cancel existing reminders first
     await cancelAllNotifications();
-    
+
+    // Get current date to calculate next occurrence
+    const now = new Date();
+
     // Morning reminder (9 AM)
+    const morning = new Date();
+    morning.setHours(9, 0, 0, 0);
+    if (morning <= now) {
+      morning.setDate(morning.getDate() + 1); // Schedule for tomorrow if time has passed
+    }
+
     await scheduleNotification(
       '☀️ Good Morning!',
       'Time to start your study session! Your hamster is waiting! 📚',
       {
-        repeats: true,
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 9,
         minute: 0,
+        repeats: true,
       },
       'study-reminders'
     );
-    
+
     // Afternoon reminder (2 PM)
+    const afternoon = new Date();
+    afternoon.setHours(14, 0, 0, 0);
+    if (afternoon <= now) {
+      afternoon.setDate(afternoon.getDate() + 1);
+    }
+
     await scheduleNotification(
       '📚 Afternoon Study Time',
       'Keep up the momentum! Time for an afternoon study session! 💪',
       {
-        repeats: true,
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 14,
         minute: 0,
+        repeats: true,
       },
       'study-reminders'
     );
-    
+
     // Evening reminder (7 PM)
+    const evening = new Date();
+    evening.setHours(19, 0, 0, 0);
+    if (evening <= now) {
+      evening.setDate(evening.getDate() + 1);
+    }
+
     await scheduleNotification(
       '🌙 Evening Study Session',
       'Finish strong! One more study session before bed! 🎯',
       {
-        repeats: true,
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 19,
         minute: 0,
+        repeats: true,
       },
       'study-reminders'
     );
-    
+
+    // Log scheduled notifications
+    const scheduled = await getAllScheduledNotifications();
     console.log('[Notifications] Daily study reminders scheduled successfully');
+    console.log('[Notifications] Total scheduled:', scheduled.length);
+    scheduled.forEach(notif => {
+      console.log('[Notifications] -', notif.content.title, 'at', notif.trigger);
+    });
   } catch (error) {
     console.error('[Notifications] Error scheduling daily reminders:', error);
   }

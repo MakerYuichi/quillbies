@@ -75,15 +75,25 @@ export const createHabitsSlice: StateCreator<
     
     const mealCount = userData.mealsLogged + 1;
     const energyGain = 10;
+    const currentHour = new Date().getHours();
+    
+    // If it's morning (6-11 AM) and this is the first meal, mark breakfast as eaten
+    const isBreakfastTime = currentHour >= 6 && currentHour <= 11;
+    const shouldMarkBreakfast = isBreakfastTime && !userData.ateBreakfast;
     
     set({
       userData: {
         ...userData,
         mealsLogged: mealCount,
+        ateBreakfast: shouldMarkBreakfast ? true : userData.ateBreakfast,
         energy: Math.min(userData.energy + energyGain, 100),
         qCoins: userData.qCoins + 10
       }
     });
+    
+    if (shouldMarkBreakfast) {
+      console.log('[Meal] Breakfast logged - reminder will stop');
+    }
   },
 
   logExercise: (minutes: number) => {

@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   Platform
 } from 'react-native';
+import PremiumUpgradeModal from './PremiumUpgradeModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -125,13 +126,24 @@ export default function SessionCustomizationModal({
   const [customSessionName, setCustomSessionName] = useState('');
   const [backgroundMusic, setBackgroundMusic] = useState(false);
   const [strictMode, setStrictMode] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   // Show all presets but with locked states for non-premium users
   const availablePresets = PRESET_SESSIONS;
 
   const handleUpgradePrompt = () => {
-    // TODO: Navigate to premium upgrade screen
-    alert('🌟 Upgrade to Quillby Premium to unlock custom session names, background music, strict mode, and extended time ranges!');
+    setShowPremiumModal(true);
+  };
+  
+  const handleUpgrade = () => {
+    // TODO: Implement actual payment flow
+    // For now, just show alert
+    setShowPremiumModal(false);
+    alert('🚀 Payment integration coming soon! This will open your app store payment flow.');
+  };
+  
+  const handleClosePremiumModal = () => {
+    setShowPremiumModal(false);
   };
 
   const handleStartSession = () => {
@@ -157,12 +169,13 @@ export default function SessionCustomizationModal({
   const isPremiumSelected = availablePresets[selectedPreset]?.isPremium;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -324,6 +337,15 @@ export default function SessionCustomizationModal({
         </View>
       </View>
     </Modal>
+    
+    {/* Premium Upgrade Modal */}
+    <PremiumUpgradeModal
+      visible={showPremiumModal}
+      onClose={handleClosePremiumModal}
+      onUpgrade={handleUpgrade}
+      featureName="Custom Time"
+    />
+    </>
   );
 }
 

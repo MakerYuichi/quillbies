@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useQuillbyStore } from '../state/store-modular';
 
-// Message collections
-const REMINDER_MESSAGES = {
+// Message collections - now as a function to use buddyName
+const getReminderMessages = (buddyName: string) => ({
   water: [
     "My water bottle's looking at me funny... thirsty? 💧",
     "Could use a water break maybe?",
@@ -43,7 +43,7 @@ const REMINDER_MESSAGES = {
     "Feeling drowsy over here... sleep soon?"
   ],
   general: [
-    "Whatcha working on? Curious hammy here! 🤔",
+    `Whatcha working on? Curious ${buddyName} here! 🤔`,
     "Just rearranged my room a bit - what do you think? 🏠",
     "Just practicing my reading... books are heavy!",
     "Thinking about all the things we'll learn today!",
@@ -71,7 +71,7 @@ const REMINDER_MESSAGES = {
       "Quiet night... perfect for focused work!"
     ]
   }
-};
+});
 
 const getRandomMessage = (messages: string[]): string => {
   return messages[Math.floor(Math.random() * messages.length)];
@@ -83,6 +83,8 @@ export const useRandomReminders = (buddyName: string) => {
   const [reminderTimestamp, setReminderTimestamp] = useState<number>(0);
 
   useEffect(() => {
+    const REMINDER_MESSAGES = getReminderMessages(buddyName);
+    
     // Check for reminders every 15 minutes
     const checkReminders = () => {
       const now = new Date();
@@ -151,7 +153,7 @@ export const useRandomReminders = (buddyName: string) => {
     const interval = setInterval(checkReminders, 900000);
 
     return () => clearInterval(interval);
-  }, [userData.ateBreakfast, userData.mealsLogged, userData.waterGlasses, userData.exerciseMinutes, userData.enabledHabits]);
+  }, [userData.ateBreakfast, userData.mealsLogged, userData.waterGlasses, userData.exerciseMinutes, userData.enabledHabits, buddyName]);
 
   return {
     reminderMessage,

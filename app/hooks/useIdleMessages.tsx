@@ -2,10 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useQuillbyStore } from '../state/store-modular';
 
-// Idle message collections
-const IDLE_MESSAGES = {
+// Idle message collections - now as a function to use buddyName
+const getIdleMessages = (buddyName: string) => ({
   general: [
-    "Whatcha working on? Curious hammy here! 🤔",
+    `Whatcha working on? Curious ${buddyName} here! 🤔`,
     "Just rearranged my room a bit - what do you think? 🏠",
     "Just practicing my reading... books are heavy!",
     "Thinking about all the things we'll learn today!",
@@ -94,7 +94,7 @@ const IDLE_MESSAGES = {
     "I believe in us! We can do this! 📚",
     "Knowledge is the best treasure! Let's collect some! 💎"
   ]
-};
+});
 
 const getRandomMessage = (messages: string[]): string => {
   return messages[Math.floor(Math.random() * messages.length)];
@@ -112,6 +112,8 @@ export const useIdleMessages = (buddyName: string) => {
   };
 
   useEffect(() => {
+    const IDLE_MESSAGES = getIdleMessages(buddyName);
+    
     const checkIdle = () => {
       const now = Date.now();
       const timeSinceInteraction = now - lastInteractionTime;
@@ -167,7 +169,7 @@ export const useIdleMessages = (buddyName: string) => {
     const interval = setInterval(checkIdle, 30000);
 
     return () => clearInterval(interval);
-  }, [lastInteractionTime, userData.energy, userData.messPoints]);
+  }, [lastInteractionTime, userData.energy, userData.messPoints, buddyName]);
 
   return {
     idleMessage,

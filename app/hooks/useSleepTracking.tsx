@@ -47,19 +47,25 @@ export const useSleepTracking = (buddyName: string) => {
       setIsSleeping(true);
       setActiveSleepSessionId(activeSession.id);
       setSleepStartTime(new Date(activeSession.start).getTime());
-      setCurrentAnimation('sleeping');
+      // Only set to sleeping if not currently showing wake-up animation
+      if (currentAnimation !== 'wake-up') {
+        setCurrentAnimation('sleeping');
+      }
       
       // Calculate elapsed time since session started
       const elapsed = Math.floor((Date.now() - new Date(activeSession.start).getTime()) / 1000);
       setElapsedSeconds(elapsed);
-    } else {
-      // No active session, ensure states are reset
+    } else if (!activeSession && currentAnimation !== 'wake-up') {
+      // No active session, ensure states are reset (but don't interrupt wake-up animation)
       setIsSleeping(false);
       setActiveSleepSessionId(null);
       setSleepStartTime(null);
       setSleepDuration(null);
       setElapsedSeconds(0);
-      setCurrentAnimation('idle');
+      // Only reset to idle if not showing wake-up animation
+      if (currentAnimation === 'sleeping') {
+        setCurrentAnimation('idle');
+      }
     }
   }, [userData.activeSleepSession]);
 
@@ -96,19 +102,8 @@ export const useSleepTracking = (buddyName: string) => {
       ? (Date.now() - sleepStartTime) / (1000 * 60 * 60)
       : 0;
     
-    // End the sleep session
-    endSleep(activeSleepSessionId);
-    
-    // Show wake-up animation
+    // Show wake-up animation IMMEDIATELY before any state changes
     setCurrentAnimation('wake-up');
-    setTimeout(() => setCurrentAnimation('idle'), 3000); // Back to idle after 3s
-    
-    // Reset sleep states
-    setIsSleeping(false);
-    setActiveSleepSessionId(null);
-    setSleepStartTime(null);
-    setSleepDuration(null);
-    setElapsedSeconds(0);
     
     // Calculate updated sleep total (current total + this session)
     const currentSleepHours = getTodaysSleepHours();
@@ -132,8 +127,22 @@ export const useSleepTracking = (buddyName: string) => {
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
     
-    // Clear message after 3 seconds
+    // End the sleep session AFTER setting animation and message
+    endSleep(activeSleepSessionId);
+    
+    // Reset sleep states AFTER a delay to allow animation to show
     setTimeout(() => {
+      setIsSleeping(false);
+      setActiveSleepSessionId(null);
+      setSleepStartTime(null);
+      setSleepDuration(null);
+      setElapsedSeconds(0);
+    }, 100); // Small delay to prevent immediate state reset
+    
+    // Return to idle after wake-up animation completes (3 seconds)
+    setTimeout(() => {
+      setCurrentAnimation('idle');
+      // Clear message after animation completes
       setMessage('');
       setMessageTimestamp(0);
     }, 3000);

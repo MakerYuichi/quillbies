@@ -9,10 +9,11 @@ interface RoomLayersProps {
   pointerEvents?: 'none' | 'auto' | 'box-none' | 'box-only';
   messPoints?: number; // Add mess points to determine room state
   isSleeping?: boolean; // Add sleeping state to hide lamp
+  sleepAnimation?: string; // Add sleep animation state to hide lamp during wake-up
   qCoins?: number; // Add Q-coins count for display
 }
 
-export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, qCoins = 0 }: RoomLayersProps) {
+export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0 }: RoomLayersProps) {
   const { userData } = useQuillbyStore();
   const roomCustomization = userData.roomCustomization;
   
@@ -89,35 +90,35 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
       />
 
       {/* LAYER 6: Lights - Show based on room customization */}
-      {!isSleeping && (
-        <>
-          {/* Lamp - Show when explicitly equipped */}
-          {roomCustomization?.lightType === 'lamp' && (
-            <Image 
-              source={require('../../../assets/rooms/lamp.png')}
-              style={styles.lampDecor}
-              resizeMode="contain"
-            />
-          )}
-          
-          {/* Default Fairy Lights - Show when no customization (original default) */}
-          {!roomCustomization?.lightType && (
-            <Image 
-              source={require('../../../assets/rooms/fairy-lights.png')}
-              style={styles.fairyLightsDecor}
-              resizeMode="contain"
-            />
-          )}
-          
-          {/* Colored Fairy Lights - Show when colored fairy lights are equipped */}
-          {roomCustomization?.lightType === 'colored-fairy-lights' && (
-            <Image 
-              source={require('../../../assets/shop/decoration/fairy-lights/colored.png')}
-              style={styles.fairyLightsDecor}
-              resizeMode="contain"
-            />
-          )}
-        </>
+      {/* Always show lights, but they'll be dimmed by overlay when sleeping */}
+      <>
+        {/* Lamp - Show when explicitly equipped */}
+        {roomCustomization?.lightType === 'lamp' && (
+          <Image 
+            source={require('../../../assets/rooms/lamp.png')}
+            style={styles.lampDecor}
+            resizeMode="contain"
+          />
+        )}
+        
+        {/* Default Fairy Lights - Show when no customization (original default) */}
+        {!roomCustomization?.lightType && (
+          <Image 
+            source={require('../../../assets/rooms/fairy-lights.png')}
+            style={styles.fairyLightsDecor}
+            resizeMode="contain"
+          />
+        )}
+        
+        {/* Colored Fairy Lights - Show when colored fairy lights are equipped */}
+        {roomCustomization?.lightType === 'colored-fairy-lights' && (
+          <Image 
+            source={require('../../../assets/shop/decoration/fairy-lights/colored.png')}
+            style={styles.fairyLightsDecor}
+            resizeMode="contain"
+          />
+        )}
+      </>
       )}
       
       {/* LAYER 7: Customizable Plants */}

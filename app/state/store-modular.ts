@@ -73,7 +73,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
             // Merge database data with local data, prioritizing database for key fields
             const mergedUserData = {
               ...userData,
-              // Profile data from database
+              // Profile data from database (PERSISTENT - always load from DB)
               buddyName: dbData.userProfile.buddy_name || userData.buddyName,
               selectedCharacter: dbData.userProfile.selected_character || userData.selectedCharacter,
               userName: dbData.userProfile.user_name || userData.userName,
@@ -95,27 +95,17 @@ export const useQuillbyStore = create<QuillbyStore>()(
                 lightType: dbData.userProfile.light_type || userData.roomCustomization?.lightType,
                 plantType: dbData.userProfile.plant_type || userData.roomCustomization?.plantType,
               },
-              // Daily data from database (prioritize daily_data over daily_progress)
-              ...(dbData.dailyData && {
-                studyMinutesToday: dbData.dailyData.study_minutes_today ?? userData.studyMinutesToday,
-                missedCheckpoints: dbData.dailyData.missed_checkpoints ?? userData.missedCheckpoints,
-                ateBreakfast: dbData.dailyData.ate_breakfast ?? userData.ateBreakfast,
-                waterGlasses: dbData.dailyData.water_glasses ?? userData.waterGlasses,
-                mealsLogged: dbData.dailyData.meals_logged ?? userData.mealsLogged,
-                exerciseMinutes: dbData.dailyData.exercise_minutes ?? userData.exerciseMinutes,
-                appleTapsToday: dbData.dailyData.apple_taps_today ?? userData.appleTapsToday,
-                coffeeTapsToday: dbData.dailyData.coffee_taps_today ?? userData.coffeeTapsToday,
-              }),
-              // Fallback to daily_progress if daily_data is not available
-              ...(!dbData.dailyData && dbData.dailyProgress && {
-                studyMinutesToday: dbData.dailyProgress.study_minutes_today ?? userData.studyMinutesToday,
-                missedCheckpoints: dbData.dailyProgress.missed_checkpoints ?? userData.missedCheckpoints,
-                ateBreakfast: dbData.dailyProgress.ate_breakfast ?? userData.ateBreakfast,
-                waterGlasses: dbData.dailyProgress.water_glasses ?? userData.waterGlasses,
-                mealsLogged: dbData.dailyProgress.meals_logged ?? userData.mealsLogged,
-                exerciseMinutes: dbData.dailyProgress.exercise_minutes ?? userData.exerciseMinutes,
-              }),
-              // Sleep sessions from database
+              // DAILY DATA - Keep local (don't overwrite from database on startup)
+              // These are session-based and will be reset at midnight by resetDay()
+              studyMinutesToday: userData.studyMinutesToday,
+              missedCheckpoints: userData.missedCheckpoints,
+              ateBreakfast: userData.ateBreakfast,
+              waterGlasses: userData.waterGlasses,
+              mealsLogged: userData.mealsLogged,
+              exerciseMinutes: userData.exerciseMinutes,
+              appleTapsToday: userData.appleTapsToday,
+              coffeeTapsToday: userData.coffeeTapsToday,
+              // Sleep sessions from database (these are persistent)
               sleepSessions: dbData.sleepSessions?.map((session: any) => ({
                 id: session.id,
                 start: session.start_time,
@@ -124,6 +114,27 @@ export const useQuillbyStore = create<QuillbyStore>()(
                 date: session.date_assigned,
               })) || userData.sleepSessions,
             };
+            
+            // Check if it's a new day - if so, reset daily data
+            const today = new Date().toDateString();
+            const lastCheckIn = mergedUserData.lastCheckInDate;
+            
+            if (lastCheckIn !== today) {
+              console.log('[Load] New day detected during load, resetting daily data');
+              mergedUserData.waterGlasses = 0;
+              mergedUserData.mealsLogged = 0;
+              mergedUserData.studyMinutesToday = 0;
+              mergedUserData.exerciseMinutes = 0;
+              mergedUserData.appleTapsToday = 0;
+              mergedUserData.coffeeTapsToday = 0;
+              mergedUserData.ateBreakfast = false;
+              mergedUserData.missedCheckpoints = 0;
+              mergedUserData.lastCheckInDate = today;
+              mergedUserData.lastSleepReset = today;
+              mergedUserData.lastExerciseReset = today;
+              mergedUserData.lastStudyReset = today;
+              mergedUserData.lastConsumableReset = today;
+            }
 
             // Convert database deadlines to local format
             const mergedDeadlines = dbData.deadlines?.map((dbDeadline: any) => ({

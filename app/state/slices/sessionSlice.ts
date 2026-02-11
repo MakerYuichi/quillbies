@@ -104,19 +104,37 @@ export const createSessionSlice: StateCreator<
   },
 
   endFocusSession: () => {
-    const { userData, session } = get();
+    const { userData, session, selectedDeadlineId } = get();
     
     if (!session) return;
+    
+    // Calculate session duration in minutes and hours
+    const sessionMinutes = Math.floor(session.duration / 60);
+    const sessionHours = session.duration / 3600;
     
     // Calculate rewards
     const qCoinsEarned = Math.floor(session.focusScore / 10);
     const energyGained = Math.min(15, Math.floor(session.focusScore / 20));
     
+    // Update user data with session results
     const updatedUserData = {
       ...userData,
       qCoins: userData.qCoins + qCoinsEarned,
-      energy: Math.min(userData.energy + energyGained, 100)
+      energy: Math.min(userData.energy + energyGained, 100),
+      studyMinutesToday: (userData.studyMinutesToday || 0) + sessionMinutes,
+      totalStudyMinutes: (userData.totalStudyMinutes || 0) + sessionMinutes
     };
+    
+    console.log(`[Session] Ended - Duration: ${sessionMinutes}min, Focus: ${session.focusScore}, Coins: +${qCoinsEarned}, Energy: +${energyGained}`);
+    
+    // Update deadline progress if one was selected
+    if (selectedDeadlineId && sessionHours > 0) {
+      console.log(`[Session→Deadline] Adding ${sessionHours.toFixed(2)}h to deadline ${selectedDeadlineId}`);
+      const { addWorkToDeadline } = get() as any;
+      if (addWorkToDeadline) {
+        addWorkToDeadline(selectedDeadlineId, sessionHours);
+      }
+    }
     
     set({
       userData: updatedUserData,
