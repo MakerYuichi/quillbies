@@ -3,6 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput,
 import { useQuillbyStore } from '../../state/store-modular';
 import { getDeviceUser } from '../../../lib/deviceAuth';
 import { saveCalendarDayNote, getCalendarDayNote } from '../../../lib/calendarNotes';
+import DeadlineDetailModal from './DeadlineDetailModal';
+import CreateDeadlineModal from './CreateDeadlineModal';
+import { Deadline } from '../../core/types';
+import { useRouter } from 'expo-router';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -14,11 +18,15 @@ interface DayDetailsModalProps {
 }
 
 export default function DayDetailsModal({ visible, onClose, date, onEmojiChange }: DayDetailsModalProps) {
-  const { userData, deadlines } = useQuillbyStore();
+  const { userData, deadlines, deleteDeadline, startFocusSession } = useQuillbyStore();
+  const router = useRouter();
   const [note, setNote] = useState('');
   const [selectedDayEmoji, setSelectedDayEmoji] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeadlineDetail, setShowDeadlineDetail] = useState(false);
+  const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
+  const [showEditDeadline, setShowEditDeadline] = useState(false);
   
   const dayEmojis = ['🌟', '🎉', '💪', '🔥', '✨', '🚀', '💯', '🎯', '⚡', '🌈', '🦋', '🌺', '🎨', '📚', '☕', '🌙'];
   
@@ -429,7 +437,15 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
                   };
                   
                   return (
-                    <View key={deadline.id} style={styles.deadlineCard}>
+                    <TouchableOpacity 
+                      key={deadline.id} 
+                      style={styles.deadlineCard}
+                      onPress={() => {
+                        setSelectedDeadline(deadline);
+                        setShowDeadlineDetail(true);
+                      }}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.deadlineIcon}>
                         {deadline.category === 'study' ? '📘' : 
                          deadline.category === 'work' ? '💼' : 
@@ -440,6 +456,17 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
                         {deadline.dueTime && (
                           <Text style={styles.deadlineTime}>⏰ {deadline.dueTime}</Text>
                         )}
+                        <TouchableOpacity
+                          style={styles.focusButton}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            startFocusSession(deadline.id);
+                            onClose();
+                            router.push('/study-session');
+                          }}
+                        >
+                          <Text style={styles.focusButtonText}>🎯 Focus on this</Text>
+                        </TouchableOpacity>
                       </View>
                       <View style={[
                         styles.priorityBadge,
@@ -449,7 +476,7 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
                       ]}>
                         <Text style={styles.priorityText}>{getTimeRemaining()}</Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })
               ) : (
@@ -464,6 +491,46 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
           </ScrollView>
         </View>
       </View>
+      
+      {/* Deadline Detail Modal */}
+      <DeadlineDetailModal
+        visible={showDeadlineDetail}
+        onClose={() => setShowDeadlineDetail(false)}
+        deadline={selectedDeadline}
+        onStartFocus={(deadlineId) => {
+          startFocusSession(deadlineId);
+          setShowDeadlineDetail(false);
+          onClose();
+          router.push('/study-session');
+        }}
+        onEdit={(deadline) => {
+          setShowDeadlineDetail(false);
+          setSelectedDeadline(deadline);
+          setShowEditDeadline(true);
+        }}
+        onDelete={(deadlineId) => {
+          deleteDeadline(deadlineId);
+          setShowDeadlineDetail(false);
+        }}
+      />
+      
+      {/* Edit Deadline Modal */}
+      {selectedDeadline && (
+        <CreateDeadlineModal
+          visible={showEditDeadline}
+          onClose={() => {
+            setShowEditDeadline(false);
+            setSelectedDeadline(null);
+          }}
+          onSubmit={() => {
+            setShowEditDeadline(false);
+            setSelectedDeadline(null);
+          }}
+          mode="edit"
+          initialData={selectedDeadline}
+          deadlineId={selectedDeadline.id}
+        />
+      )}
     </Modal>
   );
 }
@@ -985,6 +1052,19 @@ const styles = StyleSheet.create({
   deadlineTime: {
     fontSize: 12,
     color: '#666',
+    marginBottom: 6,
+  },
+  focusButton: {
+    backgroundColor: '#6200EA',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  focusButtonText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '600',
   },
   priorityBadge: {
     borderRadius: 12,

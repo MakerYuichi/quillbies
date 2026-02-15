@@ -316,6 +316,12 @@ export const useQuillbyStore = create<QuillbyStore>()(
         
         set({ userData: updatedUserData });
         
+        // Send mess notification if room is getting messy (only when app is in background)
+        // This will be handled by background task
+        if (newMessPoints >= 4) {
+          console.log(`[addMissedCheckpoint] Room is messy (${newMessPoints} points), notification will be sent if app is in background`);
+        }
+        
         // Sync the changes to database
         syncToDatabase(updatedUserData);
         

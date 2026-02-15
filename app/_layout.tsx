@@ -1,11 +1,12 @@
 import { Stack } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, Text, Image } from 'react-native';
+import { View, ActivityIndicator, Text, Image, AppState, AppStateStatus } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
 import { useQuillbyStore } from './state/store-modular';
 import { authenticateDevice, isDeviceAuthenticated } from '../lib/deviceAuth';
-import { requestNotificationPermissions } from '../lib/notifications';
+import { requestNotificationPermissions, sendMessNotification } from '../lib/notifications';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ImagePreloader from './components/ImagePreloader';
 
@@ -118,12 +119,54 @@ const setupGlobalErrorHandlers = () => {
 };
 
 export default function RootLayout() {
+  // Load Schoolbell font
+  const [fontsLoaded] = useFonts({
+    'Schoolbell': require('../assets/fonts/Schoolbell-Regular.ttf'),
+  });
+  
   // Use separate selectors to prevent object recreation
   const initializeUser = useQuillbyStore((state) => state.initializeUser);
   const loadFromDatabase = useQuillbyStore((state) => state.loadFromDatabase);
+  const userData = useQuillbyStore((state) => state.userData);
   
   const [isReady, setIsReady] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+  const lastMessPoints = useRef<number>(0);
+  
+  // Track app state changes to send notifications when app goes to background
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      // App is going to background
+      if (appState.current.match(/active/) && nextAppState === 'background') {
+        console.log('[App] Going to background, checking mess points...');
+        
+        // Check if mess points increased and room is messy
+        if (userData.messPoints >= 4 && userData.messPoints !== lastMessPoints.current) {
+          console.log(`[App] Mess points increased to ${userData.messPoints}, sending notification`);
+          await sendMessNotification(userData.messPoints);
+          lastMessPoints.current = userData.messPoints;
+        }
+      }
+      
+      // App is coming to foreground
+      if (appState.current.match(/background/) && nextAppState === 'active') {
+        console.log('[App] Coming to foreground');
+        lastMessPoints.current = userData.messPoints; // Update reference
+      }
+      
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [userData.messPoints]);
+  
+  // Initialize last mess points reference
+  useEffect(() => {
+    lastMessPoints.current = userData.messPoints;
+  }, [userData.messPoints]);
   
   // Memoize the initialization function to prevent re-runs
   const initializeAuth = useCallback(async () => {
@@ -181,10 +224,16 @@ export default function RootLayout() {
         if (notificationPermission) {
           console.log('[App] Notification permissions granted');
           
-          // Schedule daily study reminders
-          const { scheduleDailyStudyReminders } = await import('../lib/notifications');
-          await scheduleDailyStudyReminders();
-          console.log('[App] Daily study reminders scheduled');
+          // Setup enhanced notification system
+          const { setupNotifications, scheduleAllNotifications } = await import('../lib/enhancedNotifications');
+          await setupNotifications();
+          
+          // Schedule all notifications (habits, deadlines, sleep, motivation, study)
+          const userData = useQuillbyStore.getState().userData;
+          const deadlines = useQuillbyStore.getState().deadlines;
+          await scheduleAllNotifications(userData, deadlines);
+          
+          console.log('[App] Enhanced notification system initialized');
         } else {
           console.log('[App] Notification permissions denied');
         }
@@ -209,7 +258,7 @@ export default function RootLayout() {
     initializeAuth();
   }, [initializeAuth]);
   
-  if (!isReady) {
+  if (!isReady || !fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
         <ActivityIndicator size="large" color="#FF9800" />

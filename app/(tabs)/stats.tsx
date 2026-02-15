@@ -169,7 +169,7 @@ export default function StatsScreen() {
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Total Study Time:</Text>
-                <Text style={styles.detailValue}>{formatStudyTime(stats.totalStudyHours * 60)}</Text>
+                <Text style={styles.detailValue}>{formatStudyTime(Math.round(stats.totalStudyHours * 60))}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Break Time Today:</Text>
@@ -270,6 +270,41 @@ export default function StatsScreen() {
             </View>
           }
         />
+
+        {/* Exercise Card - Only show if exercise habit is enabled */}
+        {userData.enabledHabits?.includes('exercise') && (
+          <ActivityCard
+            title="Exercise"
+            value={`${userData.exerciseMinutes}/${stats.exerciseGoal}`}
+            subtitle="Minutes today"
+            image={require('../../assets/hamsters/casual/jumping.gif')}
+            backgroundColor="#66BB6A"
+            icon="💪"
+            detailedStats={
+              <View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Today's Progress:</Text>
+                  <Text style={styles.detailValue}>{Math.round(stats.exerciseProgress)}%</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Minutes Completed:</Text>
+                  <Text style={styles.detailValue}>{userData.exerciseMinutes} min</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Daily Goal:</Text>
+                  <Text style={styles.detailValue}>{stats.exerciseGoal} min</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Status:</Text>
+                  <Text style={styles.detailValue}>
+                    {stats.exerciseProgress >= 100 ? '🎉 Complete!' :
+                     stats.exerciseProgress >= 50 ? '💪 On Track' : '🏃 Keep Going!'}
+                  </Text>
+                </View>
+              </View>
+            }
+          />
+        )}
 
         {/* Weekly Trends - Premium Feature */}
         <View style={styles.premiumCard}>

@@ -12,15 +12,21 @@ export default function SpeechBubble({ message }: SpeechBubbleProps) {
   // Calculate dynamic font size based on message length
   const getDynamicFontSize = () => {
     const length = message.length;
-    if (length < 50) return (SCREEN_WIDTH * 20) / 393; // Normal size
-    if (length < 100) return (SCREEN_WIDTH * 16) / 393; // Smaller
-    if (length < 150) return (SCREEN_WIDTH * 14) / 393; // Even smaller
-    return (SCREEN_WIDTH * 12) / 393; // Smallest
+    if (length < 40) return (SCREEN_WIDTH * 20) / 393; // Normal size
+    if (length < 70) return (SCREEN_WIDTH * 16) / 393; // Smaller
+    if (length < 100) return (SCREEN_WIDTH * 14) / 393; // Even smaller
+    if (length < 130) return (SCREEN_WIDTH * 12) / 393; // Smaller still
+    return (SCREEN_WIDTH * 10) / 393; // Smallest
   };
 
   return (
     <View style={styles.speechBubble}>
-      <Text style={[styles.speechText, { fontSize: getDynamicFontSize() }]}>
+      <Text 
+        style={[styles.speechText, { fontSize: getDynamicFontSize() }]}
+        adjustsFontSizeToFit
+        numberOfLines={4}
+        minimumFontScale={0.5}
+      >
         {message}
       </Text>
     </View>
@@ -46,7 +52,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   speechText: {
-    fontFamily: 'Chakra Petch',
+    fontFamily: 'Schoolbell',
     lineHeight: (SCREEN_HEIGHT * 26) / 852,
     color: '#000000',
     textAlign: 'center',

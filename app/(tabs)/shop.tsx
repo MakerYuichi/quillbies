@@ -36,7 +36,7 @@ export default function ShopScreen() {
     }
   };
 
-  const handlePurchaseAndEquip = (item: any) => {
+  const handlePurchaseAndEquip = async (item: any) => {
     console.log(`[Shop] Handling purchase/equip for:`, item);
     console.log(`[Shop] Current room customization:`, userData.roomCustomization);
     
@@ -78,8 +78,8 @@ export default function ShopScreen() {
         return;
       }
       
-      // Purchase item
-      const success = purchaseItem(item.id, item.price);
+      // Purchase item (async)
+      const success = await purchaseItem(item.id, item.price);
       if (success) {
         // Auto-equip after purchase
         if (item.category === 'light') {

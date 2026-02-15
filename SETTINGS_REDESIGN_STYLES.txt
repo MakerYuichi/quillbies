@@ -1,0 +1,21 @@
+# Settings Screen Styles - Quillby's Cozy Room Theme
+
+This file contains the complete StyleSheet for the reimagined settings screen.
+Due to length, implementing in next step.
+
+Key Features:
+- Warm overlay on background
+- Animated Quillby with reactions
+- Speech bubble for Quillby messages
+- Vanity mirror card for profile
+- Bed card for hamster customization
+- Nameplate card for name
+- Sticky notes for habits/goals
+- Bookshelf for app settings
+- Goodnight corner with sleeping Quillby
+- Photo frame for app info
+- Paw prints as indicators
+- Curled corners on sticky notes
+- Soft shadows everywhere
+- Pastel colors
+- Rounded everything

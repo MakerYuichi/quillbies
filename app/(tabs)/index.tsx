@@ -94,6 +94,8 @@ function HomeScreenContent() {
   const [totalStages, setTotalStages] = React.useState(1);
   const [cleaningPlan, setCleaningPlan] = React.useState<CleaningPlan | null>(null);
   const [lastCheckpointCheck, setLastCheckpointCheck] = React.useState(Date.now());
+  const [checkpointMessage, setCheckpointMessage] = React.useState<string>('');
+  const [checkpointMessageTimestamp, setCheckpointMessageTimestamp] = React.useState<number>(0);
   const [showSessionModal, setShowSessionModal] = React.useState(false);
   const [showExerciseModal, setShowExerciseModal] = React.useState(false);
   const [showSleepModal, setShowSleepModal] = React.useState(false);
@@ -759,6 +761,7 @@ function HomeScreenContent() {
   // Find the most recent message among all features (only if not using simulated time messages)
   // Find the most recent message among all features (only if not using simulated time messages)
   const messages = [
+    { text: checkpointMessage, timestamp: checkpointMessageTimestamp, priority: 6 }, // Checkpoint warnings (highest priority)
     { text: waterMessage, timestamp: waterMessageTimestamp, priority: 5 }, // Action messages (highest)
     { text: sleepMessage, timestamp: sleepMessageTimestamp, priority: 5 },
     { text: mealMessage, timestamp: mealMessageTimestamp, priority: 5 },
@@ -812,9 +815,16 @@ function HomeScreenContent() {
     try {
       const result = checkAndProcessCheckpoints();
       if (result.shouldNotify && result.checkpoint && result.expected && result.actual && result.missing) {
-        const checkpointMessage = `⚠️ Behind on study time... room's getting messy! 📚\n` +
-                                 `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
-        console.log('[Checkpoint]', checkpointMessage);
+        // Format missing time as "Xh Ymin"
+        const missingHours = Math.floor(result.missing);
+        const missingMinutes = Math.round((result.missing - missingHours) * 60);
+        const missingText = `${missingHours}h ${missingMinutes}min`;
+        
+        const message = `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
+                       `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
+        console.log('[Checkpoint]', message);
+        setCheckpointMessage(message);
+        setCheckpointMessageTimestamp(Date.now());
       }
     } catch (error) {
       console.error('[HomeScreen] Error in initial checkpoint check:', error);
@@ -830,12 +840,18 @@ function HomeScreenContent() {
           const result = checkAndProcessCheckpoints();
           
           if (result.shouldNotify && result.checkpoint && result.expected && result.actual && result.missing) {
-            // Update hamster message with checkpoint notification
-            const checkpointMessage = `⚠️ Behind on study time... room's getting messy! 📚\n` +
-                                     `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
+            // Format missing time as "Xh Ymin"
+            const missingHours = Math.floor(result.missing);
+            const missingMinutes = Math.round((result.missing - missingHours) * 60);
+            const missingText = `${missingHours}h ${missingMinutes}min`;
             
-            // This will be picked up by the message system
-            console.log('[Checkpoint]', checkpointMessage);
+            // Update hamster message with checkpoint notification
+            const message = `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
+                           `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
+            
+            console.log('[Checkpoint]', message);
+            setCheckpointMessage(message);
+            setCheckpointMessageTimestamp(Date.now());
           }
           
           setLastCheckpointCheck(now);

@@ -6,7 +6,7 @@ import { syncToDatabase } from '../utils/syncUtils';
 
 export interface ShopSlice {
   // Shop actions
-  purchaseItem: (itemId: string, price: number) => boolean;
+  purchaseItem: (itemId: string, price: number) => Promise<boolean>;
   getShopItems: () => ShopItem[];
   updateRoomCustomization: (lightType?: string, plantType?: string) => void;
 }
@@ -51,7 +51,7 @@ export const createShopSlice: StateCreator<
     ];
   },
 
-  purchaseItem: (itemId: string, price: number) => {
+  purchaseItem: async (itemId: string, price: number) => {
     const { userData } = get();
     
     const currentCoins = Number(userData.qCoins) || 0;
@@ -84,6 +84,19 @@ export const createShopSlice: StateCreator<
     // Sync to database
     syncToDatabase(updatedUserData);
     
+    // Also save to purchased_items table
+    try {
+      const { getDeviceUser } = await import('../../../lib/deviceAuth');
+      const { purchaseItem: savePurchase } = await import('../../../lib/shop');
+      const user = await getDeviceUser();
+      if (user) {
+        await savePurchase(user.id, itemId);
+        console.log(`[Shop] Saved purchase to database: ${itemId}`);
+      }
+    } catch (error) {
+      console.error('[Shop] Error saving purchase to database:', error);
+    }
+    
     return true;
   },
 
@@ -108,11 +121,16 @@ export const createShopSlice: StateCreator<
       newCustomization.plantType = userData.roomCustomization.plantType;
     }
     
+    const updatedUserData = {
+      ...userData,
+      roomCustomization: Object.keys(newCustomization).length > 0 ? newCustomization : undefined
+    };
+    
     set({
-      userData: {
-        ...userData,
-        roomCustomization: Object.keys(newCustomization).length > 0 ? newCustomization : undefined
-      }
+      userData: updatedUserData
     });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
   }
 });

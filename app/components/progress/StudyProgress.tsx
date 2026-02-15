@@ -39,7 +39,7 @@ export default function StudyProgress() {
 
   const getStatusText = () => {
     if (checkResult.isBehind && checkResult.missing) {
-      return `Behind by ${checkResult.missing.toFixed(1)}h`;
+      return 'Behind';
     }
     if (progressPercent >= 100) {
       return 'Goal achieved! 🎉';
@@ -87,7 +87,7 @@ export default function StudyProgress() {
       
       {checkResult.isBehind && checkResult.expected && checkResult.checkpoint && (
         <Text style={styles.warningText}>
-          Expected {checkResult.expected.toFixed(1)}h by {checkResult.checkpoint}
+          Expected {Math.floor(checkResult.expected)}h {Math.round((checkResult.expected - Math.floor(checkResult.expected)) * 60)}min by {checkResult.checkpoint}
         </Text>
       )}
     </View>

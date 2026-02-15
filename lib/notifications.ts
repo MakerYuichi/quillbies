@@ -211,75 +211,112 @@ export async function scheduleDailyStudyReminders(): Promise<void> {
   try {
     console.log('[Notifications] Setting up daily study reminders...');
 
-    // Get all scheduled notifications
-    const allNotifications = await getAllScheduledNotifications();
+    // Cancel all existing notifications first to avoid duplicates
+    await cancelAllNotifications();
+    console.log('[Notifications] Cleared existing notifications');
     
-    // Check if study reminders are already scheduled
-    const studyReminderTitles = [
-      '☀️ Good Morning!',
-      '📚 Afternoon Study Time',
-      '🌙 Evening Study Session'
-    ];
-    
-    const existingReminders = allNotifications.filter(notif => 
-      studyReminderTitles.includes(notif.content.title || '')
-    );
-    
-    // If all 3 reminders already exist, don't reschedule
-    if (existingReminders.length === 3) {
-      console.log('[Notifications] Study reminders already scheduled, skipping');
-      return;
-    }
-    
-    console.log('[Notifications] Scheduling study reminders...');
+    console.log('[Notifications] Scheduling new study reminders...');
 
     // Morning reminder (9 AM)
-    await scheduleNotification(
+    const morning = await scheduleNotification(
       '☀️ Good Morning!',
       'Time to start your study session! Your hamster is waiting! 📚',
       {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 9,
         minute: 0,
-        repeats: true,
       },
       'study-reminders'
     );
+    console.log('[Notifications] Morning reminder scheduled:', morning);
 
     // Afternoon reminder (2 PM)
-    await scheduleNotification(
+    const afternoon = await scheduleNotification(
       '📚 Afternoon Study Time',
       'Keep up the momentum! Time for an afternoon study session! 💪',
       {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 14,
         minute: 0,
-        repeats: true,
       },
       'study-reminders'
     );
+    console.log('[Notifications] Afternoon reminder scheduled:', afternoon);
 
     // Evening reminder (7 PM)
-    await scheduleNotification(
+    const evening = await scheduleNotification(
       '🌙 Evening Study Session',
       'Finish strong! One more study session before bed! 🎯',
       {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 19,
         minute: 0,
-        repeats: true,
       },
       'study-reminders'
     );
+    console.log('[Notifications] Evening reminder scheduled:', evening);
 
     // Log scheduled notifications
     const scheduled = await getAllScheduledNotifications();
     console.log('[Notifications] Daily study reminders scheduled successfully');
     console.log('[Notifications] Total scheduled:', scheduled.length);
     scheduled.forEach(notif => {
-      console.log('[Notifications] -', notif.content.title, 'at', notif.trigger);
+      console.log('[Notifications] -', notif.content.title);
+      console.log('[Notifications]   Trigger:', JSON.stringify(notif.trigger));
     });
   } catch (error) {
     console.error('[Notifications] Error scheduling daily reminders:', error);
+  }
+}
+
+// Test notification (sends in 5 seconds) - for debugging
+export async function scheduleTestNotification(): Promise<void> {
+  try {
+    console.log('[Notifications] Scheduling test notification in 5 seconds...');
+    
+    const testDate = new Date();
+    testDate.setSeconds(testDate.getSeconds() + 5);
+    
+    await scheduleNotification(
+      '🧪 Test Notification',
+      'This is a test notification to verify notifications work when app is closed!',
+      {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: testDate,
+      },
+      'default'
+    );
+    
+    console.log('[Notifications] Test notification scheduled for:', testDate.toLocaleTimeString());
+  } catch (error) {
+    console.error('[Notifications] Error scheduling test notification:', error);
+  }
+}
+
+// Send mess notification when room gets messy (only when app is in background)
+export async function sendMessNotification(messPoints: number): Promise<void> {
+  try {
+    // Get message based on mess level
+    let title = '';
+    let body = '';
+    
+    if (messPoints >= 10) {
+      title = '🗑️ Room is a Disaster!';
+      body = 'Your hamster is drowning in mess! Come clean up right away! 😰';
+    } else if (messPoints >= 7) {
+      title = '📄 Room Getting Messy!';
+      body = 'Papers and trash are piling up! Time to clean before it gets worse! 🧹';
+    } else if (messPoints >= 4) {
+      title = '🧹 Time to Tidy Up!';
+      body = 'Your room is starting to get messy. A quick cleanup would help! ✨';
+    } else {
+      // Don't send notification for low mess levels
+      return;
+    }
+    
+    await sendImmediateNotification(title, body, 'default');
+    console.log(`[Notifications] Sent mess notification for ${messPoints} mess points`);
+  } catch (error) {
+    console.error('[Notifications] Error sending mess notification:', error);
   }
 }
