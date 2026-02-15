@@ -19,19 +19,24 @@ export const syncToDatabase = async (userData: UserData) => {
     // Clear any pending sync
     if (syncTimeout) {
       clearTimeout(syncTimeout);
+      console.log('[Sync] Cleared previous pending sync');
     }
     
     // If we synced recently, schedule a delayed sync instead
     if (now - lastSyncTime < SYNC_THROTTLE_MS) {
+      const delayMs = SYNC_THROTTLE_MS - (now - lastSyncTime);
+      console.log(`[Sync] Throttling - will sync in ${Math.round(delayMs / 1000)}s`);
       syncTimeout = setTimeout(() => {
         if (pendingUserData) {
+          console.log('[Sync] Executing delayed sync...');
           performSync(pendingUserData);
         }
-      }, SYNC_THROTTLE_MS - (now - lastSyncTime));
+      }, delayMs);
       return;
     }
     
     // Perform immediate sync
+    console.log('[Sync] Performing immediate sync...');
     await performSync(userData);
   } catch (error) {
     console.warn('[Sync] Failed to sync to database:', error);

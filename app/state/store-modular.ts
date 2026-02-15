@@ -149,31 +149,33 @@ export const useQuillbyStore = create<QuillbyStore>()(
             const { userData, deadlines } = get();
             
             console.log('[Load] Merging database data with local state...');
+            console.log('[Load] DB study_goal_hours:', dbData.userProfile.study_goal_hours);
+            console.log('[Load] Local study_goal_hours:', userData.studyGoalHours);
             
             // Merge database data with local data, prioritizing database for key fields
             const mergedUserData = {
               ...userData,
-              // Profile data from database (PERSISTENT - always load from DB)
-              buddyName: dbData.userProfile.buddy_name || userData.buddyName,
-              selectedCharacter: dbData.userProfile.selected_character || userData.selectedCharacter,
-              userName: dbData.userProfile.user_name || userData.userName,
-              studentLevel: dbData.userProfile.student_level || userData.studentLevel,
-              country: dbData.userProfile.country || userData.country,
-              timezone: dbData.userProfile.timezone || userData.timezone,
+              // Profile data from database (PERSISTENT - ALWAYS prioritize DB over local cache)
+              buddyName: dbData.userProfile.buddy_name ?? userData.buddyName,
+              selectedCharacter: dbData.userProfile.selected_character ?? userData.selectedCharacter,
+              userName: dbData.userProfile.user_name ?? userData.userName,
+              studentLevel: dbData.userProfile.student_level ?? userData.studentLevel,
+              country: dbData.userProfile.country ?? userData.country,
+              timezone: dbData.userProfile.timezone ?? userData.timezone,
               qCoins: dbData.userProfile.q_coins ?? userData.qCoins,
               messPoints: dbData.userProfile.mess_points ?? userData.messPoints,
               currentStreak: dbData.userProfile.current_streak ?? userData.currentStreak,
-              enabledHabits: dbData.userProfile.enabled_habits || userData.enabledHabits,
+              enabledHabits: dbData.userProfile.enabled_habits ?? userData.enabledHabits,
               studyGoalHours: dbData.userProfile.study_goal_hours ?? userData.studyGoalHours,
               exerciseGoalMinutes: dbData.userProfile.exercise_goal_minutes ?? userData.exerciseGoalMinutes,
               hydrationGoalGlasses: dbData.userProfile.hydration_goal_glasses ?? userData.hydrationGoalGlasses,
               sleepGoalHours: dbData.userProfile.sleep_goal_hours ?? userData.sleepGoalHours,
-              weightGoal: dbData.userProfile.weight_goal || userData.weightGoal,
+              weightGoal: dbData.userProfile.weight_goal ?? userData.weightGoal,
               mealPortionSize: dbData.userProfile.meal_portion_size ?? userData.mealPortionSize,
-              purchasedItems: dbData.purchasedItems?.map((item: any) => item.item_id) || userData.purchasedItems,
+              purchasedItems: dbData.purchasedItems?.map((item: any) => item.item_id) ?? userData.purchasedItems,
               roomCustomization: {
-                lightType: dbData.userProfile.light_type || userData.roomCustomization?.lightType,
-                plantType: dbData.userProfile.plant_type || userData.roomCustomization?.plantType,
+                lightType: dbData.userProfile.light_type ?? userData.roomCustomization?.lightType,
+                plantType: dbData.userProfile.plant_type ?? userData.roomCustomization?.plantType,
               },
               // DAILY DATA - Keep local (don't overwrite from database on startup)
               // These are session-based and will be reset at midnight by resetDay()
@@ -236,12 +238,21 @@ export const useQuillbyStore = create<QuillbyStore>()(
             
             console.log('[Load] Loaded deadlines from database:', mergedDeadlines.length);
             console.log('[Load] Deadline IDs:', mergedDeadlines.map((d: any) => d.id));
+            
+            console.log('[Load] Merged study_goal_hours:', mergedUserData.studyGoalHours);
+            console.log('[Load] Merged exercise_goal_minutes:', mergedUserData.exerciseGoalMinutes);
+            console.log('[Load] Merged enabled_habits:', mergedUserData.enabledHabits);
 
             set({ 
               userData: mergedUserData,
               deadlines: mergedDeadlines
             });
             console.log('[Load] ✅ Database data merged successfully');
+            
+            // Verify the state was actually updated
+            const updatedState = get();
+            console.log('[Load] Verification - study_goal_hours in state:', updatedState.userData.studyGoalHours);
+            console.log('[Load] Verification - exercise_goal_minutes in state:', updatedState.userData.exerciseGoalMinutes);
             
             // Start periodic sync after successful load
             setInterval(() => {

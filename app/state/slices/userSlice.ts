@@ -340,12 +340,13 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
 
   setCharacter: (character: string) => {
     const { userData } = get();
-    set({
-      userData: {
-        ...userData,
-        selectedCharacter: character
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      selectedCharacter: character
+    };
+    set({ userData: updatedUserData });
+    // Sync to database
+    syncToDatabase(updatedUserData);
   },
 
   setBuddyName: (name: string) => {
@@ -390,42 +391,50 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
 
   setHabits: (habits: string[]) => {
     const { userData } = get();
+    console.log('[UserSlice] setHabits called with habits:', habits);
     const updatedUserData = {
       ...userData,
       enabledHabits: habits
     };
     set({ userData: updatedUserData });
+    console.log('[UserSlice] Calling syncToDatabase for habits...');
     syncToDatabase(updatedUserData);
   },
 
   setStudyGoal: (hours: number, checkpoints: string[]) => {
     const { userData } = get();
+    console.log('[UserSlice] setStudyGoal called with hours:', hours);
     const updatedUserData = {
       ...userData,
       studyGoalHours: hours,
       studyCheckpoints: checkpoints
     };
     set({ userData: updatedUserData });
+    console.log('[UserSlice] Calling syncToDatabase for study goal...');
     syncToDatabase(updatedUserData);
   },
 
   setExerciseGoal: (minutes: number) => {
     const { userData } = get();
+    console.log('[UserSlice] setExerciseGoal called with minutes:', minutes);
     const updatedUserData = {
       ...userData,
       exerciseGoalMinutes: minutes
     };
     set({ userData: updatedUserData });
+    console.log('[UserSlice] Calling syncToDatabase for exercise goal...');
     syncToDatabase(updatedUserData);
   },
 
   setHydrationGoal: (glasses: number) => {
     const { userData } = get();
+    console.log('[UserSlice] setHydrationGoal called with glasses:', glasses);
     const updatedUserData = {
       ...userData,
       hydrationGoalGlasses: glasses
     };
     set({ userData: updatedUserData });
+    console.log('[UserSlice] Calling syncToDatabase for hydration goal...');
     syncToDatabase(updatedUserData);
   },
 
@@ -441,11 +450,13 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
 
   setSleepGoal: (hours: number) => {
     const { userData } = get();
+    console.log('[UserSlice] setSleepGoal called with hours:', hours);
     const updatedUserData = {
       ...userData,
       sleepGoalHours: hours
     };
     set({ userData: updatedUserData });
+    console.log('[UserSlice] Calling syncToDatabase for sleep goal...');
     syncToDatabase(updatedUserData);
   }
 });

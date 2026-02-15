@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ImageBackground, Image, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store-modular';
 import { DeadlineFormData, Deadline } from '../core/types';
@@ -37,6 +37,8 @@ export default function FocusScreen() {
   const urgentDeadlines = getUrgentDeadlines();
   const upcomingDeadlines = getUpcomingDeadlines();
   const completedDeadlines = getCompletedDeadlines();
+  
+  const totalMissions = urgentDeadlines.length + upcomingDeadlines.length;
   
   // Debug logging
   React.useEffect(() => {

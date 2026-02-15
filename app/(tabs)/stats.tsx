@@ -153,7 +153,8 @@ export default function StatsScreen() {
           </View>
         </View>
 
-        {/* Activity Cards - 1 per row */}
+        {/* Activity Cards - Only show enabled habits */}
+        {/* Study is always shown */}
         <ActivityCard
           title="Study Time"
           value={formatStudyTime(userData.studyMinutesToday || 0)}
@@ -183,122 +184,34 @@ export default function StatsScreen() {
           }
         />
 
-        <ActivityCard
-          title="Sleep"
-          value={formatSleepTime(stats.todaysSleep)}
-          subtitle={`Avg: ${formatSleepTime(stats.avgSleep)}`}
-          image={require('../../assets/hamsters/casual/sleeping.png')}
-          backgroundColor="#7E57C2"
-          icon="😴"
-          detailedStats={
-            <View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Last Night:</Text>
-                <Text style={styles.detailValue}>{formatSleepTime(stats.todaysSleep)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Average Sleep:</Text>
-                <Text style={styles.detailValue}>{formatSleepTime(stats.avgSleep)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Total Sessions:</Text>
-                <Text style={styles.detailValue}>{userData.sleepSessions?.length || 0}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Quality:</Text>
-                <Text style={styles.detailValue}>
-                  {stats.todaysSleep >= 7 ? '😊 Excellent' :
-                   stats.todaysSleep >= 5 ? '😐 Fair' : '😴 Poor'}
-                </Text>
-              </View>
-            </View>
-          }
-        />
-
-        <ActivityCard
-          title="Hydration"
-          value={`${userData.waterGlasses}/${stats.hydrationGoal}`}
-          subtitle="Glasses today"
-          image={require('../../assets/hamsters/casual/drinking.png')}
-          backgroundColor="#42A5F5"
-          icon="💧"
-          detailedStats={
-            <View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Today's Progress:</Text>
-                <Text style={styles.detailValue}>{Math.round(stats.waterProgress)}%</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Glasses Logged:</Text>
-                <Text style={styles.detailValue}>{userData.waterGlasses}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Daily Goal:</Text>
-                <Text style={styles.detailValue}>{stats.hydrationGoal} glasses</Text>
-              </View>
-            </View>
-          }
-        />
-
-        <ActivityCard
-          title="Meals"
-          value={`${userData.mealsLogged}/${stats.mealGoal}`}
-          subtitle="Meals today"
-          image={
-            userData.dietType === 'small-portions' 
-              ? require('../../assets/hamsters/casual/eating-small.png')
-              : userData.dietType === 'large-portions'
-              ? require('../../assets/hamsters/casual/eating-large.png')
-              : require('../../assets/hamsters/casual/eating-normal.png')
-          }
-          backgroundColor="#FF7043"
-          icon="🍽️"
-          detailedStats={
-            <View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Today's Progress:</Text>
-                <Text style={styles.detailValue}>{Math.round(stats.mealProgress)}%</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Meals Logged:</Text>
-                <Text style={styles.detailValue}>{userData.mealsLogged}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Breakfast:</Text>
-                <Text style={styles.detailValue}>{userData.ateBreakfast ? '✅' : '⬜'}</Text>
-              </View>
-            </View>
-          }
-        />
-
-        {/* Exercise Card - Only show if exercise habit is enabled */}
-        {userData.enabledHabits?.includes('exercise') && (
+        {/* Sleep Card - Only if sleep habit is enabled */}
+        {userData.enabledHabits?.includes('sleep') && (
           <ActivityCard
-            title="Exercise"
-            value={`${userData.exerciseMinutes}/${stats.exerciseGoal}`}
-            subtitle="Minutes today"
-            image={require('../../assets/hamsters/casual/jumping.gif')}
-            backgroundColor="#66BB6A"
-            icon="💪"
+            title="Sleep"
+            value={formatSleepTime(stats.todaysSleep)}
+            subtitle={`Avg: ${formatSleepTime(stats.avgSleep)}`}
+            image={require('../../assets/hamsters/casual/sleeping.png')}
+            backgroundColor="#7E57C2"
+            icon="😴"
             detailedStats={
               <View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Today's Progress:</Text>
-                  <Text style={styles.detailValue}>{Math.round(stats.exerciseProgress)}%</Text>
+                  <Text style={styles.detailLabel}>Last Night:</Text>
+                  <Text style={styles.detailValue}>{formatSleepTime(stats.todaysSleep)}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Minutes Completed:</Text>
-                  <Text style={styles.detailValue}>{userData.exerciseMinutes} min</Text>
+                  <Text style={styles.detailLabel}>Average Sleep:</Text>
+                  <Text style={styles.detailValue}>{formatSleepTime(stats.avgSleep)}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Daily Goal:</Text>
-                  <Text style={styles.detailValue}>{stats.exerciseGoal} min</Text>
+                  <Text style={styles.detailLabel}>Total Sessions:</Text>
+                  <Text style={styles.detailValue}>{userData.sleepSessions?.length || 0}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Status:</Text>
+                  <Text style={styles.detailLabel}>Quality:</Text>
                   <Text style={styles.detailValue}>
-                    {stats.exerciseProgress >= 100 ? '🎉 Complete!' :
-                     stats.exerciseProgress >= 50 ? '💪 On Track' : '🏃 Keep Going!'}
+                    {stats.todaysSleep >= 7 ? '😊 Excellent' :
+                     stats.todaysSleep >= 5 ? '😐 Fair' : '😴 Poor'}
                   </Text>
                 </View>
               </View>
@@ -306,17 +219,122 @@ export default function StatsScreen() {
           />
         )}
 
-        {/* Weekly Trends - Premium Feature */}
+        {/* Hydration Card - Only if hydration habit is enabled */}
+        {userData.enabledHabits?.includes('hydration') && (
+          <ActivityCard
+            title="Hydration"
+            value={`${userData.waterGlasses}/${stats.hydrationGoal}`}
+            subtitle="Glasses today"
+            image={require('../../assets/hamsters/casual/drinking.png')}
+            backgroundColor="#42A5F5"
+            icon="💧"
+            detailedStats={
+              <View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Today's Progress:</Text>
+                  <Text style={styles.detailValue}>{Math.round(stats.waterProgress)}%</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Glasses Logged:</Text>
+                  <Text style={styles.detailValue}>{userData.waterGlasses}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Daily Goal:</Text>
+                  <Text style={styles.detailValue}>{stats.hydrationGoal} glasses</Text>
+                </View>
+              </View>
+            }
+          />
+        )}
+
+        {/* Meals Card - Only if meals habit is enabled */}
+        {userData.enabledHabits?.includes('meals') && (
+          <ActivityCard
+            title="Meals"
+            value={`${userData.mealsLogged}/${stats.mealGoal}`}
+            subtitle="Meals today"
+            image={
+              userData.dietType === 'small-portions' 
+                ? require('../../assets/hamsters/casual/eating-small.png')
+                : userData.dietType === 'large-portions'
+                ? require('../../assets/hamsters/casual/eating-large.png')
+                : require('../../assets/hamsters/casual/eating-normal.png')
+            }
+            backgroundColor="#FF7043"
+            icon="🍽️"
+            detailedStats={
+              <View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Today's Progress:</Text>
+                  <Text style={styles.detailValue}>{Math.round(stats.mealProgress)}%</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Meals Logged:</Text>
+                  <Text style={styles.detailValue}>{userData.mealsLogged}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Breakfast:</Text>
+                  <Text style={styles.detailValue}>{userData.ateBreakfast ? '✅' : '⬜'}</Text>
+                </View>
+              </View>
+            }
+          />
+        )}
+
+        {/* Exercise Card - Only if exercise habit is enabled */}
+        {userData.enabledHabits?.includes('exercise') && (
+          <ActivityCard
+            title="Exercise"
+            value={`${userData.exerciseMinutes}/${stats.exerciseGoal}`}
+            subtitle="Minutes today"
+            image={require('../../assets/hamsters/casual/jumping.gif')}
+            backgroundColor="#66BB6A"
+            icon="🏃"
+            detailedStats={
+              <View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Today's Progress:</Text>
+                  <Text style={styles.detailValue}>{Math.round(stats.exerciseProgress)}%</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Minutes Logged:</Text>
+                  <Text style={styles.detailValue}>{userData.exerciseMinutes}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Daily Goal:</Text>
+                  <Text style={styles.detailValue}>{stats.exerciseGoal} minutes</Text>
+                </View>
+              </View>
+            }
+          />
+        )}
+
+        {/* Weekly Trends - Premium Feature (Collapsible) */}
         <View style={styles.premiumCard}>
-          <View style={styles.premiumHeader}>
-            <Text style={styles.cardTitle}>� Weekly Trends</Text>
-            <View style={styles.premiumBadge}>
-              <Text style={styles.premiumBadgeText}>⭐ PREMIUM</Text>
+          <TouchableOpacity 
+            style={styles.premiumHeader}
+            onPress={() => {
+              if (userData.isPremium) {
+                setIsPremiumExpanded(!isPremiumExpanded);
+              } else {
+                setShowPremiumModal(true);
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={styles.premiumHeaderContent}>
+              <Text style={styles.cardTitle}>📈 Weekly Trends</Text>
+              <View style={styles.premiumBadge}>
+                <Text style={styles.premiumBadgeText}>⭐ PREMIUM</Text>
+              </View>
             </View>
-          </View>
+            {userData.isPremium && (
+              <Text style={styles.expandIcon}>{isPremiumExpanded ? '▼' : '▶'}</Text>
+            )}
+          </TouchableOpacity>
           
-          {userData.isPremium ? (
-            <View>
+          {userData.isPremium && isPremiumExpanded ? (
+            <View style={styles.premiumContent}>
               {/* Study Graph */}
               <WeeklyLineGraph
                 data={weeklyData.studyData}
@@ -719,6 +737,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
     letterSpacing: 0.5,
+  },
+  premiumHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  expandIcon: {
+    fontSize: SCREEN_WIDTH * 0.05,
+    color: '#FFD700',
+    fontWeight: '700',
+    marginLeft: 10,
+  },
+  premiumContent: {
+    marginTop: SCREEN_HEIGHT * 0.02,
   },
   graphDivider: {
     height: 1,
