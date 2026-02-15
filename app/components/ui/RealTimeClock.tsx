@@ -4,7 +4,11 @@ import { useQuillbyStore } from '../../state/store-modular';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export default function RealTimeClock() {
+interface RealTimeClockProps {
+  isExercising?: boolean;
+}
+
+export default function RealTimeClock({ isExercising = false }: RealTimeClockProps) {
   const { userData } = useQuillbyStore();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [fadeAnim] = useState(new Animated.Value(1));
@@ -60,6 +64,12 @@ export default function RealTimeClock() {
     const time = formatTime();
     const buddyName = getBuddyName();
     const timeEmoji = getTimeBasedEmoji();
+    
+    // Show different text during exercise session
+    if (isExercising) {
+      return `${time} 💪 ${buddyName}'s Exercise Session`;
+    }
+    
     return `${time} ${timeEmoji} ${buddyName}'s Room`;
   };
 
@@ -76,7 +86,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     // Dynamic positioning based on iPhone 15 Pro specs (393x852)
-    width: (SCREEN_WIDTH * 266) / 393, // 266px on iPhone 15 Pro
+    width: '90%', // 266px on iPhone 15 Pro
     height: (SCREEN_HEIGHT * 66) / 852, // 66px on iPhone 15 Pro
     left: (SCREEN_WIDTH * 16) / 393, // 16px on iPhone 15 Pro
     top: (SCREEN_HEIGHT * 9) / 852, // 9px on iPhone 15 Pro

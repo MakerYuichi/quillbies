@@ -2,6 +2,7 @@
 import { StateCreator } from 'zustand';
 import { ShopItem } from '../../core/types';
 import { UserSlice } from './userSlice';
+import { syncToDatabase } from '../utils/syncUtils';
 
 export interface ShopSlice {
   // Shop actions
@@ -79,6 +80,10 @@ export const createShopSlice: StateCreator<
     });
     
     console.log(`[Shop] Purchased ${itemId} for ${itemPrice} coins`);
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
+    
     return true;
   },
 

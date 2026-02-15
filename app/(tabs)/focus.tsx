@@ -13,7 +13,8 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function FocusScreen() {
   const router = useRouter();
   const { 
-    userData, 
+    userData,
+    deadlines,
     startFocusSession, 
     createDeadline,
     updateDeadline,
@@ -36,6 +37,15 @@ export default function FocusScreen() {
   const urgentDeadlines = getUrgentDeadlines();
   const upcomingDeadlines = getUpcomingDeadlines();
   const completedDeadlines = getCompletedDeadlines();
+  
+  // Debug logging
+  React.useEffect(() => {
+    console.log('[Focus] Total deadlines in store:', deadlines.length);
+    console.log('[Focus] Urgent:', urgentDeadlines.length, 'Upcoming:', upcomingDeadlines.length, 'Completed:', completedDeadlines.length);
+    if (deadlines.length > 0) {
+      console.log('[Focus] First deadline:', deadlines[0]);
+    }
+  }, [deadlines, urgentDeadlines, upcomingDeadlines, completedDeadlines]);
 
   const handleStartSession = (deadlineId?: string) => {
     const energyNeeded = calculateFocusEnergyCost(userData);
@@ -97,14 +107,16 @@ export default function FocusScreen() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse date string in local timezone to avoid UTC conversion issues
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
     const now = new Date();
 
     // Compare at the calendar-day level (ignore time of day)
     const startOfDue = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const diffTime = startOfDue.getTime() - startOfToday.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
     const formattedDate = date.toLocaleDateString('en-US', options);

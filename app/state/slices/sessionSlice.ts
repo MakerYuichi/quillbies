@@ -2,6 +2,7 @@
 import { StateCreator } from 'zustand';
 import { SessionData } from '../../core/types';
 import { UserSlice } from './userSlice';
+import { syncToDatabase } from '../utils/syncUtils';
 
 export interface SessionConfig {
   duration: number; // in minutes
@@ -142,6 +143,9 @@ export const createSessionSlice: StateCreator<
       selectedDeadlineId: null,
       currentSessionId: null
     });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
   },
 
   updateFocusDuringSession: () => {
@@ -295,18 +299,23 @@ export const createSessionSlice: StateCreator<
     
     const newInteractionBoosts = session.interactionBoosts + boost;
     
+    const updatedUserData = {
+      ...userData,
+      qCoins: userData.qCoins - cost,
+      appleTapsToday: isPremium ? userData.appleTapsToday : userData.appleTapsToday + 1
+    };
+    
     set({
       session: {
         ...session,
         interactionBoosts: newInteractionBoosts,
         applePremiumUsedThisSession: isPremium ? true : session.applePremiumUsedThisSession
       },
-      userData: {
-        ...userData,
-        qCoins: userData.qCoins - cost,
-        appleTapsToday: isPremium ? userData.appleTapsToday : userData.appleTapsToday + 1
-      }
+      userData: updatedUserData
     });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
     
     return true;
   },
@@ -326,6 +335,12 @@ export const createSessionSlice: StateCreator<
     const now = Date.now();
     const boostDuration = isPremium ? 5 * 60 * 1000 : 3 * 60 * 1000;
     
+    const updatedUserData = {
+      ...userData,
+      qCoins: userData.qCoins - cost,
+      coffeeTapsToday: isPremium ? userData.coffeeTapsToday : userData.coffeeTapsToday + 1
+    };
+    
     set({
       session: {
         ...session,
@@ -334,12 +349,11 @@ export const createSessionSlice: StateCreator<
         coffeeBoostStartTime: now,
         coffeeBoostEndTime: now + boostDuration
       },
-      userData: {
-        ...userData,
-        qCoins: userData.qCoins - cost,
-        coffeeTapsToday: isPremium ? userData.coffeeTapsToday : userData.coffeeTapsToday + 1
-      }
+      userData: updatedUserData
     });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
     
     return true;
   }

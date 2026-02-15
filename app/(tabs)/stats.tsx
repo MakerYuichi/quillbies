@@ -1,14 +1,46 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, TouchableOpacity, Image } from 'react-native';
 import { useQuillbyStore } from '../state/store-modular';
 import { formatSleepTime, formatExerciseTime, formatStudyTime } from '../../lib/timeUtils';
 import { getTodaysSleepHours } from '../core/engine';
+import WeeklyLineGraph from '../components/stats/WeeklyLineGraph';
+import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
+import ActivityCard from '../components/stats/ActivityCard';
+import StreakCalendar from '../components/stats/StreakCalendar';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function StatsScreen() {
-  const { userData, deadlines, getCompletedDeadlines, getUrgentDeadlines, getUpcomingDeadlines } = useQuillbyStore();
+  const { userData, deadlines, session, getCompletedDeadlines, getUrgentDeadlines, getUpcomingDeadlines } = useQuillbyStore();
   const buddyName = userData.buddyName || 'Quillby';
+  const [showPremiumModal, setShowPremiumModal] = React.useState(false);
+  const [isPremiumExpanded, setIsPremiumExpanded] = React.useState(false);
+
+  // Generate mock weekly data (last 7 days)
+  // In production, this would come from historical data stored in the database
+  const weeklyData = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    // Study data (minutes per day)
+    const studyData = days.map((day, index) => ({
+      day,
+      value: index === 6 ? (userData.studyMinutesToday || 0) : Math.floor(Math.random() * 120 + 30), // Today's actual data
+    }));
+    
+    // Sleep data (hours per day)
+    const sleepData = days.map((day, index) => ({
+      day,
+      value: index === 6 ? getTodaysSleepHours(userData.sleepSessions || []) : Math.random() * 3 + 5, // Today's actual data
+    }));
+    
+    // Water data (glasses per day)
+    const waterData = days.map((day, index) => ({
+      day,
+      value: index === 6 ? userData.waterGlasses : Math.floor(Math.random() * 8 + 2), // Today's actual data
+    }));
+    
+    return { studyData, sleepData, waterData };
+  }, [userData.studyMinutesToday, userData.sleepSessions, userData.waterGlasses]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -115,230 +147,238 @@ export default function StatsScreen() {
               <Text style={styles.overviewLabel}>Day Streak</Text>
             </View>
             <View style={styles.overviewItem}>
-              <Text style={styles.overviewValue}>{stats.roomStatus}</Text>
-              <Text style={styles.overviewLabel}>Room</Text>
+              <Text style={styles.overviewValue}>{userData.messPoints.toFixed(0)}</Text>
+              <Text style={styles.overviewLabel}>Mess Points</Text>
             </View>
           </View>
         </View>
 
-        {/* Study Analytics */}
-        {userData.enabledHabits?.includes('study') && (
-          <View style={styles.statsCard}>
-            <Text style={styles.cardTitle}>📚 Study Analytics</Text>
-            
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Today's Goal Progress:</Text>
+        {/* Activity Cards - 1 per row */}
+        <ActivityCard
+          title="Study Time"
+          value={formatStudyTime(userData.studyMinutesToday || 0)}
+          subtitle={`Goal: ${formatStudyTime((userData.studyGoalHours || 0) * 60)}`}
+          image={require('../../assets/hamsters/casual/studying.png')}
+          backgroundColor="#5C6BC0"
+          icon="📚"
+          detailedStats={
+            <View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Today's Progress:</Text>
+                <Text style={styles.detailValue}>{Math.round(stats.studyGoalProgress)}%</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Total Study Time:</Text>
+                <Text style={styles.detailValue}>{formatStudyTime(stats.totalStudyHours * 60)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Break Time Today:</Text>
+                <Text style={styles.detailValue}>{formatStudyTime(Math.floor((session?.totalBreakTime || 0) / 60))}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Missed Checkpoints:</Text>
+                <Text style={styles.detailValue}>{userData.missedCheckpoints || 0}</Text>
+              </View>
             </View>
-            {renderProgressBar(stats.studyGoalProgress, '#1976D2')}
-            <Text style={styles.statDetail}>
-              {formatStudyTime(userData.studyMinutesToday || 0)} / {formatStudyTime((userData.studyGoalHours || 0) * 60)}
-            </Text>
-            
-            <View style={styles.divider} />
-            
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Total Study Time:</Text>
-              <Text style={styles.statValue}>{formatStudyTime(stats.totalStudyHours * 60)}</Text>
+          }
+        />
+
+        <ActivityCard
+          title="Sleep"
+          value={formatSleepTime(stats.todaysSleep)}
+          subtitle={`Avg: ${formatSleepTime(stats.avgSleep)}`}
+          image={require('../../assets/hamsters/casual/sleeping.png')}
+          backgroundColor="#7E57C2"
+          icon="😴"
+          detailedStats={
+            <View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Last Night:</Text>
+                <Text style={styles.detailValue}>{formatSleepTime(stats.todaysSleep)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Average Sleep:</Text>
+                <Text style={styles.detailValue}>{formatSleepTime(stats.avgSleep)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Total Sessions:</Text>
+                <Text style={styles.detailValue}>{userData.sleepSessions?.length || 0}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Quality:</Text>
+                <Text style={styles.detailValue}>
+                  {stats.todaysSleep >= 7 ? '😊 Excellent' :
+                   stats.todaysSleep >= 5 ? '😐 Fair' : '😴 Poor'}
+                </Text>
+              </View>
             </View>
-            
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Missed Checkpoints:</Text>
-              <Text style={styles.statValue}>{userData.missedCheckpoints || 0}</Text>
+          }
+        />
+
+        <ActivityCard
+          title="Hydration"
+          value={`${userData.waterGlasses}/${stats.hydrationGoal}`}
+          subtitle="Glasses today"
+          image={require('../../assets/hamsters/casual/drinking.png')}
+          backgroundColor="#42A5F5"
+          icon="💧"
+          detailedStats={
+            <View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Today's Progress:</Text>
+                <Text style={styles.detailValue}>{Math.round(stats.waterProgress)}%</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Glasses Logged:</Text>
+                <Text style={styles.detailValue}>{userData.waterGlasses}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Daily Goal:</Text>
+                <Text style={styles.detailValue}>{stats.hydrationGoal} glasses</Text>
+              </View>
+            </View>
+          }
+        />
+
+        <ActivityCard
+          title="Meals"
+          value={`${userData.mealsLogged}/${stats.mealGoal}`}
+          subtitle="Meals today"
+          image={
+            userData.dietType === 'small-portions' 
+              ? require('../../assets/hamsters/casual/eating-small.png')
+              : userData.dietType === 'large-portions'
+              ? require('../../assets/hamsters/casual/eating-large.png')
+              : require('../../assets/hamsters/casual/eating-normal.png')
+          }
+          backgroundColor="#FF7043"
+          icon="🍽️"
+          detailedStats={
+            <View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Today's Progress:</Text>
+                <Text style={styles.detailValue}>{Math.round(stats.mealProgress)}%</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Meals Logged:</Text>
+                <Text style={styles.detailValue}>{userData.mealsLogged}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Breakfast:</Text>
+                <Text style={styles.detailValue}>{userData.ateBreakfast ? '✅' : '⬜'}</Text>
+              </View>
+            </View>
+          }
+        />
+
+        {/* Weekly Trends - Premium Feature */}
+        <View style={styles.premiumCard}>
+          <View style={styles.premiumHeader}>
+            <Text style={styles.cardTitle}>� Weekly Trends</Text>
+            <View style={styles.premiumBadge}>
+              <Text style={styles.premiumBadgeText}>⭐ PREMIUM</Text>
             </View>
           </View>
-        )}
-
-        {/* Deadline Progress */}
-        <View style={styles.statsCard}>
-          <Text style={styles.cardTitle}>🎯 Deadline Progress</Text>
           
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Total Deadlines:</Text>
-            <Text style={styles.statValue}>{stats.totalDeadlines}</Text>
-          </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Completed:</Text>
-            <Text style={styles.statValue}>✅ {stats.completedDeadlines}</Text>
-          </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Urgent:</Text>
-            <Text style={styles.statValue}>🔴 {stats.urgentDeadlines}</Text>
-          </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Upcoming:</Text>
-            <Text style={styles.statValue}>🟡 {stats.upcomingDeadlines}</Text>
-          </View>
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Completion Rate:</Text>
-          </View>
-          {renderProgressBar(stats.completionRate, '#4CAF50')}
-        </View>
-
-        {/* Today's Habits */}
-        <View style={styles.statsCard}>
-          <Text style={styles.cardTitle}>✅ Today's Habits</Text>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>💧 Hydration:</Text>
-            <Text style={styles.statValue}>{userData.waterGlasses} / {stats.hydrationGoal}</Text>
-          </View>
-          {renderProgressBar(stats.waterProgress, '#2196F3')}
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>🍽️ Meals:</Text>
-            <Text style={styles.statValue}>{userData.mealsLogged} / {stats.mealGoal}</Text>
-          </View>
-          {renderProgressBar(stats.mealProgress, '#FF9800')}
-          
-          {userData.enabledHabits?.includes('exercise') && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>🏃 Exercise:</Text>
-                <Text style={styles.statValue}>{formatExerciseTime(userData.exerciseMinutes)} / {formatExerciseTime(stats.exerciseGoal)}</Text>
+          {userData.isPremium ? (
+            <View>
+              {/* Study Graph */}
+              <WeeklyLineGraph
+                data={weeklyData.studyData}
+                color="#1976D2"
+                label="📚 Study Time"
+                unit="Minutes per day"
+                maxValue={180}
+              />
+              
+              <View style={styles.graphDivider} />
+              
+              {/* Sleep Graph */}
+              <WeeklyLineGraph
+                data={weeklyData.sleepData}
+                color="#9C27B0"
+                label="😴 Sleep Duration"
+                unit="Hours per night"
+                maxValue={10}
+              />
+              
+              <View style={styles.graphDivider} />
+              
+              {/* Water Graph */}
+              <WeeklyLineGraph
+                data={weeklyData.waterData}
+                color="#2196F3"
+                label="💧 Hydration"
+                unit="Glasses per day"
+                maxValue={12}
+              />
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.blurContainerCompact}
+              activeOpacity={0.9}
+              onPress={() => setShowPremiumModal(true)}
+            >
+              {/* Compact preview - just one graph */}
+              <View style={styles.graphPreviewCompact}>
+                <WeeklyLineGraph
+                  data={weeklyData.studyData}
+                  color="#1976D2"
+                  label="📚 Study Time"
+                  unit="Minutes per day"
+                  maxValue={180}
+                />
               </View>
-              {renderProgressBar(stats.exerciseProgress, '#4CAF50')}
-            </>
-          )}
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>🍳 Breakfast:</Text>
-            <Text style={styles.statValue}>{userData.ateBreakfast ? '✅ Logged' : '⬜ Not logged'}</Text>
-          </View>
-        </View>
-
-        {/* Sleep Analytics */}
-        <View style={styles.statsCard}>
-          <Text style={styles.cardTitle}>😴 Sleep Analytics</Text>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Last Night:</Text>
-            <Text style={styles.statValue}>{formatSleepTime(stats.todaysSleep)}</Text>
-          </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Average Sleep:</Text>
-            <Text style={styles.statValue}>{formatSleepTime(stats.avgSleep)}</Text>
-          </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Total Sessions:</Text>
-            <Text style={styles.statValue}>{userData.sleepSessions?.length || 0}</Text>
-          </View>
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.sleepQualityContainer}>
-            <Text style={styles.sleepQualityLabel}>Sleep Quality:</Text>
-            <Text style={[
-              styles.sleepQualityValue,
-              stats.todaysSleep >= 7 ? styles.sleepGood :
-              stats.todaysSleep >= 5 ? styles.sleepOkay :
-              styles.sleepPoor
-            ]}>
-              {stats.todaysSleep >= 7 ? '😊 Excellent' :
-               stats.todaysSleep >= 5 ? '😐 Fair' :
-               stats.todaysSleep > 0 ? '😴 Poor' : '⬜ Not tracked'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Room & Energy */}
-        <View style={styles.statsCard}>
-          <Text style={styles.cardTitle}>🏠 Room & Energy</Text>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Room Status:</Text>
-            <Text style={[
-              styles.statValue,
-              userData.messPoints <= 5 ? styles.roomClean :
-              userData.messPoints <= 10 ? styles.roomLight :
-              userData.messPoints <= 20 ? styles.roomMedium :
-              styles.roomHeavy
-            ]}>
-              {stats.roomStatus}
-            </Text>
-          </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Mess Points:</Text>
-            <Text style={styles.statValue}>{userData.messPoints.toFixed(1)}</Text>
-          </View>
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Energy Cap:</Text>
-            <Text style={styles.statValue}>⚡ {userData.maxEnergyCap}</Text>
-          </View>
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Current Energy:</Text>
-            <Text style={styles.statValue}>⚡ {Math.round(userData.energy)}</Text>
-          </View>
-        </View>
-
-        {/* Achievements Preview */}
-        <View style={styles.achievementsCard}>
-          <Text style={styles.cardTitle}>🏆 Achievements</Text>
-          <View style={styles.achievementGrid}>
-            {userData.currentStreak >= 7 && (
-              <View style={styles.achievementBadge}>
-                <Text style={styles.achievementIcon}>🔥</Text>
-                <Text style={styles.achievementName}>Week Warrior</Text>
+              
+              {/* Blur overlay */}
+              <View style={styles.blurOverlayCompact}>
+                <View style={styles.premiumPromptCompact}>
+                  <Image 
+                    source={require('../../assets/hamsters/casual/idle-sit.png')}
+                    style={styles.quillbyLockImageCompact}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.premiumTextContainer}>
+                    <Text style={styles.premiumPromptTitleCompact}>Unlock Weekly Insights</Text>
+                    <Text style={styles.premiumPromptTextCompact}>
+                      Track study, sleep & hydration trends
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upgradeButtonCompact}
+                    onPress={() => setShowPremiumModal(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.upgradeButtonTextCompact}>⭐ Upgrade</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            )}
-            {stats.completedDeadlines >= 5 && (
-              <View style={styles.achievementBadge}>
-                <Text style={styles.achievementIcon}>📚</Text>
-                <Text style={styles.achievementName}>Task Master</Text>
-              </View>
-            )}
-            {stats.totalStudyHours >= 10 && (
-              <View style={styles.achievementBadge}>
-                <Text style={styles.achievementIcon}>⭐</Text>
-                <Text style={styles.achievementName}>Study Star</Text>
-              </View>
-            )}
-            {userData.waterGlasses >= stats.hydrationGoal && (
-              <View style={styles.achievementBadge}>
-                <Text style={styles.achievementIcon}>💧</Text>
-                <Text style={styles.achievementName}>Hydration Hero</Text>
-              </View>
-            )}
-            {userData.messPoints <= 5 && (
-              <View style={styles.achievementBadge}>
-                <Text style={styles.achievementIcon}>✨</Text>
-                <Text style={styles.achievementName}>Clean Queen</Text>
-              </View>
-            )}
-            {stats.avgSleep >= 7 && (
-              <View style={styles.achievementBadge}>
-                <Text style={styles.achievementIcon}>😴</Text>
-                <Text style={styles.achievementName}>Sleep Champion</Text>
-              </View>
-            )}
-          </View>
-          {userData.currentStreak < 7 && stats.completedDeadlines < 5 && stats.totalStudyHours < 10 && (
-            <Text style={styles.achievementHint}>
-              Keep building habits to unlock achievements! 🌟
-            </Text>
+            </TouchableOpacity>
           )}
         </View>
+
+        {/* Streak Calendar */}
+        <StreakCalendar
+          completedDays={[]} // TODO: Track completed days as day numbers (1-31)
+          currentMonth={new Date().toLocaleString('default', { month: 'long' })}
+          userCreatedAt={userData.createdAt ? new Date(userData.createdAt) : new Date()}
+        />
 
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Premium Upgrade Modal */}
+      <PremiumUpgradeModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onUpgrade={() => {
+          // TODO: Implement actual payment flow
+          // For now, just show an alert
+          alert('Premium upgrade coming soon! This will integrate with App Store/Google Play.');
+          setShowPremiumModal(false);
+        }}
+      />
     </ImageBackground>
   );
 }
@@ -360,30 +400,57 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: SCREEN_HEIGHT * 0.03,
     alignItems: 'center',
+    paddingTop: 10,
   },
   title: {
-    fontSize: SCREEN_WIDTH * 0.07,
+    fontSize: SCREEN_WIDTH * 0.075,
     fontWeight: '700',
-    color: '#333',
+    color: '#1976D2',
     marginBottom: SCREEN_HEIGHT * 0.01,
+    textShadowColor: 'rgba(25, 118, 210, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitle: {
-    fontSize: SCREEN_WIDTH * 0.04,
+    fontSize: SCREEN_WIDTH * 0.042,
     color: '#666',
     textAlign: 'center',
+    fontWeight: '500',
+  },
+  
+  // Detail Stats (for flipped cards)
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  detailLabel: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: '#FFF',
+    fontWeight: '700',
   },
   
   // Overview Card
   overviewCard: {
     backgroundColor: '#FFF',
     padding: SCREEN_WIDTH * 0.05,
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: SCREEN_HEIGHT * 0.02,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: '#1976D2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E3F2FD',
   },
   overviewGrid: {
     flexDirection: 'row',
@@ -392,52 +459,59 @@ const styles = StyleSheet.create({
   overviewItem: {
     alignItems: 'center',
     flex: 1,
+    padding: 8,
   },
   overviewValue: {
-    fontSize: SCREEN_WIDTH * 0.06,
+    fontSize: SCREEN_WIDTH * 0.065,
     fontWeight: '700',
     color: '#1976D2',
     marginBottom: 4,
   },
   overviewLabel: {
-    fontSize: SCREEN_WIDTH * 0.03,
+    fontSize: SCREEN_WIDTH * 0.032,
     color: '#666',
     textAlign: 'center',
+    fontWeight: '500',
   },
   
   // Stats Cards
   statsCard: {
     backgroundColor: '#FFF',
     padding: SCREEN_WIDTH * 0.05,
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: SCREEN_HEIGHT * 0.02,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F5F5F5',
   },
   cardTitle: {
-    fontSize: SCREEN_WIDTH * 0.05,
+    fontSize: SCREEN_WIDTH * 0.052,
     fontWeight: '700',
     color: '#333',
     marginBottom: SCREEN_HEIGHT * 0.02,
+    letterSpacing: 0.3,
   },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: SCREEN_HEIGHT * 0.008,
+    paddingVertical: SCREEN_HEIGHT * 0.01,
+    paddingHorizontal: 4,
   },
   statLabel: {
     fontSize: SCREEN_WIDTH * 0.04,
-    color: '#666',
+    color: '#555',
     flex: 1,
+    fontWeight: '500',
   },
   statValue: {
     fontSize: SCREEN_WIDTH * 0.04,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1976D2',
   },
   statDetail: {
     fontSize: SCREEN_WIDTH * 0.035,
@@ -450,10 +524,13 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: SCREEN_HEIGHT * 0.01,
+    marginVertical: SCREEN_HEIGHT * 0.012,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 8,
   },
   progressBar: {
-    fontSize: SCREEN_WIDTH * 0.04,
+    fontSize: SCREEN_WIDTH * 0.042,
     fontFamily: 'monospace',
     flex: 1,
   },
@@ -461,11 +538,12 @@ const styles = StyleSheet.create({
     color: '#E0E0E0',
   },
   progressPercent: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    marginLeft: 8,
-    minWidth: 35,
+    fontSize: SCREEN_WIDTH * 0.038,
+    color: '#1976D2',
+    marginLeft: 12,
+    minWidth: 40,
     textAlign: 'right',
+    fontWeight: '700',
   },
   
   // Dividers
@@ -515,12 +593,17 @@ const styles = StyleSheet.create({
   
   // Achievements
   achievementsCard: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: '#FFF9E6',
     padding: SCREEN_WIDTH * 0.05,
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: SCREEN_HEIGHT * 0.02,
     borderWidth: 2,
-    borderColor: '#FFB74D',
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   achievementGrid: {
     flexDirection: 'row',
@@ -529,24 +612,26 @@ const styles = StyleSheet.create({
   },
   achievementBadge: {
     backgroundColor: '#FFF',
-    padding: SCREEN_WIDTH * 0.03,
-    borderRadius: 12,
+    padding: SCREEN_WIDTH * 0.035,
+    borderRadius: 16,
     alignItems: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.01,
+    marginBottom: SCREEN_HEIGHT * 0.012,
     width: '48%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#FFE082',
   },
   achievementIcon: {
-    fontSize: SCREEN_WIDTH * 0.08,
-    marginBottom: 4,
+    fontSize: SCREEN_WIDTH * 0.09,
+    marginBottom: 6,
   },
   achievementName: {
-    fontSize: SCREEN_WIDTH * 0.03,
-    fontWeight: '600',
+    fontSize: SCREEN_WIDTH * 0.032,
+    fontWeight: '700',
     color: '#333',
     textAlign: 'center',
   },
@@ -561,5 +646,199 @@ const styles = StyleSheet.create({
   // Bottom Spacer
   bottomSpacer: {
     height: SCREEN_HEIGHT * 0.05,
+  },
+  
+  // Premium Card
+  premiumCard: {
+    backgroundColor: '#FFF',
+    padding: SCREEN_WIDTH * 0.05,
+    borderRadius: 20,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+  },
+  premiumHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.02,
+  },
+  premiumBadge: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  premiumBadgeText: {
+    fontSize: SCREEN_WIDTH * 0.032,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.5,
+  },
+  graphDivider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: SCREEN_HEIGHT * 0.02,
+  },
+  
+  // Blur Container (Compact for free users)
+  blurContainerCompact: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 12,
+    minHeight: 200,
+  },
+  graphPreviewCompact: {
+    opacity: 0.3,
+  },
+  blurOverlayCompact: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  premiumPromptCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SCREEN_WIDTH * 0.04,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    maxWidth: SCREEN_WIDTH * 0.85,
+  },
+  quillbyLockImageCompact: {
+    width: SCREEN_WIDTH * 0.15,
+    height: SCREEN_WIDTH * 0.15,
+    marginRight: 12,
+  },
+  premiumTextContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  premiumPromptTitleCompact: {
+    fontSize: SCREEN_WIDTH * 0.042,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  premiumPromptTextCompact: {
+    fontSize: SCREEN_WIDTH * 0.032,
+    color: '#666',
+    lineHeight: SCREEN_WIDTH * 0.042,
+  },
+  upgradeButtonCompact: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#FFA000',
+  },
+  upgradeButtonTextCompact: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.3,
+  },
+  
+  // Blur Container (Original - for premium users)
+  blurContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 12,
+    minHeight: 600,
+  },
+  graphPreview: {
+    opacity: 0.4,
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  premiumPrompt: {
+    alignItems: 'center',
+    padding: SCREEN_WIDTH * 0.06,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    maxWidth: SCREEN_WIDTH * 0.8,
+  },
+  quillbyLockImage: {
+    width: SCREEN_WIDTH * 0.25,
+    height: SCREEN_WIDTH * 0.25,
+    marginBottom: 12,
+  },
+  premiumPromptIcon: {
+    fontSize: SCREEN_WIDTH * 0.15,
+    marginBottom: 12,
+  },
+  premiumPromptTitle: {
+    fontSize: SCREEN_WIDTH * 0.055,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
+  },
+  premiumPromptText: {
+    fontSize: SCREEN_WIDTH * 0.038,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: SCREEN_WIDTH * 0.05,
+  },
+  upgradeButton: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 28,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#FFA000',
+  },
+  upgradeButtonText: {
+    fontSize: SCREEN_WIDTH * 0.045,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.5,
   },
 });

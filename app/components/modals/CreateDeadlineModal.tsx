@@ -15,13 +15,25 @@ import {
 import { DeadlineFormData, Deadline } from '../../core/types';
 import CustomDatePicker from '../ui/CustomDatePicker';
 import CustomTimePicker from '../ui/CustomTimePicker';
+import ScrollablePicker from '../ui/ScrollablePicker';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Helper function to get today's date
+// Helper function to get today's date in local timezone
 const getTodayDate = () => {
   const today = new Date();
-  return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`; // YYYY-MM-DD format in local timezone
+};
+
+// Helper function to get current time in HH:MM format
+const getCurrentTime = () => {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 };
 
 interface CreateDeadlineModalProps {
@@ -44,11 +56,18 @@ export default function CreateDeadlineModal({
   const [formData, setFormData] = useState<DeadlineFormData>({
     title: '',
     dueDate: getTodayDate(), // Default to today
-    dueTime: '',
+    dueTime: getCurrentTime(), // Default to current time
     priority: 'medium',
     estimatedHours: '',
     category: 'study'
   });
+  
+  const [selectedHundreds, setSelectedHundreds] = useState(0);
+  const [selectedTens, setSelectedTens] = useState(0);
+  const [selectedOnes, setSelectedOnes] = useState(0);
+  const [selectedMinTens, setSelectedMinTens] = useState(0);
+  const [selectedMinOnes, setSelectedMinOnes] = useState(0);
+  const [showPicker, setShowPicker] = useState<{ type: 'hundreds' | 'tens' | 'ones' | 'minTens' | 'minOnes' | null }>({ type: null });
 
   // Debug log for form data changes
   React.useEffect(() => {
@@ -62,25 +81,46 @@ export default function CreateDeadlineModal({
       const normalizedDate = initialData.dueDate.includes('T')
         ? initialData.dueDate.split('T')[0]
         : initialData.dueDate;
+      
+      const estimatedHours = initialData.estimatedHours.toString();
+      const totalHours = Math.floor(initialData.estimatedHours);
+      const totalMinutes = Math.round((initialData.estimatedHours - totalHours) * 60);
+      
+      const hundreds = Math.floor(totalHours / 100);
+      const tens = Math.floor((totalHours % 100) / 10);
+      const ones = totalHours % 10;
+      const minTens = Math.floor(totalMinutes / 10);
+      const minOnes = totalMinutes % 10;
 
       setFormData({
         title: initialData.title,
         dueDate: normalizedDate,
-        dueTime: initialData.dueTime || '',
+        dueTime: initialData.dueTime || getCurrentTime(),
         priority: initialData.priority,
-        estimatedHours: initialData.estimatedHours.toString(),
+        estimatedHours: estimatedHours,
         category: initialData.category || 'study'
       });
+      
+      setSelectedHundreds(hundreds);
+      setSelectedTens(tens);
+      setSelectedOnes(ones);
+      setSelectedMinTens(minTens);
+      setSelectedMinOnes(minOnes);
     }
     if (visible && mode === 'create' && !initialData) {
       setFormData({
         title: '',
         dueDate: getTodayDate(),
-        dueTime: '',
+        dueTime: getCurrentTime(),
         priority: 'medium',
         estimatedHours: '',
         category: 'study'
       });
+      setSelectedHundreds(0);
+      setSelectedTens(0);
+      setSelectedOnes(0);
+      setSelectedMinTens(0);
+      setSelectedMinOnes(0);
     }
   }, [visible, mode, initialData]);
 
@@ -98,25 +138,37 @@ export default function CreateDeadlineModal({
       Alert.alert('Error', 'Please select a due date');
       return;
     }
-    if (!formData.estimatedHours || parseFloat(formData.estimatedHours) <= 0) {
-      Alert.alert('Error', 'Please enter valid estimated hours');
+    
+    // Calculate total hours from digit pickers
+    const totalHours = (selectedHundreds * 100) + (selectedTens * 10) + selectedOnes;
+    const totalMinutes = (selectedMinTens * 10) + selectedMinOnes;
+    const totalHoursDecimal = totalHours + (totalMinutes / 60);
+    
+    if (totalHoursDecimal <= 0) {
+      Alert.alert('Error', 'Please select estimated work time (at least 1 minute)');
       return;
     }
+    
+    // Update formData with calculated hours before submitting
+    const updatedFormData = {
+      ...formData,
+      estimatedHours: totalHoursDecimal.toString()
+    };
 
     // Validate date format and not in past
-    if (!validateDate(formData.dueDate)) {
+    if (!validateDate(updatedFormData.dueDate)) {
       Alert.alert('Error', 'Due date cannot be in the past');
       return;
     }
     
     // Validate time format if provided
-    if (formData.dueTime && !validateTime(formData.dueTime)) {
+    if (updatedFormData.dueTime && !validateTime(updatedFormData.dueTime)) {
       Alert.alert('Error', 'Please enter time in HH:MM format (e.g., 14:30)');
       return;
     }
 
     // Submit form (create or edit)
-    onSubmit(formData, deadlineId);
+    onSubmit(updatedFormData, deadlineId);
     
     // Reset form
     setFormData({
@@ -214,6 +266,7 @@ export default function CreateDeadlineModal({
             <TextInput
               style={styles.textInput}
               placeholder="e.g., Math Final Exam"
+              placeholderTextColor="#BBB"
               value={formData.title}
               onChangeText={(text) => setFormData(prev => ({...prev, title: text}))}
               autoFocus
@@ -240,6 +293,7 @@ export default function CreateDeadlineModal({
                   <TextInput
                     style={styles.dateTimeInput}
                     placeholder="2024-12-28"
+                    placeholderTextColor="#BBB"
                     value={formData.dueDate}
                     onChangeText={(text) => setFormData(prev => ({...prev, dueDate: text}))}
                     keyboardType="numeric"
@@ -261,6 +315,7 @@ export default function CreateDeadlineModal({
                   <TextInput
                     style={styles.dateTimeInput}
                     placeholder="14:30"
+                    placeholderTextColor="#BBB"
                     value={formData.dueTime}
                     onChangeText={(text) => setFormData(prev => ({...prev, dueTime: text}))}
                     keyboardType="numeric"
@@ -313,15 +368,63 @@ export default function CreateDeadlineModal({
 
           {/* Estimated Work Hours */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Estimated Work Hours *</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g., 8"
-              keyboardType="numeric"
-              value={formData.estimatedHours}
-              onChangeText={(text) => setFormData(prev => ({...prev, estimatedHours: text}))}
-            />
-            <Text style={styles.inputHint}>How many hours do you think this will take?</Text>
+            <Text style={styles.inputLabel}>Estimated Work Time *</Text>
+            <View style={styles.digitPickerRow}>
+              <TouchableOpacity
+                style={styles.digitBox}
+                onPress={() => setShowPicker({ type: 'hundreds' })}
+              >
+                {selectedHundreds === 0 && selectedTens === 0 && selectedOnes === 0 && selectedMinTens === 0 && selectedMinOnes === 0 ? (
+                  <Text style={styles.digitPlaceholder}>H</Text>
+                ) : (
+                  <Text style={styles.digitValue}>{selectedHundreds}</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.digitBox}
+                onPress={() => setShowPicker({ type: 'tens' })}
+              >
+                {selectedHundreds === 0 && selectedTens === 0 && selectedOnes === 0 && selectedMinTens === 0 && selectedMinOnes === 0 ? (
+                  <Text style={styles.digitPlaceholder}>H</Text>
+                ) : (
+                  <Text style={styles.digitValue}>{selectedTens}</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.digitBox}
+                onPress={() => setShowPicker({ type: 'ones' })}
+              >
+                {selectedHundreds === 0 && selectedTens === 0 && selectedOnes === 0 && selectedMinTens === 0 && selectedMinOnes === 0 ? (
+                  <Text style={styles.digitPlaceholder}>H</Text>
+                ) : (
+                  <Text style={styles.digitValue}>{selectedOnes}</Text>
+                )}
+              </TouchableOpacity>
+              <Text style={styles.timeSeparator}>:</Text>
+              <TouchableOpacity
+                style={styles.digitBox}
+                onPress={() => setShowPicker({ type: 'minTens' })}
+              >
+                {selectedHundreds === 0 && selectedTens === 0 && selectedOnes === 0 && selectedMinTens === 0 && selectedMinOnes === 0 ? (
+                  <Text style={styles.digitPlaceholder}>M</Text>
+                ) : (
+                  <Text style={styles.digitValue}>{selectedMinTens}</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.digitBox}
+                onPress={() => setShowPicker({ type: 'minOnes' })}
+              >
+                {selectedHundreds === 0 && selectedTens === 0 && selectedOnes === 0 && selectedMinTens === 0 && selectedMinOnes === 0 ? (
+                  <Text style={styles.digitPlaceholder}>M</Text>
+                ) : (
+                  <Text style={styles.digitValue}>{selectedMinOnes}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.inputHint}>
+              Format: HHH:MM • Total: {(selectedHundreds * 100) + (selectedTens * 10) + selectedOnes}H {(selectedMinTens * 10) + selectedMinOnes}M
+            </Text>
           </View>
 
           {/* Category */}
@@ -399,6 +502,96 @@ export default function CreateDeadlineModal({
           onTimeSelect={handleTimeSelect}
           initialTime={formData.dueTime}
         />
+        
+        {/* Hundreds Picker */}
+        {showPicker.type === 'hundreds' && (
+          <ScrollablePicker
+            visible={true}
+            onClose={() => setShowPicker({ type: null })}
+            onSelect={(value) => {
+              setSelectedHundreds(value);
+              const totalHours = (value * 100) + (selectedTens * 10) + selectedOnes + ((selectedMinTens * 10 + selectedMinOnes) / 60);
+              setFormData(prev => ({...prev, estimatedHours: totalHours.toString()}));
+              setShowPicker({ type: null });
+            }}
+            selectedValue={selectedHundreds}
+            minValue={0}
+            maxValue={9}
+            label="Hundreds"
+          />
+        )}
+        
+        {/* Tens Picker */}
+        {showPicker.type === 'tens' && (
+          <ScrollablePicker
+            visible={true}
+            onClose={() => setShowPicker({ type: null })}
+            onSelect={(value) => {
+              setSelectedTens(value);
+              const totalHours = (selectedHundreds * 100) + (value * 10) + selectedOnes + ((selectedMinTens * 10 + selectedMinOnes) / 60);
+              setFormData(prev => ({...prev, estimatedHours: totalHours.toString()}));
+              setShowPicker({ type: null });
+            }}
+            selectedValue={selectedTens}
+            minValue={0}
+            maxValue={9}
+            label="Tens"
+          />
+        )}
+        
+        {/* Ones Picker */}
+        {showPicker.type === 'ones' && (
+          <ScrollablePicker
+            visible={true}
+            onClose={() => setShowPicker({ type: null })}
+            onSelect={(value) => {
+              setSelectedOnes(value);
+              const totalHours = (selectedHundreds * 100) + (selectedTens * 10) + value + ((selectedMinTens * 10 + selectedMinOnes) / 60);
+              setFormData(prev => ({...prev, estimatedHours: totalHours.toString()}));
+              setShowPicker({ type: null });
+            }}
+            selectedValue={selectedOnes}
+            minValue={0}
+            maxValue={9}
+            label="Ones"
+          />
+        )}
+        
+        {/* Minutes Tens Picker */}
+        {showPicker.type === 'minTens' && (
+          <ScrollablePicker
+            visible={true}
+            onClose={() => setShowPicker({ type: null })}
+            onSelect={(value) => {
+              setSelectedMinTens(value);
+              const totalHours = (selectedHundreds * 100) + (selectedTens * 10) + selectedOnes + ((value * 10 + selectedMinOnes) / 60);
+              setFormData(prev => ({...prev, estimatedHours: totalHours.toString()}));
+              setShowPicker({ type: null });
+            }}
+            selectedValue={selectedMinTens}
+            minValue={0}
+            maxValue={5}
+            label="Minutes (Tens)"
+          />
+        )}
+        
+        {/* Minutes Ones Picker */}
+        {showPicker.type === 'minOnes' && (
+          <ScrollablePicker
+            visible={true}
+            onClose={() => setShowPicker({ type: null })}
+            onSelect={(value) => {
+              setSelectedMinOnes(value);
+              const totalHours = (selectedHundreds * 100) + (selectedTens * 10) + selectedOnes + ((selectedMinTens * 10 + value) / 60);
+              setFormData(prev => ({...prev, estimatedHours: totalHours.toString()}));
+              setShowPicker({ type: null });
+            }}
+            selectedValue={selectedMinOnes}
+            minValue={0}
+            maxValue={9}
+            label="Minutes (Ones)"
+          />
+        )}
       </ImageBackground>
     </Modal>
   );
@@ -636,5 +829,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     paddingVertical: SCREEN_WIDTH * 0.02,
     fontFamily: 'ChakraPetch_500Medium',
+  },
+  digitPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SCREEN_WIDTH * 0.02,
+  },
+  digitBox: {
+    backgroundColor: '#fcfc00ff',
+    borderRadius: 12,
+    width: SCREEN_WIDTH * 0.15,
+    height: SCREEN_WIDTH * 0.15,
+    borderWidth: 3,
+    borderColor: '#e94343ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  digitValue: {
+    fontSize: SCREEN_WIDTH * 0.08,
+    fontWeight: '900',
+    color: '#333',
+  },
+  digitPlaceholder: {
+    fontSize: SCREEN_WIDTH * 0.06,
+    fontWeight: '600',
+    color: '#BBB',
+  },
+  timeSeparator: {
+    fontSize: SCREEN_WIDTH * 0.08,
+    fontWeight: '700',
+    color: '#333',
+    marginHorizontal: SCREEN_WIDTH * 0.01,
   },
 });

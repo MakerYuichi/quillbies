@@ -2,6 +2,14 @@
 import { StateCreator } from 'zustand';
 import { Deadline, DeadlineFormData } from '../../core/types';
 import { UserSlice } from './userSlice';
+import { getDeviceUser } from '../../../lib/deviceAuth';
+import { 
+  createDeadline as createDeadlineDB, 
+  updateDeadline as updateDeadlineDB,
+  deleteDeadline as deleteDeadlineDB,
+  markDeadlineComplete as markDeadlineCompleteDB,
+  addWorkToDeadline as addWorkToDeadlineDB
+} from '../../../lib/deadlines';
 
 export interface DeadlinesSlice {
   deadlines: Deadline[];
@@ -38,8 +46,9 @@ export const createDeadlinesSlice: StateCreator<
       normalizedDueDate = date.toISOString();
     }
 
+    const tempId = Date.now().toString();
     const newDeadline: Deadline = {
-      id: Date.now().toString(),
+      id: tempId,
       title: formData.title,
       dueDate: normalizedDueDate,
       dueTime: formData.dueTime || undefined,
@@ -58,6 +67,42 @@ export const createDeadlinesSlice: StateCreator<
     set({
       deadlines: [...deadlines, newDeadline]
     });
+    
+    // Sync deadline to database and update with real ID
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          console.log('[Deadline] Syncing to database:', newDeadline.title);
+          const dbDeadline = await createDeadlineDB(user.id, {
+            title: formData.title,
+            description: '',
+            dueDate: formData.dueDate, // Use original format for database
+            dueTime: formData.dueTime || null, // Use null instead of empty string
+            priority: formData.priority,
+            category: formData.category,
+            estimatedHours: parseFloat(formData.estimatedHours),
+            reminderOneDayBefore: true,
+            reminderThreeDaysBefore: true,
+          });
+          
+          if (dbDeadline) {
+            console.log('[Deadline] Successfully synced, updating with database ID:', dbDeadline.id);
+            // Update the deadline with the real database ID
+            const currentDeadlines = get().deadlines;
+            set({
+              deadlines: currentDeadlines.map(d => 
+                d.id === tempId ? { ...d, id: dbDeadline.id } : d
+              )
+            });
+          }
+        } else {
+          console.log('[Deadline] No user, skipping database sync');
+        }
+      } catch (error) {
+        console.error('[Deadline] Failed to sync to database:', error);
+      }
+    })();
   },
 
   updateDeadline: (id: string, updates: Partial<Deadline>) => {
@@ -75,6 +120,19 @@ export const createDeadlinesSlice: StateCreator<
         deadline.id === id ? { ...deadline, ...normalizedUpdates } : deadline
       )
     });
+    
+    // Sync update to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          console.log('[Deadline] Syncing update to database');
+          await updateDeadlineDB(id, normalizedUpdates);
+        }
+      } catch (error) {
+        console.error('[Deadline] Failed to sync update:', error);
+      }
+    })();
   },
 
   deleteDeadline: (id: string) => {
@@ -83,6 +141,19 @@ export const createDeadlinesSlice: StateCreator<
     set({
       deadlines: deadlines.filter(deadline => deadline.id !== id)
     });
+    
+    // Sync deletion to database
+    (async () => {
+      try {
+        const user = await getDeviceUser();
+        if (user) {
+          console.log('[Deadline] Syncing deletion to database');
+          await deleteDeadlineDB(id);
+        }
+      } catch (error) {
+        console.error('[Deadline] Failed to sync deletion:', error);
+      }
+    })();
   },
 
   markDeadlineComplete: (id: string) => {
@@ -114,6 +185,19 @@ export const createDeadlinesSlice: StateCreator<
         deadlines: updatedDeadlines,
         userData: updatedUserData
       });
+      
+      // Sync to database
+      (async () => {
+        try {
+          const user = await getDeviceUser();
+          if (user) {
+            console.log('[Deadline] Syncing completion to database');
+            await markDeadlineCompleteDB(id);
+          }
+        } catch (error) {
+          console.error('[Deadline] Failed to sync completion:', error);
+        }
+      })();
     }
   },
 
@@ -136,6 +220,19 @@ export const createDeadlinesSlice: StateCreator<
             : d
         )
       });
+      
+      // Sync to database
+      (async () => {
+        try {
+          const user = await getDeviceUser();
+          if (user) {
+            console.log('[Deadline] Syncing work progress to database');
+            await addWorkToDeadlineDB(id, hours);
+          }
+        } catch (error) {
+          console.error('[Deadline] Failed to sync work progress:', error);
+        }
+      })();
     }
   },
 
@@ -154,11 +251,16 @@ export const createDeadlinesSlice: StateCreator<
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
     
+    // Set to start of day for comparison
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const threeDaysStart = new Date(threeDaysFromNow.getFullYear(), threeDaysFromNow.getMonth(), threeDaysFromNow.getDate());
+    
     return deadlines
       .filter(deadline => {
         if (deadline.isCompleted) return false;
         const dueDate = new Date(deadline.dueDate);
-        return dueDate > threeDaysFromNow;
+        const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+        return dueStart > threeDaysStart;
       })
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   },
@@ -168,11 +270,16 @@ export const createDeadlinesSlice: StateCreator<
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
     
+    // Set to start of day for comparison
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const threeDaysStart = new Date(threeDaysFromNow.getFullYear(), threeDaysFromNow.getMonth(), threeDaysFromNow.getDate());
+    
     return deadlines
       .filter(deadline => {
         if (deadline.isCompleted) return false;
         const dueDate = new Date(deadline.dueDate);
-        return dueDate <= threeDaysFromNow && dueDate >= now;
+        const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+        return dueStart <= threeDaysStart && dueStart >= todayStart;
       })
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   },

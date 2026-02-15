@@ -103,6 +103,21 @@ function HomeScreenContent() {
   const [simulatedTime, setSimulatedTime] = React.useState<string>('00:00');
   const [useSimulatedTime, setUseSimulatedTime] = React.useState(false);
   const [isStartingSimulation, setIsStartingSimulation] = React.useState(false);
+  const [randomExerciseMessage, setRandomExerciseMessage] = React.useState<string>('');
+  
+  // Random exercise messages
+  const exerciseMotivationalMessages = [
+    "I'm jumping! You should exercise too! 🦘",
+    "Look at me go! Let's stay active! 💪",
+    "Moving feels great! Join me! 🏃",
+    "Exercise time! Let's do this together! ⚡",
+    "I'm stretching! Feel the energy! 🤸",
+    "Cardio is fun! Keep moving! ❤️",
+    "Let's get stronger together! 💪",
+    "I'm working out! You got this! 🎯",
+    "Movement is life! Let's go! 🌟",
+    "Feeling energized! Exercise rocks! ✨"
+  ];
   
   // Cleanup function to clear any running intervals
   const cleanupAcceleration = (force = false) => {
@@ -792,6 +807,19 @@ function HomeScreenContent() {
   useEffect(() => {
     if (!userData.enabledHabits?.includes('study') || !userData.studyGoalHours) return;
     
+    // Check immediately on mount
+    console.log('[HomeScreen] Running initial checkpoint check...');
+    try {
+      const result = checkAndProcessCheckpoints();
+      if (result.shouldNotify && result.checkpoint && result.expected && result.actual && result.missing) {
+        const checkpointMessage = `⚠️ Behind on study time... room's getting messy! 📚\n` +
+                                 `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
+        console.log('[Checkpoint]', checkpointMessage);
+      }
+    } catch (error) {
+      console.error('[HomeScreen] Error in initial checkpoint check:', error);
+    }
+    
     const checkpointInterval = setInterval(() => {
       try {
         const now = Date.now();
@@ -819,6 +847,26 @@ function HomeScreenContent() {
     
     return () => clearInterval(checkpointInterval);
   }, [userData.enabledHabits, userData.studyGoalHours]); // Removed frequently changing dependencies
+
+  // Rotate exercise messages during exercise session
+  useEffect(() => {
+    if (!isExercising) {
+      setRandomExerciseMessage('');
+      return;
+    }
+    
+    // Set initial random message
+    const randomIndex = Math.floor(Math.random() * exerciseMotivationalMessages.length);
+    setRandomExerciseMessage(exerciseMotivationalMessages[randomIndex]);
+    
+    // Change message every 10 seconds
+    const messageInterval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * exerciseMotivationalMessages.length);
+      setRandomExerciseMessage(exerciseMotivationalMessages[randomIndex]);
+    }, 10000); // Change every 10 seconds
+    
+    return () => clearInterval(messageInterval);
+  }, [isExercising]);
 
   // Daily reset automation (check every 10 minutes for better performance)
   useEffect(() => {
@@ -855,7 +903,7 @@ function HomeScreenContent() {
         {/* Exercise Timer Overlay */}
         <View style={styles.exerciseTimerContainer}>
           <Text style={styles.exerciseTimerLabel}>
-            {buddyName}'s {exerciseType === 'walk' ? 'Walking' : exerciseType === 'stretch' ? 'Stretching' : exerciseType === 'cardio' ? 'Cardio' : 'Energizer'} Session
+            {randomExerciseMessage || "Let's exercise together! 💪"}
           </Text>
           <Text style={styles.exerciseTimerValue}>{exerciseElapsedTime}</Text>
         </View>
@@ -934,7 +982,7 @@ function HomeScreenContent() {
       )}
 
       {/* REAL-TIME CLOCK */}
-      <RealTimeClock />
+      <RealTimeClock isExercising={isExercising} />
 
       {/* CLEANING TAP OVERLAY - Only when cleaning */}
       {isCleaning && (
@@ -1208,7 +1256,7 @@ const styles = StyleSheet.create({
     top: (SCREEN_HEIGHT * 450) / 852, // Slightly higher than energy bar was
     left: (SCREEN_WIDTH * 17) / 393,  // Align with original speech bubble positioning
     width: (SCREEN_WIDTH * 355) / 393, // Match speech bubble width
-    zIndex: 20,
+    zIndex: 25, // Above scrollable content (20)
   },
   // Scrollable content area - inside orange theme background, below floor
   scrollableContent: {
@@ -1217,7 +1265,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 30, // Small padding from bottom edge
-    zIndex: 15,
+    zIndex: 20, // Above cleaning overlay (15) and other overlays
   },
   scrollContentContainer: {
     paddingHorizontal: (SCREEN_WIDTH * 17) / 393,
@@ -1289,7 +1337,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#4CAF50',
-    zIndex: 100,
+    zIndex: 30, // Above everything else so it's always visible
     minWidth: 150,
   },
   cleaningProgressTitle: {

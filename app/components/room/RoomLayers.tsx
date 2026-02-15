@@ -89,36 +89,36 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
         resizeMode="contain"
       />
 
-      {/* LAYER 6: Lights - Show based on room customization */}
-      {/* Always show lights, but they'll be dimmed by overlay when sleeping */}
-      <>
-        {/* Lamp - Show when explicitly equipped */}
-        {roomCustomization?.lightType === 'lamp' && (
-          <Image 
-            source={require('../../../assets/rooms/lamp.png')}
-            style={styles.lampDecor}
-            resizeMode="contain"
-          />
-        )}
-        
-        {/* Default Fairy Lights - Show when no customization (original default) */}
-        {!roomCustomization?.lightType && (
-          <Image 
-            source={require('../../../assets/rooms/fairy-lights.png')}
-            style={styles.fairyLightsDecor}
-            resizeMode="contain"
-          />
-        )}
-        
-        {/* Colored Fairy Lights - Show when colored fairy lights are equipped */}
-        {roomCustomization?.lightType === 'colored-fairy-lights' && (
-          <Image 
-            source={require('../../../assets/shop/decoration/fairy-lights/colored.png')}
-            style={styles.fairyLightsDecor}
-            resizeMode="contain"
-          />
-        )}
-      </>
+      {/* LAYER 6: Lights - Hide when sleeping or during wake-up animation */}
+      {!isSleeping && sleepAnimation !== 'sleeping' && sleepAnimation !== 'wake-up' && (
+        <>
+          {/* Lamp - Show when explicitly equipped */}
+          {roomCustomization?.lightType === 'lamp' && (
+            <Image 
+              source={require('../../../assets/rooms/lamp.png')}
+              style={styles.lampDecor}
+              resizeMode="contain"
+            />
+          )}
+          
+          {/* Default Fairy Lights - Show when no customization (original default) */}
+          {!roomCustomization?.lightType && (
+            <Image 
+              source={require('../../../assets/rooms/fairy-lights.png')}
+              style={styles.fairyLightsDecor}
+              resizeMode="contain"
+            />
+          )}
+          
+          {/* Colored Fairy Lights - Show when colored fairy lights are equipped */}
+          {roomCustomization?.lightType === 'colored-fairy-lights' && (
+            <Image 
+              source={require('../../../assets/shop/decoration/fairy-lights/colored.png')}
+              style={styles.fairyLightsDecor}
+              resizeMode="contain"
+            />
+          )}
+        </>
       )}
       
       {/* LAYER 7: Customizable Plants */}

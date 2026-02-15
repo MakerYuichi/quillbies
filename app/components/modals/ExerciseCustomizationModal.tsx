@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, ScrollView, TextInput } from 'react-native';
+import PremiumUpgradeModal from './PremiumUpgradeModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -20,6 +21,7 @@ export default function ExerciseCustomizationModal({
   const [selectedType, setSelectedType] = useState<'walk' | 'stretch' | 'cardio' | 'energizer' | 'custom'>('walk');
   const [customDuration, setCustomDuration] = useState<number>(20);
   const [customExerciseName, setCustomExerciseName] = useState<string>('');
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const durations = [
     { label: 'Quick (5 min)', value: 5, isPremium: false },
@@ -39,8 +41,16 @@ export default function ExerciseCustomizationModal({
   ];
 
   const handleUpgradePrompt = () => {
-    // TODO: Navigate to premium upgrade screen
-    alert('🌟 Upgrade to Quillby Premium to unlock custom exercises, custom durations, and more features!');
+    setShowPremiumModal(true);
+  };
+  
+  const handleUpgrade = () => {
+    setShowPremiumModal(false);
+    alert('🚀 Payment integration coming soon! This will open your app store payment flow.');
+  };
+  
+  const handleClosePremiumModal = () => {
+    setShowPremiumModal(false);
   };
 
   const handleStart = () => {
@@ -53,12 +63,13 @@ export default function ExerciseCustomizationModal({
   const isCustomExercise = selectedType === 'custom';
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -227,6 +238,15 @@ export default function ExerciseCustomizationModal({
         </View>
       </View>
     </Modal>
+    
+    {/* Premium Upgrade Modal */}
+    <PremiumUpgradeModal
+      visible={showPremiumModal}
+      onClose={handleClosePremiumModal}
+      onUpgrade={handleUpgrade}
+      featureName="Custom Exercise"
+    />
+    </>
   );
 }
 

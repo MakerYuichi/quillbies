@@ -64,9 +64,9 @@ export default function SessionCompletionModal({ visible, onClose, sessionData }
     return `${minutes}m`;
   };
   
-  // Calculate completion percentage
+  // Calculate completion percentage (cap at 100%)
   const completionPercent = sessionData.targetDuration 
-    ? Math.round((sessionData.duration / sessionData.targetDuration) * 100)
+    ? Math.min(100, Math.round((sessionData.duration / sessionData.targetDuration) * 100))
     : 100; // If no target, assume 100%
   
   // Determine Quillby's reaction based on completion percentage

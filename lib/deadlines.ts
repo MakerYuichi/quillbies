@@ -12,7 +12,7 @@ export const createDeadline = async (userId: string, deadlineData: any) => {
           title: deadlineData.title,
           description: deadlineData.description,
           due_date: deadlineData.dueDate,
-          due_time: deadlineData.dueTime,
+          due_time: deadlineData.dueTime || null, // Use null instead of empty string
           priority: deadlineData.priority,
           category: deadlineData.category,
           estimated_hours: deadlineData.estimatedHours,

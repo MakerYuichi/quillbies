@@ -91,20 +91,23 @@ const setupGlobalErrorHandlers = () => {
   // Handle unhandled promise rejections
   if (typeof global.addEventListener === 'function') {
     global.addEventListener('unhandledrejection', (event: any) => {
-      console.error('[GlobalError] Unhandled promise rejection:', event.reason);
-      
       // Handle keep awake promise rejections (multiple variations)
       const reasonMessage = event.reason?.message || '';
       const reasonString = String(event.reason);
+      const reasonName = event.reason?.name || '';
+      
       if (reasonMessage.includes('keep awake') || 
           reasonMessage.includes('KeepAwake') ||
           reasonMessage.includes('Unable to activate keep awake') ||
           reasonString.includes('keep awake') ||
-          reasonString.includes('KeepAwake')) {
-        console.warn('[GlobalError] Keep awake promise rejection caught and ignored:', event.reason);
+          reasonString.includes('KeepAwake') ||
+          reasonName.includes('KeepAwake')) {
+        console.warn('[GlobalError] Keep awake promise rejection caught and ignored');
         event.preventDefault(); // Prevent the error from crashing the app
         return;
       }
+      
+      console.error('[GlobalError] Unhandled promise rejection:', event.reason);
     });
   }
   
@@ -129,6 +132,15 @@ export default function RootLayout() {
       
       // Preload images first for instant display
       await preloadImages();
+      
+      // Preload sounds
+      try {
+        const { preloadSounds } = await import('../lib/soundManager');
+        await preloadSounds();
+        console.log('[App] Sounds preloaded');
+      } catch (soundError) {
+        console.warn('[App] Sound preloading failed:', soundError);
+      }
       
       // Check if already authenticated
       const authenticated = await isDeviceAuthenticated();

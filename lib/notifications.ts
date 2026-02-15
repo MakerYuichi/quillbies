@@ -211,19 +211,29 @@ export async function scheduleDailyStudyReminders(): Promise<void> {
   try {
     console.log('[Notifications] Setting up daily study reminders...');
 
-    // Cancel existing reminders first
-    await cancelAllNotifications();
-
-    // Get current date to calculate next occurrence
-    const now = new Date();
+    // Get all scheduled notifications
+    const allNotifications = await getAllScheduledNotifications();
+    
+    // Check if study reminders are already scheduled
+    const studyReminderTitles = [
+      '☀️ Good Morning!',
+      '📚 Afternoon Study Time',
+      '🌙 Evening Study Session'
+    ];
+    
+    const existingReminders = allNotifications.filter(notif => 
+      studyReminderTitles.includes(notif.content.title || '')
+    );
+    
+    // If all 3 reminders already exist, don't reschedule
+    if (existingReminders.length === 3) {
+      console.log('[Notifications] Study reminders already scheduled, skipping');
+      return;
+    }
+    
+    console.log('[Notifications] Scheduling study reminders...');
 
     // Morning reminder (9 AM)
-    const morning = new Date();
-    morning.setHours(9, 0, 0, 0);
-    if (morning <= now) {
-      morning.setDate(morning.getDate() + 1); // Schedule for tomorrow if time has passed
-    }
-
     await scheduleNotification(
       '☀️ Good Morning!',
       'Time to start your study session! Your hamster is waiting! 📚',
@@ -237,12 +247,6 @@ export async function scheduleDailyStudyReminders(): Promise<void> {
     );
 
     // Afternoon reminder (2 PM)
-    const afternoon = new Date();
-    afternoon.setHours(14, 0, 0, 0);
-    if (afternoon <= now) {
-      afternoon.setDate(afternoon.getDate() + 1);
-    }
-
     await scheduleNotification(
       '📚 Afternoon Study Time',
       'Keep up the momentum! Time for an afternoon study session! 💪',
@@ -256,12 +260,6 @@ export async function scheduleDailyStudyReminders(): Promise<void> {
     );
 
     // Evening reminder (7 PM)
-    const evening = new Date();
-    evening.setHours(19, 0, 0, 0);
-    if (evening <= now) {
-      evening.setDate(evening.getDate() + 1);
-    }
-
     await scheduleNotification(
       '🌙 Evening Study Session',
       'Finish strong! One more study session before bed! 🎯',

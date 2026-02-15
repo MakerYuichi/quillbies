@@ -58,6 +58,7 @@ export interface UserData {
   studyMinutesToday?: number; // Accumulated study minutes today
   lastStudyReset?: string; // Date when study was last reset
   missedCheckpoints?: number; // Count of missed checkpoints today
+  lastProcessedCheckpoint?: string; // Last checkpoint that was processed (to avoid duplicates)
   
   // Exercise goal
   exerciseGoalMinutes?: number; // Daily exercise goal (15, 30, 45, 60 minutes)
@@ -118,6 +119,18 @@ export interface UserData {
   
   // Shop Purchases
   purchasedItems?: string[]; // Array of purchased item IDs
+  
+  // Premium Status
+  isPremium?: boolean; // Whether user has premium subscription
+  
+  // Diet Type
+  dietType?: 'small-portions' | 'normal-portions' | 'large-portions'; // Meal portion preference
+  
+  // Session History
+  completedFocusSessions?: string[]; // Array of dates when focus sessions were completed
+  
+  // Account Creation
+  createdAt?: string; // ISO timestamp when account was created
 }
 
 export interface SessionData {

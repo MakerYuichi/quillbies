@@ -56,10 +56,14 @@ export const endFocusSession = async (
   results: {
     focusScore: number;
     distractionCount: number;
+    distractionWarnings: number;
     totalBreakTime: number;
     applePremiumUsed: boolean;
     coffeePremiumUsed: boolean;
+    coffeeBonus: number;
+    interactionBoosts: number;
     durationSeconds: number;
+    lastDistractionTime?: number;
   }
 ) => {
   try {
@@ -94,9 +98,13 @@ export const endFocusSession = async (
         duration_seconds: results.durationSeconds,
         focus_score: results.focusScore,
         distraction_count: results.distractionCount,
+        distraction_warnings: results.distractionWarnings,
         total_break_time: results.totalBreakTime,
         apple_premium_used: results.applePremiumUsed,
         coffee_premium_used: results.coffeePremiumUsed,
+        coffee_bonus: results.coffeeBonus,
+        interaction_boosts: results.interactionBoosts,
+        last_distraction_time: results.lastDistractionTime ? new Date(results.lastDistractionTime) : null,
         is_completed: true,
       })
       .eq('id', sessionId);
@@ -119,10 +127,22 @@ export const endFocusSession = async (
       mess_points: Math.max((profile?.mess_points || 0) - messRemoved, 0),
     });
 
-    // Update daily data
+    // Update daily data - INCREMENT study minutes, don't replace
+    const { data: dailyData } = await supabase
+      .from('daily_data')
+      .select('study_minutes_today')
+      .eq('user_id', userId)
+      .eq('date_tracked', new Date().toISOString().split('T')[0])
+      .single();
+
+    const currentStudyMinutes = dailyData?.study_minutes_today || 0;
+    const newStudyMinutes = currentStudyMinutes + Math.round(studyHours * 60);
+
     await updateDailyData(userId, {
-      study_minutes_today: Math.round(studyHours * 60),
+      study_minutes_today: newStudyMinutes,
     });
+
+    console.log(`[EndSession] Study minutes: ${currentStudyMinutes} + ${Math.round(studyHours * 60)} = ${newStudyMinutes}`);
 
     // Update deadline if applicable
     if (session.deadline_id) {

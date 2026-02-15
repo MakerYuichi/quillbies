@@ -15,7 +15,7 @@ export default function StudyProgress() {
   const goalHours = userData.studyGoalHours;
   const progressPercent = Math.min(100, (studyHours / goalHours) * 100);
   
-  // Get current checkpoint status
+  // Get current checkpoint status (but don't add mess points here - that's done by the interval in index.tsx)
   const checkResult: CheckpointResult = checkStudyCheckpoints();
   
   const getProgressColor = () => {

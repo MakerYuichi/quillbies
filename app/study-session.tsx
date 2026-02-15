@@ -56,8 +56,14 @@ function StudySessionContent() {
       try {
         await activateKeepAwakeAsync(keepAwakeTag);
         console.log('[KeepAwake] Activated for study session');
-      } catch (error) {
-        console.warn('[KeepAwake] Failed to activate, continuing without keep awake:', error);
+      } catch (error: any) {
+        // Silently ignore keep awake errors - they don't affect functionality
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('keep awake') || errorMessage.includes('KeepAwake')) {
+          console.log('[KeepAwake] Module not available (native rebuild required), continuing without keep awake');
+        } else {
+          console.warn('[KeepAwake] Failed to activate:', error);
+        }
       }
     };
     
@@ -70,12 +76,15 @@ function StudySessionContent() {
         deactivateKeepAwake(keepAwakeTag);
         console.log('[KeepAwake] Deactivated');
       } catch (error) {
-        console.warn('[KeepAwake] Failed to deactivate:', error);
+        // Silently ignore deactivation errors
       }
     };
     
-    // Activate keep awake when component mounts
-    activateKeepAwake();
+    // Activate keep awake when component mounts (with promise catch)
+    activateKeepAwake().catch((error) => {
+      // Final catch to prevent unhandled promise rejection
+      console.log('[KeepAwake] Activation promise caught, continuing without keep awake');
+    });
     
     // Deactivate when component unmounts
     return () => {

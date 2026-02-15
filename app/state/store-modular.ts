@@ -25,6 +25,86 @@ export type QuillbyStore = UserSlice & SessionSlice & HabitsSlice & DeadlinesSli
   generateDailySummary: () => string;
 };
 
+// Helper function to check study checkpoints
+const checkWithCheckpoints = (userData: any) => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const studyHours = (userData.studyMinutesToday || 0) / 60;
+  const goalHours = userData.studyGoalHours || 0;
+  
+  console.log('[checkWithCheckpoints] Current state:', {
+    currentHour,
+    studyHours,
+    goalHours,
+    checkpoints: userData.studyCheckpoints
+  });
+  
+  if (!goalHours || !userData.studyCheckpoints || userData.studyCheckpoints.length === 0) {
+    console.log('[checkWithCheckpoints] No goal or checkpoints, returning not behind');
+    return { isBehind: false };
+  }
+  
+  // Parse checkpoint times and find the most recent one that has passed
+  const checkpoints = userData.studyCheckpoints.map((cp: string) => {
+    const match = cp.match(/(\d+)\s*(AM|PM)/i);
+    if (!match) return null;
+    
+    let hour = parseInt(match[1]);
+    const period = match[2].toUpperCase();
+    
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    
+    return { time: cp, hour };
+  }).filter(Boolean);
+  
+  console.log('[checkWithCheckpoints] Parsed checkpoints:', checkpoints);
+  
+  // Find the most recent checkpoint that has passed
+  let lastCheckpoint = null;
+  for (const checkpoint of checkpoints) {
+    if (checkpoint && checkpoint.hour <= currentHour) {
+      if (!lastCheckpoint || checkpoint.hour > lastCheckpoint.hour) {
+        lastCheckpoint = checkpoint;
+      }
+    }
+  }
+  
+  console.log('[checkWithCheckpoints] Last passed checkpoint:', lastCheckpoint);
+  
+  if (!lastCheckpoint) {
+    console.log('[checkWithCheckpoints] No checkpoint has passed yet today');
+    return { isBehind: false };
+  }
+  
+  // Calculate expected progress at this checkpoint
+  const hoursIntoDay = currentHour;
+  const expectedProgress = (hoursIntoDay / 24) * goalHours;
+  const missing = Math.max(0, expectedProgress - studyHours);
+  
+  console.log('[checkWithCheckpoints] Progress calculation:', {
+    hoursIntoDay,
+    expectedProgress,
+    actualProgress: studyHours,
+    missing
+  });
+  
+  if (missing > 0.5) { // Only flag if behind by more than 30 minutes
+    console.log('[checkWithCheckpoints] ⚠️ User is behind! Adding mess points');
+    return {
+      isBehind: true,
+      checkpoint: lastCheckpoint.time,
+      checkpointHour: lastCheckpoint.hour,
+      expected: expectedProgress,
+      actual: studyHours,
+      missing: missing
+    };
+  }
+  
+  console.log('[checkWithCheckpoints] User is on track or only slightly behind');
+  return { isBehind: false };
+};
+
 // Load data from database on app startup
 const loadFromDatabase = async () => {
   try {
@@ -153,6 +233,9 @@ export const useQuillbyStore = create<QuillbyStore>()(
                 threeDaysBefore: dbDeadline.reminder_three_days_before,
               }
             })) || deadlines;
+            
+            console.log('[Load] Loaded deadlines from database:', mergedDeadlines.length);
+            console.log('[Load] Deadline IDs:', mergedDeadlines.map((d: any) => d.id));
 
             set({ 
               userData: mergedUserData,
@@ -179,65 +262,32 @@ export const useQuillbyStore = create<QuillbyStore>()(
 
       // Study checkpoint functions (simplified)
       checkStudyCheckpoints: () => {
-        const [, get] = args;
+        const [set, get] = args;
         const { userData } = get();
         
-        if (!userData.studyGoalHours || !userData.studyCheckpoints) return { isBehind: false };
+        console.log('[Checkpoint] Checking study checkpoints...', {
+          studyGoalHours: userData.studyGoalHours,
+          studyCheckpoints: userData.studyCheckpoints,
+          studyMinutesToday: userData.studyMinutesToday,
+          messPoints: userData.messPoints,
+          enabledHabits: userData.enabledHabits
+        });
         
-        const today = new Date().toDateString();
-        const signupDate = (userData as any).signupDate || today;
-        const isFirstDay = signupDate === today;
-        
-        if (isFirstDay) {
-          return { isBehind: false };
-        }
-        
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const currentTimeDecimal = currentHour + (currentMinute / 60);
-        
-        const studyHours = (userData.studyMinutesToday || 0) / 60;
-        const goalHours = userData.studyGoalHours;
-        
-        const checkpointTimes = {
-          '9 AM': 9,
-          '12 PM': 12,
-          '3 PM': 15,
-          '6 PM': 18,
-          '9 PM': 21
-        };
-        
-        let currentCheckpoint = null;
-        let checkpointHour = 0;
-        
-        for (const checkpoint of userData.studyCheckpoints) {
-          const hour = checkpointTimes[checkpoint as keyof typeof checkpointTimes];
-          if (currentTimeDecimal >= hour && hour > checkpointHour) {
-            currentCheckpoint = checkpoint;
-            checkpointHour = hour;
-          }
-        }
-        
-        if (!currentCheckpoint) return { isBehind: false };
-        
-        const expectedHours = goalHours * (checkpointHour / 24);
-        const actualHours = studyHours;
-        
-        if (actualHours < expectedHours) {
-          const missingHours = expectedHours - actualHours;
-          
-          return {
-            isBehind: true,
-            checkpoint: currentCheckpoint,
-            checkpointHour,
-            expected: expectedHours,
-            actual: actualHours,
-            missing: missingHours
+        // Initialize default checkpoints if not set
+        if (!userData.studyCheckpoints || userData.studyCheckpoints.length === 0) {
+          console.log('[Checkpoint] ⚠️ No checkpoints set, initializing defaults: 12 PM, 6 PM, 9 PM');
+          const updatedUserData = {
+            ...userData,
+            studyCheckpoints: ['12 PM', '6 PM', '9 PM']
           };
+          set({ userData: updatedUserData });
+          syncToDatabase(updatedUserData);
+          
+          // Use the updated checkpoints for this check
+          return checkWithCheckpoints(updatedUserData);
         }
         
-        return { isBehind: false };
+        return checkWithCheckpoints(userData);
       },
 
       addMissedCheckpoint: (missingHours: number = 1) => {
@@ -247,6 +297,14 @@ export const useQuillbyStore = create<QuillbyStore>()(
         
         const messPointsIncrease = Math.max(0.5, missingHours);
         const newMessPoints = userData.messPoints + messPointsIncrease;
+        
+        console.log(`[addMissedCheckpoint] ADDING MESS POINTS:`, {
+          currentMessPoints: userData.messPoints,
+          messPointsIncrease,
+          newMessPoints,
+          missingHours,
+          newMissedCount
+        });
         
         const updatedUserData = {
           ...userData,
@@ -261,17 +319,50 @@ export const useQuillbyStore = create<QuillbyStore>()(
         // Sync the changes to database
         syncToDatabase(updatedUserData);
         
-        console.log(`[Checkpoint] Added ${messPointsIncrease} mess points for missed checkpoint (${userData.messPoints} → ${newMessPoints})`);
+        console.log(`[addMissedCheckpoint] ✅ Mess points updated: ${userData.messPoints} → ${newMessPoints}`);
       },
 
       checkAndProcessCheckpoints: () => {
-        const [, get] = args;
-        const { checkStudyCheckpoints, addMissedCheckpoint } = get();
+        const [set, get] = args;
+        const { checkStudyCheckpoints, addMissedCheckpoint, userData } = get();
         
+        console.log('[checkAndProcessCheckpoints] Starting checkpoint processing...');
         const checkResult = checkStudyCheckpoints();
         
-        if (checkResult.isBehind && checkResult.missing && checkResult.expected && checkResult.actual && checkResult.checkpoint) {
+        console.log('[checkAndProcessCheckpoints] Check result:', checkResult);
+        
+        // Check all required fields exist (use !== undefined to allow 0 values)
+        if (checkResult.isBehind && 
+            checkResult.missing !== undefined && 
+            checkResult.expected !== undefined && 
+            checkResult.actual !== undefined && 
+            checkResult.checkpoint) {
+          // Check if we've already processed this checkpoint today
+          const today = new Date().toDateString();
+          const checkpointKey = `${checkResult.checkpoint}-${today}`;
+          const lastProcessedCheckpoint = userData.lastProcessedCheckpoint || '';
+          
+          console.log('[checkAndProcessCheckpoints] Checking duplicate:', {
+            checkpointKey,
+            lastProcessedCheckpoint,
+            isDuplicate: lastProcessedCheckpoint === checkpointKey
+          });
+          
+          if (lastProcessedCheckpoint === checkpointKey) {
+            console.log('[checkAndProcessCheckpoints] Already processed this checkpoint today, skipping');
+            return { shouldNotify: false };
+          }
+          
+          console.log('[checkAndProcessCheckpoints] ✅ Calling addMissedCheckpoint with missing hours:', checkResult.missing);
           addMissedCheckpoint(checkResult.missing);
+          
+          // Mark this checkpoint as processed
+          const updatedUserData = {
+            ...get().userData,
+            lastProcessedCheckpoint: checkpointKey
+          };
+          set({ userData: updatedUserData });
+          syncToDatabase(updatedUserData);
           
           return {
             shouldNotify: true,
@@ -285,6 +376,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
           };
         }
         
+        console.log('[checkAndProcessCheckpoints] Not behind or missing required fields, no action taken');
         return { shouldNotify: false };
       },
 

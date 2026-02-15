@@ -167,6 +167,16 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     const waterGoal = userData.hydrationGoalGlasses || 8;
     const mealGoal = userData.mealGoalCount || 3;
     
+    // Calculate mess points for unmet study goal
+    const studyDeficit = Math.max(0, studyGoal - studyHours);
+    const messPointsToAdd = studyDeficit * 2; // 2 mess points per hour of unmet study goal
+    const newMessPoints = userData.messPoints + messPointsToAdd;
+    
+    if (messPointsToAdd > 0) {
+      console.log(`[Daily] 🧹 Adding ${messPointsToAdd.toFixed(1)} mess points for unmet study goal (${studyHours.toFixed(1)}h/${studyGoal}h)`);
+      console.log(`[Daily] Mess points: ${userData.messPoints.toFixed(1)} → ${newMessPoints.toFixed(1)}`);
+    }
+    
     // Determine if this was a terrible day
     const isTerribleDay = studyHours === 0; // No studying at all
     const isBadDay = studyHours < (studyGoal * 0.3); // Less than 30% of study goal
@@ -229,6 +239,8 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
       appleTapsToday: 0,
       coffeeTapsToday: 0,
       missedCheckpoints: 0, // Reset missed checkpoints for new day
+      processedCheckpoints: [], // Reset processed checkpoints for new day
+      messPoints: newMessPoints, // Update mess points
       currentStreak: newStreak,
       qCoins: newQCoins,
       lastCheckInDate: today,
@@ -338,25 +350,27 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
 
   setBuddyName: (name: string) => {
     const { userData } = get();
-    set({
-      userData: {
-        ...userData,
-        buddyName: name
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      buddyName: name
+    };
+    set({ userData: updatedUserData });
+    // Sync to database
+    syncToDatabase(updatedUserData);
   },
 
   setProfile: (userName: string, studentLevel: string, country: string, timezone: string) => {
     const { userData } = get();
-    set({
-      userData: {
-        ...userData,
-        userName: userName || undefined,
-        studentLevel,
-        country,
-        timezone
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      userName: userName || undefined,
+      studentLevel,
+      country,
+      timezone
+    };
+    set({ userData: updatedUserData });
+    // Sync to database
+    syncToDatabase(updatedUserData);
   },
 
   setWeightGoal: (weightGoal: 'lose' | 'maintain' | 'gain') => {
