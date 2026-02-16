@@ -14,6 +14,7 @@ import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
 import { useQuillbyStore } from '../state/store-modular';
 import ScrollablePicker from '../components/ui/ScrollablePicker';
+import { playTabSound, playUISubmitSound, soundManager } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -68,6 +69,7 @@ export default function GoalSetupScreen() {
   }
 
   const toggleCheckpoint = (timeLabel: string) => {
+    playTabSound();
     setCheckpoints(prev => 
       prev.includes(timeLabel) 
         ? prev.filter(t => t !== timeLabel)
@@ -79,6 +81,12 @@ export default function GoalSetupScreen() {
   };
 
   const handleCompleteSetup = async () => {
+    playUISubmitSound();
+    
+    // Stop onboarding music before transitioning to main app
+    console.log('[Goal Setup] Stopping onboarding music...');
+    soundManager.stopBackgroundMusic();
+    
     // Save goals for enabled habits
     if (enabledHabits.includes('meals')) {
       setWeightGoal(weightGoal);

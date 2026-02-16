@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
 import TermsModal from '../components/modals/TermsModal';
+import { playTabSound, playUISubmitSound, soundManager, SOUNDS } from '../../lib/soundManager';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -16,6 +17,37 @@ export default function WelcomeScreen() {
     ChakraPetch_400Regular,
     ChakraPetch_600SemiBold,
   });
+  
+  // Preload UI sounds when fonts are loaded
+  React.useEffect(() => {
+    if (fontsLoaded) {
+      console.log('[Welcome] Preloading UI sounds...');
+      // UI sounds are already preloaded in _layout.tsx, but ensure they're ready
+      if (!soundManager.isLoaded(SOUNDS.TAB)) {
+        soundManager.loadSound(SOUNDS.TAB, require('../../assets/sounds/ui_buttons/tab.mp3'));
+      }
+      if (!soundManager.isLoaded(SOUNDS.UI_SUBMIT)) {
+        soundManager.loadSound(SOUNDS.UI_SUBMIT, require('../../assets/sounds/ui_buttons/ui-submit.mp3'));
+      }
+      
+      // Start onboarding background music
+      console.log('[Welcome] Starting onboarding background music...');
+      soundManager.playBackgroundMusic(
+        SOUNDS.ONBOARDING_MUSIC,
+        require('../../assets/sounds/background_music/gamemusic.mp3'),
+        0.2, // Low volume (20%)
+        true // Loop
+      );
+    }
+  }, [fontsLoaded]);
+
+  // Cleanup background music when leaving onboarding
+  React.useEffect(() => {
+    return () => {
+      console.log('[Welcome] Cleaning up onboarding music...');
+      soundManager.stopBackgroundMusic();
+    };
+  }, []);
   
   // Show loading while fonts load
   if (!fontsLoaded) {

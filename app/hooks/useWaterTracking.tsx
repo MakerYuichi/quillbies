@@ -1,12 +1,14 @@
 // Water tracking hook for Casual character - optimized for performance
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQuillbyStore } from '../state/store-modular';
+import { soundManager, SOUNDS } from '../../lib/soundManager';
 
 export const useWaterTracking = (buddyName: string) => {
   const { userData, logWater } = useQuillbyStore();
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle-sit');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
+  const soundLoopActive = useRef(false);
 
   // Optimized habit completion check - simplified
   const areAllHabitsCompletedForCurrentTime = useCallback(() => {
@@ -25,15 +27,49 @@ export const useWaterTracking = (buddyName: string) => {
     return false;
   }, [userData.enabledHabits, userData.studyGoalHours, userData.studyMinutesToday, userData.hydrationGoalGlasses, userData.waterGlasses]);
 
-  const handleDrinkWater = useCallback(() => {
+  const handleDrinkWater = useCallback(async () => {
     const newCount = userData.waterGlasses + 1;
     const hydrationGoal = userData.hydrationGoalGlasses || 8;
     const currentHour = new Date().getHours();
     
     console.log('[WaterTracking] Drinking water - setting animation to drinking');
     
+    // Stop any previous sound loop
+    soundLoopActive.current = false;
+    await new Promise(resolve => setTimeout(resolve, 150)); // Wait for previous loop to stop
+    
     // Show drinking animation
     setCurrentAnimation('drinking');
+    
+    // Start new sound loop for exactly 3 seconds
+    soundLoopActive.current = true;
+    const startTime = Date.now();
+    
+    (async () => {
+      while (soundLoopActive.current && (Date.now() - startTime) < 3000) {
+        const duration = await soundManager.playSound(SOUNDS.HAMSTER_DRINKING, 1.0, 1.0);
+        console.log(`[Water] Sound duration: ${duration}ms`);
+        
+        // Wait for sound to finish OR until loop should stop
+        const waitTime = Math.min(duration || 500, 3000 - (Date.now() - startTime));
+        if (waitTime > 0) {
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        // Check if we should continue
+        if (!soundLoopActive.current || (Date.now() - startTime) >= 3000) {
+          break;
+        }
+      }
+      soundLoopActive.current = false;
+      console.log('[Water] Sound loop stopped');
+    })();
+    
+    // Stop sound after exactly 3 seconds
+    setTimeout(() => {
+      soundLoopActive.current = false;
+      soundManager.stopSound(SOUNDS.HAMSTER_DRINKING);
+    }, 3000);
     
     // Return to appropriate idle after 3s
     setTimeout(() => {

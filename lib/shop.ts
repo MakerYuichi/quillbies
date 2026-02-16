@@ -56,13 +56,15 @@ export const purchaseItem = async (userId: string, itemId: string) => {
       .single();
 
     if (error) {
-      console.error('PurchaseItem Error:', error);
+      // Don't fail loudly if item doesn't exist in shop_items table
+      // This allows local-only shop functionality
+      console.warn('[Shop] Could not save purchase to database (item may not exist in shop_items table):', error.message);
       return null;
     }
 
     return data;
   } catch (err) {
-    console.error('PurchaseItem Exception:', err);
+    console.warn('[Shop] Purchase database save failed (continuing with local state):', err);
     return null;
   }
 };

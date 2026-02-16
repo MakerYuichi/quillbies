@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
 import { useQuillbyStore } from '../state/store-modular';
+import { playToggleSound, playUISubmitSound } from '../../lib/soundManager';
 
 // Get screen dimensions for responsive layout
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -86,6 +87,7 @@ export default function HabitSetupScreen() {
   }
 
   const toggleHabit = (id: string) => {
+    playToggleSound(); // Play toggle sound
     setHabitsState(prev =>
       prev.map(habit =>
         habit.id === id
@@ -96,6 +98,7 @@ export default function HabitSetupScreen() {
   };
 
   const handleNext = () => {
+    playUISubmitSound();
     // Save selected habits to store
     const selectedHabits = habits.filter(h => h.enabled).map(h => h.id);
     setHabits(selectedHabits);

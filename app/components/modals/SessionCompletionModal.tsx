@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Image, Animated } from 'react-native';
+import { playEndSessionSound } from '../../../lib/soundManager';
 
 interface SessionCompletionModalProps {
   visible: boolean;
@@ -16,6 +17,11 @@ interface SessionCompletionModalProps {
 export default function SessionCompletionModal({ visible, onClose, sessionData }: SessionCompletionModalProps) {
   const [celebrationAnim] = useState(new Animated.Value(0));
   const [coinsAnim] = useState(new Animated.Value(0));
+  
+  const handleClose = () => {
+    playEndSessionSound(); // Play sound when returning to home
+    onClose();
+  };
   
   useEffect(() => {
     if (visible) {
@@ -114,7 +120,7 @@ export default function SessionCompletionModal({ visible, onClose, sessionData }
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
         <View style={styles.container}>
@@ -202,7 +208,7 @@ export default function SessionCompletionModal({ visible, onClose, sessionData }
           {/* Return Button */}
           <TouchableOpacity
             style={styles.returnButton}
-            onPress={onClose}
+            onPress={handleClose}
             activeOpacity={0.8}
           >
             <Text style={styles.returnButtonText}>Return to Home</Text>

@@ -3,6 +3,7 @@ import { StateCreator } from 'zustand';
 import { SessionData } from '../../core/types';
 import { UserSlice } from './userSlice';
 import { syncToDatabase } from '../utils/syncUtils';
+import { calculateFocusEnergyCost } from '../../core/engine';
 
 export interface SessionConfig {
   duration: number; // in minutes
@@ -46,13 +47,14 @@ export const createSessionSlice: StateCreator<
   startFocusSession: (deadlineId?: string, config?: SessionConfig) => {
     const { userData } = get();
     
-    // Check energy requirements
-    if (userData.energy < 20) {
-      console.log(`[Session] Not enough energy: Need 20, Have ${userData.energy}`);
+    // Check energy requirements using dynamic calculation
+    const energyNeeded = calculateFocusEnergyCost(userData);
+    if (userData.energy < energyNeeded) {
+      console.log(`[Session] Not enough energy: Need ${energyNeeded}, Have ${userData.energy}`);
       return false;
     }
     
-    const newEnergy = userData.energy - 20;
+    const newEnergy = userData.energy - energyNeeded;
     
     const updatedUserData = {
       ...userData,

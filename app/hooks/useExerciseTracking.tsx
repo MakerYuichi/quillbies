@@ -1,6 +1,8 @@
 // Exercise tracking hook with timer functionality like sleep
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuillbyStore } from '../state/store-modular';
+import { playEndSessionSound } from '../../lib/soundManager';
+import { soundManager, SOUNDS } from '../../lib/soundManager';
 
 export const useExerciseTracking = (buddyName: string) => {
   const { userData, logExercise, resetDay } = useQuillbyStore();
@@ -15,6 +17,80 @@ export const useExerciseTracking = (buddyName: string) => {
   
   // Track accumulated minutes separately
   const [accumulatedMinutes, setAccumulatedMinutes] = useState<number>(0);
+  
+  // Track sound loop control
+  const soundLoopActive = useRef(false);
+
+  // Sound loop effect - plays jumping and wet grass sounds simultaneously during exercise
+  useEffect(() => {
+    if (!isExercising) {
+      soundLoopActive.current = false;
+      // Stop all exercise sounds immediately
+      soundManager.stopSound(SOUNDS.HAMSTER_JUMPING);
+      soundManager.stopSound(SOUNDS.WET_GRASS);
+      return;
+    }
+
+    soundLoopActive.current = true;
+
+    // Play jumping sound loop - every 2 seconds
+    (async () => {
+      while (soundLoopActive.current) {
+        try {
+          await soundManager.playSound(SOUNDS.HAMSTER_JUMPING, 1.0, 0.6);
+          console.log(`[Exercise] Playing jumping sound`);
+          
+          // Wait 2 seconds before next jump
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Check if loop should stop
+          if (!soundLoopActive.current) {
+            break;
+          }
+        } catch (error) {
+          console.error(`[Exercise] Error playing jumping sound:`, error);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+      
+      soundManager.stopSound(SOUNDS.HAMSTER_JUMPING);
+      console.log('[Exercise] Jumping sound loop stopped');
+    })();
+
+    // Play wet grass sound loop (simultaneously) - continuous background
+    (async () => {
+      // Small delay before starting wet grass to layer the sounds
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      while (soundLoopActive.current) {
+        try {
+          await soundManager.playSound(SOUNDS.WET_GRASS, 1.0, 0.5);
+          console.log(`[Exercise] Playing wet grass sound`);
+          
+          // Wait 3 seconds before replaying (longer for background ambience)
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Check if loop should stop
+          if (!soundLoopActive.current) {
+            break;
+          }
+        } catch (error) {
+          console.error(`[Exercise] Error playing wet grass sound:`, error);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
+      
+      soundManager.stopSound(SOUNDS.WET_GRASS);
+      console.log('[Exercise] Wet grass sound loop stopped');
+    })();
+
+    return () => {
+      console.log('[Exercise] Cleaning up sound loops');
+      soundLoopActive.current = false;
+      soundManager.stopSound(SOUNDS.HAMSTER_JUMPING);
+      soundManager.stopSound(SOUNDS.WET_GRASS);
+    };
+  }, [isExercising]);
 
   // Update elapsed time every second when exercising
   useEffect(() => {
@@ -55,21 +131,30 @@ export const useExerciseTracking = (buddyName: string) => {
     setExerciseStartTime(Date.now());
     setCurrentAnimation('exercising');
     
-    const exerciseNames = {
+    const exerciseNames: Record<string, string> = {
       walk: 'Walking',
       stretch: 'Stretching', 
       cardio: 'Cardio',
-      energizer: 'Energizing'
+      energizer: 'Energizing',
+      custom: 'Custom'
     };
     
-    const durationText = duration ? `${duration} min` : 'stopwatch mode';
-    const newMessage = `🏃‍♂️ Alright, let's do this! ${exerciseNames[type].toLowerCase()} time...\nTap "Finish" when done!`;
+    const newMessage = `🏃‍♂️ Alright, let's do this! ${exerciseNames[type]?.toLowerCase() || 'exercise'} time...\nTap "Finish" when done!`;
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
   };
 
   const handleFinishExercise = () => {
     if (!exerciseStartTime) return;
+    
+    // Play end session sound
+    playEndSessionSound();
+    
+    // Stop exercise sounds immediately
+    soundLoopActive.current = false;
+    soundManager.stopSound(SOUNDS.HAMSTER_JUMPING);
+    soundManager.stopSound(SOUNDS.WET_GRASS);
+    console.log('[Exercise] Stopping exercise sounds immediately');
     
     // Calculate exercise duration for this session
     const exerciseEndTime = Date.now();
@@ -107,18 +192,7 @@ export const useExerciseTracking = (buddyName: string) => {
     // Log exercise in store
     logExercise(minutesInt);
     
-    // Calculate rewards based on duration
-    const baseReward = Math.min(sessionMinutes * 2, 30); // 2 energy per minute, max 30
-    const coinReward = Math.min(sessionMinutes, 20); // 1 coin per minute, max 20
-    
-    // Update message based on exercise duration and type
-    const exerciseNames = {
-      walk: 'Walking',
-      stretch: 'Stretching', 
-      cardio: 'Cardio workout',
-      energizer: 'Energy boost'
-    };
-    
+    // Update message based on exercise duration
     let newMessage = '';
     if (sessionMinutes < 5) {
       newMessage = `💪 Quick ${durationText} session! Good little break!\n(${totalText} today)`;

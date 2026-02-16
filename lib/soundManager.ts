@@ -2,9 +2,14 @@ import { Audio } from 'expo-av';
 
 // Sound manager for playing app sounds
 class SoundManager {
-  private sounds: Map<string, Audio.Sound> = new Map();
+  private sounds: Map<string, Audio.Sound[]> = new Map(); // Store multiple instances
+  private backgroundMusic: Audio.Sound | null = null; // Single instance for background music
+  private currentBackgroundMusicKey: string | null = null;
   private isEnabled: boolean = true;
   private isAvailable: boolean = false;
+  private isInitialized: boolean = false;
+  private isActivated: boolean = false; // Track if audio system is activated
+  private soundInstances: number = 1; // Use single instance for reliability
 
   constructor() {
     // Check if Audio is available
@@ -12,10 +17,55 @@ class SoundManager {
       if (Audio) {
         this.isAvailable = true;
         console.log('[Sound] expo-av is available');
+        this.initializeAudio();
       }
     } catch (error) {
       console.warn('[Sound] expo-av not available, sounds disabled:', error);
       this.isAvailable = false;
+    }
+  }
+
+  async initializeAudio(): Promise<void> {
+    if (this.isInitialized) return;
+    
+    try {
+      // Set audio mode for better performance and audibility
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: false, // Don't duck - play at full volume
+        interruptionModeIOS: 2, // Mix with others
+        interruptionModeAndroid: 2, // Mix with others
+        playThroughEarpieceAndroid: false, // Use speaker, not earpiece
+      });
+      this.isInitialized = true;
+      console.log('[Sound] Audio mode initialized');
+    } catch (error) {
+      console.warn('[Sound] Failed to initialize audio mode:', error);
+    }
+  }
+
+  // Activate audio system on first user interaction
+  async activate(): Promise<void> {
+    if (this.isActivated || !this.isAvailable) return;
+    
+    try {
+      console.log('[Sound] Unlocking audio system...');
+      
+      // Play a silent sound to activate the audio system
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=' },
+        { shouldPlay: true, volume: 0 }
+      );
+      
+      // Let it play for a moment to ensure audio context is unlocked
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      await sound.unloadAsync();
+      this.isActivated = true;
+      console.log('[Sound] Audio system unlocked and ready');
+    } catch (error) {
+      console.warn('[Sound] Failed to activate audio system:', error);
     }
   }
 
@@ -26,9 +76,39 @@ class SoundManager {
     }
 
     try {
-      const { sound } = await Audio.Sound.createAsync(source);
-      this.sounds.set(key, sound);
-      console.log(`[Sound] Loaded: ${key}`);
+      const instances: Audio.Sound[] = [];
+      
+      // Load multiple instances for instant playback
+      for (let i = 0; i < this.soundInstances; i++) {
+        const { sound } = await Audio.Sound.createAsync(source, {
+          shouldPlay: false,
+          volume: 1.0,
+        });
+        
+        // Force the sound to load into memory by preparing it
+        await sound.setStatusAsync({ 
+          shouldPlay: false, 
+          positionMillis: 0,
+          progressUpdateIntervalMillis: 500,
+        });
+        
+        // Get status to ensure it's loaded
+        const status = await sound.getStatusAsync();
+        if (!status.isLoaded) {
+          console.warn(`[Sound] Instance ${i} of ${key} failed to load`);
+          continue;
+        }
+        
+        instances.push(sound);
+      }
+      
+      if (instances.length === 0) {
+        console.error(`[Sound] Failed to load any instances of ${key}`);
+        return;
+      }
+      
+      this.sounds.set(key, instances);
+      console.log(`[Sound] ✓ Loaded and ready: ${key} (${instances.length} instances)`);
     } catch (error) {
       console.warn(`[Sound] Failed to load ${key}:`, error);
     }
@@ -36,37 +116,72 @@ class SoundManager {
 
   async playSound(key: string, rate: number = 1.0, volume: number = 1.0): Promise<number> {
     if (!this.isAvailable || !this.isEnabled) {
-      console.log(`[Sound] Audio not available or disabled, skipping: ${key}`);
       return 0;
     }
 
     try {
-      const sound = this.sounds.get(key);
-      if (!sound) {
+      // Ensure audio is activated before playing
+      if (!this.isActivated) {
+        console.log('[Sound] First sound - activating audio system...');
+        await this.activate();
+        // CRITICAL: Wait for audio system to fully initialize
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('[Sound] Audio system ready');
+      }
+
+      const instances = this.sounds.get(key);
+      if (!instances || instances.length === 0) {
         console.warn(`[Sound] Sound not loaded: ${key}`);
         return 0;
       }
 
-      // Stop if already playing
-      await sound.stopAsync();
-      await sound.setPositionAsync(0);
+      // Get the best available instance (not currently playing)
+      let soundToPlay = null;
       
-      // Set volume (0.0 to 1.0)
-      await sound.setVolumeAsync(volume);
+      for (const instance of instances) {
+        try {
+          const status = await instance.getStatusAsync();
+          if (status.isLoaded && !status.isPlaying) {
+            soundToPlay = instance;
+            break;
+          }
+        } catch (e) {
+          // Instance might be corrupted, skip it
+          console.warn(`[Sound] Skipping corrupted instance for ${key}`);
+          continue;
+        }
+      }
+
+      // If no available instance found, return early
+      if (!soundToPlay) {
+        console.error(`[Sound] No valid instance available for ${key}`);
+        return 0;
+      }
+
+      // Verify the sound is still loaded before playing
+      const status = await soundToPlay.getStatusAsync();
+      if (!status.isLoaded) {
+        console.error(`[Sound] Sound ${key} is not loaded, cannot play`);
+        return 0;
+      }
+
+      // Only stop if it's currently playing
+      if (status.isPlaying) {
+        await soundToPlay.stopAsync();
+      }
       
-      // Set playback rate for speed adjustment
-      await sound.setRateAsync(rate, true);
+      // Reset position
+      await soundToPlay.setPositionAsync(0);
+      await soundToPlay.setVolumeAsync(volume);
+      await soundToPlay.setRateAsync(rate, true);
       
-      // Get duration before playing
-      const status = await sound.getStatusAsync();
-      const duration = status.isLoaded ? (status.durationMillis || 0) / rate : 0;
+      // Play
+      await soundToPlay.playAsync();
+      console.log(`[Sound] ✓ Played ${key}`);
       
-      await sound.playAsync();
-      console.log(`[Sound] Playing: ${key} at ${rate}x speed, volume: ${volume} (${duration}ms)`);
-      
-      return duration;
+      return 0;
     } catch (error) {
-      console.warn(`[Sound] Failed to play ${key}:`, error);
+      console.warn(`[Sound] Play error for ${key}:`, error);
       return 0;
     }
   }
@@ -75,13 +190,105 @@ class SoundManager {
     if (!this.isAvailable) return;
 
     try {
-      const sound = this.sounds.get(key);
-      if (sound) {
-        await sound.stopAsync();
-        await sound.setPositionAsync(0);
+      const instances = this.sounds.get(key);
+      if (instances) {
+        for (const sound of instances) {
+          await sound.stopAsync();
+          await sound.setPositionAsync(0);
+        }
       }
     } catch (error) {
       console.warn(`[Sound] Failed to stop ${key}:`, error);
+    }
+  }
+
+  // Background music methods
+  async playBackgroundMusic(key: string, source: any, volume: number = 0.3, loop: boolean = true): Promise<void> {
+    if (!this.isAvailable || !this.isEnabled) {
+      console.log('[Sound] Background music disabled or unavailable');
+      return;
+    }
+
+    try {
+      // If same music is already playing, don't restart
+      if (this.currentBackgroundMusicKey === key && this.backgroundMusic) {
+        const status = await this.backgroundMusic.getStatusAsync();
+        if (status.isLoaded && status.isPlaying) {
+          console.log(`[Sound] Background music ${key} already playing`);
+          return;
+        }
+      }
+
+      // Stop current background music if any
+      await this.stopBackgroundMusic();
+
+      console.log(`[Sound] Loading background music: ${key}`);
+      
+      // Load and play new background music
+      const { sound } = await Audio.Sound.createAsync(
+        source,
+        {
+          shouldPlay: true,
+          volume: volume,
+          isLooping: loop,
+        }
+      );
+
+      this.backgroundMusic = sound;
+      this.currentBackgroundMusicKey = key;
+      
+      console.log(`[Sound] ✓ Background music ${key} started (volume: ${volume}, loop: ${loop})`);
+    } catch (error) {
+      console.warn(`[Sound] Failed to play background music ${key}:`, error);
+    }
+  }
+
+  async stopBackgroundMusic(): Promise<void> {
+    if (!this.isAvailable) return;
+
+    try {
+      if (this.backgroundMusic) {
+        console.log(`[Sound] Stopping background music: ${this.currentBackgroundMusicKey}`);
+        await this.backgroundMusic.stopAsync();
+        await this.backgroundMusic.unloadAsync();
+        this.backgroundMusic = null;
+        this.currentBackgroundMusicKey = null;
+      }
+    } catch (error) {
+      console.warn('[Sound] Failed to stop background music:', error);
+    }
+  }
+
+  async setBackgroundMusicVolume(volume: number): Promise<void> {
+    if (!this.isAvailable || !this.backgroundMusic) return;
+
+    try {
+      await this.backgroundMusic.setVolumeAsync(volume);
+      console.log(`[Sound] Background music volume set to ${volume}`);
+    } catch (error) {
+      console.warn('[Sound] Failed to set background music volume:', error);
+    }
+  }
+
+  async pauseBackgroundMusic(): Promise<void> {
+    if (!this.isAvailable || !this.backgroundMusic) return;
+
+    try {
+      await this.backgroundMusic.pauseAsync();
+      console.log('[Sound] Background music paused');
+    } catch (error) {
+      console.warn('[Sound] Failed to pause background music:', error);
+    }
+  }
+
+  async resumeBackgroundMusic(): Promise<void> {
+    if (!this.isAvailable || !this.backgroundMusic) return;
+
+    try {
+      await this.backgroundMusic.playAsync();
+      console.log('[Sound] Background music resumed');
+    } catch (error) {
+      console.warn('[Sound] Failed to resume background music:', error);
     }
   }
 
@@ -89,9 +296,11 @@ class SoundManager {
     if (!this.isAvailable) return;
 
     try {
-      const sound = this.sounds.get(key);
-      if (sound) {
-        await sound.unloadAsync();
+      const instances = this.sounds.get(key);
+      if (instances) {
+        for (const sound of instances) {
+          await sound.unloadAsync();
+        }
         this.sounds.delete(key);
         console.log(`[Sound] Unloaded: ${key}`);
       }
@@ -103,9 +312,14 @@ class SoundManager {
   async unloadAll(): Promise<void> {
     if (!this.isAvailable) return;
 
-    for (const [key, sound] of this.sounds.entries()) {
+    // Stop background music first
+    await this.stopBackgroundMusic();
+
+    for (const [key, instances] of this.sounds.entries()) {
       try {
-        await sound.unloadAsync();
+        for (const sound of instances) {
+          await sound.unloadAsync();
+        }
         console.log(`[Sound] Unloaded: ${key}`);
       } catch (error) {
         console.warn(`[Sound] Failed to unload ${key}:`, error);
@@ -131,14 +345,34 @@ export const soundManager = new SoundManager();
 export const SOUNDS = {
   HAMSTER_EATING: 'hamster_eating',
   HAMSTER_DRINKING: 'hamster_drinking',
+  HAMSTER_YAWN: 'hamster_yawn',
+  HAMSTER_JUMPING: 'hamster_jumping',
   HAMSTER_HAPPY: 'hamster_happy',
   HAMSTER_SAD: 'hamster_sad',
   HAMSTER_SLEEPING: 'hamster_sleeping',
+  WET_GRASS: 'wet_grass',
+  BIRDS_CHIRPING: 'birds_chirping',
   WATER_LOG: 'water_log',
   MEAL_LOG: 'meal_log',
   EXERCISE_LOG: 'exercise_log',
   COIN_EARNED: 'coin_earned',
   BUTTON_CLICK: 'button_click',
+  // UI Sounds
+  TOGGLE: 'toggle',
+  TAB: 'tab',
+  END_SESSION: 'end_session',
+  EQUIP: 'equip',
+  UI_SUBMIT: 'ui_submit',
+  // Study Actions
+  COFFEE_SLURP: 'coffee_slurp',
+  EATING_APPLE: 'eating_apple',
+  // Cleaning Sounds
+  BROOM: 'broom',
+  SCRUB: 'scrub',
+  DEEP_CLEAN: 'deep_clean',
+  // Background Music
+  ONBOARDING_MUSIC: 'onboarding_music',
+  GAME_MUSIC: 'game_music',
 };
 
 // Preload essential sounds
@@ -151,15 +385,221 @@ export async function preloadSounds(): Promise<void> {
       require('../assets/sounds/character/hamster_eating.mp3')
     );
     console.log('[Sound] Hamster eating sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.HAMSTER_DRINKING,
+      require('../assets/sounds/character/drinking-water.mp3')
+    );
+    console.log('[Sound] Hamster drinking sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.HAMSTER_YAWN,
+      require('../assets/sounds/character/yawn.mp3')
+    );
+    console.log('[Sound] Hamster yawn sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.HAMSTER_JUMPING,
+      require('../assets/sounds/character/jumping.mp3')
+    );
+    console.log('[Sound] Hamster jumping sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.WET_GRASS,
+      require('../assets/sounds/background_music/wet-grass.mp3')
+    );
+    console.log('[Sound] Wet grass sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.BIRDS_CHIRPING,
+      require('../assets/sounds/background_music/birds-chirping.mp3')
+    );
+    console.log('[Sound] Birds chirping sound loaded');
+    
+    // UI Sounds
+    await soundManager.loadSound(
+      SOUNDS.TOGGLE,
+      require('../assets/sounds/ui_buttons/toggle.mp3')
+    );
+    console.log('[Sound] Toggle sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.TAB,
+      require('../assets/sounds/ui_buttons/tab.mp3')
+    );
+    console.log('[Sound] Tab sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.END_SESSION,
+      require('../assets/sounds/ui_buttons/end-session.mp3')
+    );
+    console.log('[Sound] End session sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.EQUIP,
+      require('../assets/sounds/ui_buttons/equip.mp3')
+    );
+    console.log('[Sound] Equip sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.UI_SUBMIT,
+      require('../assets/sounds/ui_buttons/ui-submit.mp3')
+    );
+    console.log('[Sound] UI submit sound loaded');
+    
+    // Study Action Sounds
+    await soundManager.loadSound(
+      SOUNDS.COFFEE_SLURP,
+      require('../assets/sounds/study_actions/coffee-slurp.mp3')
+    );
+    console.log('[Sound] Coffee slurp sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.EATING_APPLE,
+      require('../assets/sounds/study_actions/eating-an-apple.mp3')
+    );
+    console.log('[Sound] Eating apple sound loaded');
+    
+    // Cleaning Sounds
+    await soundManager.loadSound(
+      SOUNDS.BROOM,
+      require('../assets/sounds/mess/broom.mp3')
+    );
+    console.log('[Sound] Broom sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.SCRUB,
+      require('../assets/sounds/mess/scrub.mp3')
+    );
+    console.log('[Sound] Scrub sound loaded');
+    
+    await soundManager.loadSound(
+      SOUNDS.DEEP_CLEAN,
+      require('../assets/sounds/mess/deep-clean.mp3')
+    );
+    console.log('[Sound] Deep clean sound loaded');
   } catch (error) {
-    console.warn('[Sound] Failed to load hamster eating sound:', error);
+    console.warn('[Sound] Failed to load sounds:', error);
   }
   
-  // Add more sounds here as needed:
-  // await soundManager.loadSound(
-  //   SOUNDS.HAMSTER_DRINKING,
-  //   require('../assets/sounds/character/hamster_drinking.mp3')
-  // );
-  
   console.log('[Sound] Preloading complete');
+}
+
+// Helper functions for playing specific sounds - now properly async
+export async function playToggleSound(): Promise<void> {
+  await soundManager.playSound(SOUNDS.TOGGLE, 1.0, 1.0);
+}
+
+export async function playTabSound(): Promise<void> {
+  await soundManager.playSound(SOUNDS.TAB, 1.0, 1.0);
+}
+
+export async function playEndSessionSound(): Promise<void> {
+  await soundManager.playSound(SOUNDS.END_SESSION, 1.3, 1.0); // Increased speed to 1.3x
+}
+
+export async function playEquipSound(): Promise<void> {
+  await soundManager.playSound(SOUNDS.EQUIP, 1.0, 0.3); // Reduced volume to 0.4
+}
+
+export async function playUISubmitSound(): Promise<void> {
+  await soundManager.playSound(SOUNDS.UI_SUBMIT, 1.0, 0.1);
+}
+
+// Test cleaning sounds
+export async function testCleaningSounds(): Promise<void> {
+  console.log('[Sound] 🧪 Testing all cleaning sounds...');
+  
+  // Check if sounds are loaded
+  const broomLoaded = soundManager.isLoaded(SOUNDS.BROOM);
+  const scrubLoaded = soundManager.isLoaded(SOUNDS.SCRUB);
+  const deepCleanLoaded = soundManager.isLoaded(SOUNDS.DEEP_CLEAN);
+  
+  console.log('[Sound] BROOM loaded:', broomLoaded);
+  console.log('[Sound] SCRUB loaded:', scrubLoaded);
+  console.log('[Sound] DEEP_CLEAN loaded:', deepCleanLoaded);
+  
+  // Test BROOM
+  if (broomLoaded) {
+    console.log('[Sound] 🔊 Playing BROOM test...');
+    try {
+      await soundManager.playSound(SOUNDS.BROOM, 1.0, 1.0);
+      console.log('[Sound] ✅ BROOM test complete');
+    } catch (err) {
+      console.error('[Sound] ❌ BROOM test failed:', err);
+    }
+  } else {
+    console.error('[Sound] ❌ BROOM not loaded!');
+  }
+  
+  // Wait between sounds
+  console.log('[Sound] ⏳ Waiting 1.5 seconds...');
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Test SCRUB
+  if (scrubLoaded) {
+    console.log('[Sound] 🔊 Playing SCRUB test...');
+    try {
+      await soundManager.playSound(SOUNDS.SCRUB, 1.0, 1.0);
+      console.log('[Sound] ✅ SCRUB test complete');
+    } catch (err) {
+      console.error('[Sound] ❌ SCRUB test failed:', err);
+    }
+  } else {
+    console.error('[Sound] ❌ SCRUB not loaded!');
+  }
+  
+  // Wait between sounds
+  console.log('[Sound] ⏳ Waiting 1.5 seconds...');
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Test DEEP_CLEAN
+  if (deepCleanLoaded) {
+    console.log('[Sound] 🔊 Playing DEEP_CLEAN test...');
+    try {
+      await soundManager.playSound(SOUNDS.DEEP_CLEAN, 1.0, 1.0);
+      console.log('[Sound] ✅ DEEP_CLEAN test complete');
+    } catch (err) {
+      console.error('[Sound] ❌ DEEP_CLEAN test failed:', err);
+    }
+  } else {
+    console.error('[Sound] ❌ DEEP_CLEAN not loaded!');
+  }
+  
+  console.log('[Sound] 🏁 All tests complete');
+}
+
+// Reload cleaning sounds (use after converting sound files)
+export async function reloadCleaningSounds(): Promise<void> {
+  console.log('[Sound] 🔄 Reloading cleaning sounds...');
+  
+  try {
+    // Unload old instances
+    console.log('[Sound] Unloading old BROOM...');
+    await soundManager.unloadSound(SOUNDS.BROOM);
+    
+    console.log('[Sound] Unloading old DEEP_CLEAN...');
+    await soundManager.unloadSound(SOUNDS.DEEP_CLEAN);
+    
+    // Wait a bit for cleanup
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Reload with new files
+    console.log('[Sound] Loading new BROOM...');
+    await soundManager.loadSound(
+      SOUNDS.BROOM,
+      require('../assets/sounds/mess/broom.mp3')
+    );
+    
+    console.log('[Sound] Loading new DEEP_CLEAN...');
+    await soundManager.loadSound(
+      SOUNDS.DEEP_CLEAN,
+      require('../assets/sounds/mess/deep-clean.mp3')
+    );
+    
+    console.log('[Sound] ✅ Cleaning sounds reloaded successfully!');
+    console.log('[Sound] 💡 Now test the sounds again');
+  } catch (error) {
+    console.error('[Sound] ❌ Failed to reload cleaning sounds:', error);
+  }
 }

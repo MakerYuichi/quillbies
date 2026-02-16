@@ -7,6 +7,7 @@ import { calculateFocusEnergyCost } from '../core/engine';
 import CreateDeadlineModal from '../components/modals/CreateDeadlineModal';
 import DeadlineDetailModal from '../components/modals/DeadlineDetailModal';
 import SessionCustomizationModal, { SessionConfig } from '../components/modals/SessionCustomizationModal';
+import { playTabSound } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -63,6 +64,7 @@ export default function FocusScreen() {
   };
 
   const handleStartSession = (deadlineId?: string) => {
+    playTabSound();
     const energyNeeded = calculateFocusEnergyCost(userData);
     if (userData.energy < energyNeeded) {
       alert(`Not enough energy! Need ${energyNeeded} energy to focus (have ${Math.round(userData.energy)})`);
@@ -102,6 +104,7 @@ export default function FocusScreen() {
   };
 
   const handleDeadlinePress = (deadline: Deadline) => {
+    playTabSound();
     setSelectedDeadline(deadline);
     setShowDetailModal(true);
   };
@@ -205,7 +208,10 @@ export default function FocusScreen() {
             <View style={styles.missionSection}>
               <TouchableOpacity 
                 style={styles.alertHeader}
-                onPress={() => setUrgentExpanded(!urgentExpanded)}
+                onPress={() => {
+                  playTabSound();
+                  setUrgentExpanded(!urgentExpanded);
+                }}
                 activeOpacity={0.8}
               >
                 <View style={styles.sectionHeaderRow}>
@@ -276,7 +282,10 @@ export default function FocusScreen() {
             <View style={styles.missionSection}>
               <TouchableOpacity 
                 style={styles.upcomingHeader}
-                onPress={() => setUpcomingExpanded(!upcomingExpanded)}
+                onPress={() => {
+                  playTabSound();
+                  setUpcomingExpanded(!upcomingExpanded);
+                }}
                 activeOpacity={0.8}
               >
                 <View style={styles.sectionHeaderRow}>
@@ -361,7 +370,10 @@ export default function FocusScreen() {
             <View style={styles.missionSection}>
               <TouchableOpacity 
                 style={styles.victoryHeader}
-                onPress={() => setVictoriesExpanded(!victoriesExpanded)}
+                onPress={() => {
+                  playTabSound();
+                  setVictoriesExpanded(!victoriesExpanded);
+                }}
                 activeOpacity={0.8}
               >
                 <View style={styles.sectionHeaderRow}>
@@ -403,7 +415,10 @@ export default function FocusScreen() {
           {/* Plan New Mission Button */}
           <TouchableOpacity 
             style={styles.newMissionButton}
-            onPress={() => setShowCreateModal(true)}
+            onPress={() => {
+              playTabSound();
+              setShowCreateModal(true);
+            }}
             activeOpacity={0.8}
           >
             <Text style={styles.newMissionText}>📝 Plan New Mission</Text>

@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_700Bold, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
 import { useQuillbyStore } from '../state/store-modular';
+import { playUISubmitSound } from '../../lib/soundManager';
 
 // Get screen dimensions for responsive layout
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -42,10 +43,6 @@ export default function NameBuddyScreen() {
   const hamsterOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   
-  // Dynamic orange section position (starts at 75% of screen height)
-  const ORANGE_INITIAL_POSITION = SCREEN_HEIGHT * 0.75;
-  const orangePosition = useRef(new Animated.Value(ORANGE_INITIAL_POSITION)).current;
-
   // Load custom fonts
   const [fontsLoaded] = useFonts({
     'CevicheOne': require('../../assets/fonts/Caviche-Regular.ttf'),
@@ -53,33 +50,6 @@ export default function NameBuddyScreen() {
     ChakraPetch_700Bold,
     ChakraPetch_600SemiBold,
   });
-
-  // Keyboard listeners - MUST be before early return
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
-      const height = e.endCoordinates.height;
-      // Move orange section up above keyboard
-      Animated.timing(orangePosition, {
-        toValue: ORANGE_INITIAL_POSITION - height - 20,
-        duration: 250,
-        useNativeDriver: false,
-      }).start();
-    });
-    
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      // Move orange section back to original position
-      Animated.timing(orangePosition, {
-        toValue: ORANGE_INITIAL_POSITION,
-        duration: 250,
-        useNativeDriver: false,
-      }).start();
-    });
-    
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   // Show loading while fonts load - AFTER all hooks
   if (!fontsLoaded) {
@@ -208,6 +178,7 @@ export default function NameBuddyScreen() {
 
   const handleNext = () => {
     if (petName.trim().length > 0) {
+      playUISubmitSound();
       // Save name to store
       setBuddyName(petName.trim());
       // Navigate to profile screen
@@ -220,175 +191,175 @@ export default function NameBuddyScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      {/* Full Background */}
-      <ImageBackground
-        source={require('../../assets/backgrounds/theme.png')}
-        style={styles.background}
-        resizeMode="cover"
-        defaultSource={require('../../assets/backgrounds/theme.png')}
-      >
-        {/* Title - Only shows after hatching */}
-        {showTitle && (
-          <Animated.Text style={[styles.title, { opacity: titleOpacity }]}>
-            Name Your New{'\n'}FRIEND
-          </Animated.Text>
-        )}
-
-        {/* Egg/Hamster Container - Only show when not in black screen mode */}
-        {!showBlackScreen && (
-          <TouchableWithoutFeedback onPress={handleEggTap}>
-            <View style={styles.eggContainer}>
-              {/* Normal Egg */}
-              {eggStage === 'normal' && (
-                <Image
-                  source={require('../../assets/onboarding/egg-only.png')}
-                  style={styles.eggImage}
-                  resizeMode="contain"
-                />
-              )}
-              
-              {/* First Crack */}
-              {eggStage === 'crack1' && (
-                <Image
-                  source={require('../../assets/onboarding/egg-crack1.png')}
-                  style={styles.eggImage}
-                  resizeMode="contain"
-                />
-              )}
-              
-              {/* Second Crack */}
-              {eggStage === 'crack2' && (
-                <Image
-                  source={require('../../assets/onboarding/egg-crack2.png')}
-                  style={styles.eggImage}
-                  resizeMode="contain"
-                />
-              )}
-              
-              {/* Hatched - Show hamster */}
-              {eggStage === 'hatched' && (
-                <Animated.Image
-                  source={require('../../assets/onboarding/hamster-egghatch.png')}
-                  style={[
-                    styles.hamsterImage,
-                    { opacity: hamsterOpacity }
-                  ]}
-                  resizeMode="contain"
-                />
-              )}
-
-              {/* Tap instruction (only before hatching sequence) */}
-              {eggStage !== 'hatching' && eggStage !== 'hatched' && (
-                <Text style={styles.tapInstruction}>
-                  Tap the egg {3 - tapCount} more time{tapCount < 2 ? 's' : ''} to hatch! 🥚
-                </Text>
-              )}
-            </View>
-          </TouchableWithoutFeedback>
-        )}
-        
-        {/* BLACK SCREEN OVERLAY - Cinematic hatching */}
-        {showBlackScreen && (
-          <Animated.View style={[styles.blackOverlay, { opacity: blackScreenOpacity }]}>
-            {/* Glowing Egg in Center */}
-            <Animated.View style={[
-              styles.glowContainer,
-              {
-                transform: [
-                  { scale: glowScale },
-                  { translateX: shakeAnim }
-                ]
-              }
-            ]}>
-              {/* Glow Effect */}
-              <Animated.View style={[
-                styles.glowEffect,
-                { transform: [{ scale: glowScale }] }
-              ]} />
-              
-              {/* Egg Stages */}
-              {eggStage === 'hatching' && (
-                <Image
-                  source={require('../../assets/onboarding/egg-crack2.png')}
-                  style={styles.eggImageCenter}
-                  resizeMode="contain"
-                />
-              )}
-              
-              {eggStage === 'crack3' && (
-                <Image
-                  source={require('../../assets/onboarding/egg-crack3.png')}
-                  style={styles.eggImageCenter}
-                  resizeMode="contain"
-                />
-              )}
-              
-              {eggStage === 'hatched' && (
-                <Animated.Image
-                  source={require('../../assets/onboarding/hamster-egghatch.png')}
-                  style={[
-                    styles.hamsterImageCenter,
-                    { opacity: hamsterOpacity }
-                  ]}
-                  resizeMode="contain"
-                />
-              )}
-            </Animated.View>
-          </Animated.View>
-        )}
-
-        {/* Orange Theme Bottom Section - Moves with keyboard */}
-        <Animated.View style={[styles.orangeSection, { top: orangePosition }]}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.wrapper}>
           <ImageBackground
-            source={require('../../assets/backgrounds/orange-theme.png')}
-            style={styles.orangeBackground}
+            source={require('../../assets/backgrounds/theme.png')}
+            style={styles.background}
             resizeMode="cover"
-            defaultSource={require('../../assets/backgrounds/orange-theme.png')}
+            defaultSource={require('../../assets/backgrounds/theme.png')}
           >
-            {/* Only show input after hatching */}
-            {showInput && (
-              <>
-                {/* Input Container */}
-                <View style={styles.inputContainer}>
-                  {/* Typing Line (Left side) */}
+            {/* Title - Only shows after hatching */}
+            {showTitle && (
+              <Animated.Text style={[styles.title, { opacity: titleOpacity }]}>
+                Name Your New{'\n'}FRIEND
+              </Animated.Text>
+            )}
 
-                  {/* Text Input */}
-                  <TextInput
-                    style={styles.textInput}
-                    value={petName}
-                    onChangeText={setPetName}
-                    placeholder="QuillBy"
-                    placeholderTextColor="rgba(92, 93, 70, 0.31)"
-                    autoFocus={false}
-                    maxLength={20}
-                  />
+            {/* Egg/Hamster Container - Only show when not in black screen mode */}
+            {!showBlackScreen && (
+              <TouchableWithoutFeedback onPress={handleEggTap}>
+                <View style={styles.eggContainer}>
+                  {/* Normal Egg */}
+                  {eggStage === 'normal' && (
+                    <Image
+                      source={require('../../assets/onboarding/egg-only.png')}
+                      style={styles.eggImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                  
+                  {/* First Crack */}
+                  {eggStage === 'crack1' && (
+                    <Image
+                      source={require('../../assets/onboarding/egg-crack1.png')}
+                      style={styles.eggImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                  
+                  {/* Second Crack */}
+                  {eggStage === 'crack2' && (
+                    <Image
+                      source={require('../../assets/onboarding/egg-crack2.png')}
+                      style={styles.eggImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                  
+                  {/* Hatched - Show hamster */}
+                  {eggStage === 'hatched' && (
+                    <Animated.Image
+                      source={require('../../assets/onboarding/hamster-egghatch.png')}
+                      style={[
+                        styles.hamsterImage,
+                        { opacity: hamsterOpacity }
+                      ]}
+                      resizeMode="contain"
+                    />
+                  )}
+
+                  {/* Tap instruction (only before hatching sequence) */}
+                  {eggStage !== 'hatching' && eggStage !== 'hatched' && (
+                    <Text style={styles.tapInstruction}>
+                      Tap the egg {3 - tapCount} more time{tapCount < 2 ? 's' : ''} to hatch! 🥚
+                    </Text>
+                  )}
                 </View>
-
-                {/* Instruction Text */}
-                <Text style={styles.instruction}>
-                  Your study buddy has just hatched! Give it a name to begin your journey together
-                </Text>
-
-                {/* Next Button */}
-                <TouchableOpacity
-                  style={[styles.nextButton, petName.trim().length === 0 && styles.nextButtonDisabled]}
-                  disabled={petName.trim().length === 0}
-                  onPress={handleNext}
-                >
-                  <Text style={styles.nextButtonText}>Next →</Text>
-                </TouchableOpacity>
-              </>
+              </TouchableWithoutFeedback>
             )}
             
-            {/* Before hatching - show hint */}
-            {!showInput && (
-              <Text style={styles.hatchHint}>
-                Tap the egg above to begin! 👆
-              </Text>
+            {/* BLACK SCREEN OVERLAY - Cinematic hatching */}
+            {showBlackScreen && (
+              <Animated.View style={[styles.blackOverlay, { opacity: blackScreenOpacity }]}>
+                {/* Glowing Egg in Center */}
+                <Animated.View style={[
+                  styles.glowContainer,
+                  {
+                    transform: [
+                      { scale: glowScale },
+                      { translateX: shakeAnim }
+                    ]
+                  }
+                ]}>
+                  {/* Glow Effect */}
+                  <Animated.View style={[
+                    styles.glowEffect,
+                    { transform: [{ scale: glowScale }] }
+                  ]} />
+                  
+                  {/* Egg Stages */}
+                  {eggStage === 'hatching' && (
+                    <Image
+                      source={require('../../assets/onboarding/egg-crack2.png')}
+                      style={styles.eggImageCenter}
+                      resizeMode="contain"
+                    />
+                  )}
+                  
+                  {eggStage === 'crack3' && (
+                    <Image
+                      source={require('../../assets/onboarding/egg-crack3.png')}
+                      style={styles.eggImageCenter}
+                      resizeMode="contain"
+                    />
+                  )}
+                  
+                  {eggStage === 'hatched' && (
+                    <Animated.Image
+                      source={require('../../assets/onboarding/hamster-egghatch.png')}
+                      style={[
+                        styles.hamsterImageCenter,
+                        { opacity: hamsterOpacity }
+                      ]}
+                      resizeMode="contain"
+                    />
+                  )}
+                </Animated.View>
+              </Animated.View>
             )}
           </ImageBackground>
-        </Animated.View>
-      </ImageBackground>
+
+          {/* Orange Theme Bottom Section - Absolute positioned at bottom */}
+          <View style={styles.orangeSection}>
+            <ImageBackground
+              source={require('../../assets/backgrounds/orange-theme.png')}
+              style={styles.orangeBackground}
+              resizeMode="cover"
+              defaultSource={require('../../assets/backgrounds/orange-theme.png')}
+            >
+              {/* Only show input after hatching */}
+              {showInput && (
+                <>
+                  {/* Input Container */}
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={petName}
+                      onChangeText={setPetName}
+                      placeholder="QuillBy"
+                      placeholderTextColor="rgba(92, 93, 70, 0.31)"
+                      autoFocus={false}
+                      maxLength={20}
+                    />
+                  </View>
+
+                  {/* Instruction Text */}
+                  <Text style={styles.instruction}>
+                    Your study buddy has just hatched! Give it a name to begin your journey together
+                  </Text>
+
+                  {/* Next Button */}
+                  <TouchableOpacity
+                    style={[styles.nextButton, petName.trim().length === 0 && styles.nextButtonDisabled]}
+                    disabled={petName.trim().length === 0}
+                    onPress={handleNext}
+                  >
+                    <Text style={styles.nextButtonText}>Next →</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              
+              {/* Before hatching - show hint */}
+              {!showInput && (
+                <Text style={styles.hatchHint}>
+                  Tap the egg above to begin! 👆
+                </Text>
+              )}
+            </ImageBackground>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
@@ -404,32 +375,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  wrapper: {
+    flex: 1,
+    position: 'relative',
+  },
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
-  // RESPONSIVE: Title centered horizontally, 8% from top
+  // RESPONSIVE: Title centered, positioned from top
   title: {
     position: 'absolute',
-    width: '100%',
     top: SCREEN_HEIGHT * 0.08,
+    width: '100%',
     fontFamily: 'CevicheOne',
-    fontSize: SCREEN_WIDTH * 0.14, // 14% of screen width
+    fontSize: SCREEN_WIDTH * 0.14,
     lineHeight: SCREEN_WIDTH * 0.145,
     textAlign: 'center',
     color: '#63582A',
     paddingHorizontal: 10,
+    zIndex: 10,
   },
-  // RESPONSIVE: Egg centered horizontally, 33% from top
+  // RESPONSIVE: Egg container centered
   eggContainer: {
     position: 'absolute',
-    width: SCREEN_WIDTH * 0.68, // 68% of screen width
-    height: SCREEN_HEIGHT * 0.29, // 29% of screen height
-    left: SCREEN_WIDTH * 0.16, // Center horizontally (16% margin on each side)
-    top: SCREEN_HEIGHT * 0.33,
+    top: SCREEN_HEIGHT * 0.3,
+    left: SCREEN_WIDTH * 0.16,
+    width: SCREEN_WIDTH * 0.68,
+    height: SCREEN_HEIGHT * 0.29,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
   },
   eggImage: {
     width: '100%',
@@ -442,28 +419,34 @@ const styles = StyleSheet.create({
   // RESPONSIVE: Instruction below egg
   tapInstruction: {
     position: 'absolute',
-    bottom: -SCREEN_HEIGHT * 0.05,
+    bottom: -30,
     fontFamily: 'ChakraPetch_600SemiBold',
     fontSize: SCREEN_WIDTH * 0.04,
     color: '#aa6300ff',
     textAlign: 'center',
-    width: SCREEN_WIDTH * 0.8,
+    width: '100%',
   },
-  // RESPONSIVE: Orange section at 75% height, full width
+  // RESPONSIVE: Orange section - absolute positioned at bottom, full width
   orangeSection: {
     position: 'absolute',
-    width: SCREEN_WIDTH, // 28% of screen height
+    bottom: 0,
     left: 0,
+    right: 0,
+    minHeight: SCREEN_HEIGHT * 0.35,
+    maxHeight: SCREEN_HEIGHT * 0.45,
+    width: SCREEN_WIDTH,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
+    zIndex: 5,
   },
   orangeBackground: {
-    width: '100%',
+    width: '105%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   hatchHint: {
     fontFamily: 'ChakraPetch_700Bold',
@@ -508,11 +491,10 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH * 0.68,
     height: SCREEN_HEIGHT * 0.29,
   },
-  // RESPONSIVE: Input container 72% of screen width
+  // RESPONSIVE: Input container
   inputContainer: {
     width: SCREEN_WIDTH * 0.72,
-    height: SCREEN_HEIGHT * 0.08,
-    marginTop: SCREEN_HEIGHT * 0.02,
+    minHeight: 60,
     backgroundColor: '#FFFCF8',
     borderWidth: 1,
     borderColor: '#705400',
@@ -537,22 +519,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 0,
   },
-  // RESPONSIVE: Instruction text 90% width
+  // RESPONSIVE: Instruction text
   instruction: {
     width: '90%',
-    marginTop: SCREEN_HEIGHT * 0.015,
+    marginTop: 12,
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: SCREEN_WIDTH * 0.053,
-    lineHeight: SCREEN_WIDTH * 0.068,
+    fontSize: SCREEN_WIDTH * 0.04,
+    lineHeight: SCREEN_WIDTH * 0.05,
     textAlign: 'center',
     color: '#000000',
   },
   nextButton: {
-    marginTop: SCREEN_HEIGHT * 0.015,
+    marginTop: 15,
     backgroundColor: '#4CAF50',
-    paddingVertical: 12,
-    paddingHorizontal: 40,
+    paddingVertical: 14,
+    paddingHorizontal: 50,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   nextButtonDisabled: {
     backgroundColor: '#CCCCCC',

@@ -84,17 +84,22 @@ export const createShopSlice: StateCreator<
     // Sync to database
     syncToDatabase(updatedUserData);
     
-    // Also save to purchased_items table
+    // Also save to purchased_items table (optional - don't fail if shop_items table doesn't have the item)
     try {
       const { getDeviceUser } = await import('../../../lib/deviceAuth');
       const { purchaseItem: savePurchase } = await import('../../../lib/shop');
       const user = await getDeviceUser();
       if (user) {
-        await savePurchase(user.id, itemId);
-        console.log(`[Shop] Saved purchase to database: ${itemId}`);
+        const result = await savePurchase(user.id, itemId);
+        if (result) {
+          console.log(`[Shop] Saved purchase to database: ${itemId}`);
+        } else {
+          console.log(`[Shop] Could not save purchase to database (item may not exist in shop_items table): ${itemId}`);
+        }
       }
     } catch (error) {
-      console.error('[Shop] Error saving purchase to database:', error);
+      console.warn('[Shop] Error saving purchase to database (continuing with local state):', error);
+      // Don't fail the purchase - local state is already updated
     }
     
     return true;

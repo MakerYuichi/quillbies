@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuillbyStore } from '../state/store-modular';
 import { formatSleepTime } from '../../lib/timeUtils';
+import { soundManager, SOUNDS, playEndSessionSound } from '../../lib/soundManager';
 
 export const useSleepTracking = (buddyName: string) => {
   const { userData, startSleep, endSleep, getTodaysSleepHours } = useQuillbyStore();
@@ -71,6 +72,11 @@ export const useSleepTracking = (buddyName: string) => {
 
   const handleSleepButton = (duration: number | null = null) => {
     console.log('[Sleep] Starting sleep session with duration:', duration);
+    
+    // Stop main app background music when going to sleep
+    console.log('[Sleep] Stopping main app background music...');
+    soundManager.stopBackgroundMusic();
+    
     // Start sleeping session
     const sessionId = startSleep();
     const startTime = Date.now();
@@ -89,7 +95,7 @@ export const useSleepTracking = (buddyName: string) => {
     setMessageTimestamp(Date.now());
   };
 
-  const handleWakeUpButton = () => {
+  const handleWakeUpButton = async () => {
     if (!activeSleepSessionId) {
       console.warn('[Sleep] No active session to end');
       return;
@@ -102,8 +108,15 @@ export const useSleepTracking = (buddyName: string) => {
       ? (Date.now() - sleepStartTime) / (1000 * 60 * 60)
       : 0;
     
+    // Play end session sound
+    playEndSessionSound();
+    
     // Show wake-up animation IMMEDIATELY before any state changes
     setCurrentAnimation('wake-up');
+    
+    // Play yawn sound during wake-up animation
+    await soundManager.playSound(SOUNDS.HAMSTER_YAWN, 1.0, 1.0);
+    console.log('[Sleep] Playing yawn sound during wake-up');
     
     // Calculate updated sleep total (current total + this session)
     const currentSleepHours = getTodaysSleepHours();
@@ -145,6 +158,15 @@ export const useSleepTracking = (buddyName: string) => {
       // Clear message after animation completes
       setMessage('');
       setMessageTimestamp(0);
+      
+      // Restart main app background music after waking up
+      console.log('[Sleep] Restarting main app background music...');
+      soundManager.playBackgroundMusic(
+        SOUNDS.GAME_MUSIC,
+        require('../../assets/sounds/background_music/gamemusic.mp3'),
+        0.15, // Very low volume (15%)
+        true // Loop
+      );
     }, 3000);
   };
 

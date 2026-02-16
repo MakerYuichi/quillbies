@@ -18,6 +18,7 @@ import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fo
 import * as Localization from 'expo-localization';
 import * as Location from 'expo-location';
 import { useQuillbyStore } from '../state/store-modular';
+import { playTabSound, playUISubmitSound } from '../../lib/soundManager';
 
 // Get screen dimensions for responsive layout
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -308,6 +309,7 @@ export default function ProfileScreen() {
 
   const handleNext = () => {
     if (isFormValid) {
+      playUISubmitSound();
       // Save to store
       setProfile(userName, studentLevel, country, timezone);
       // Navigate to habit setup screen
@@ -356,6 +358,7 @@ export default function ProfileScreen() {
                   selectedValue === option.value && styles.pickerModalOptionSelected
                 ]}
                 onPress={() => {
+                  playTabSound();
                   onSelect(option.value);
                   onClose();
                 }}
@@ -442,7 +445,10 @@ export default function ProfileScreen() {
             <Text style={styles.inputLabel}>You are a...</Text>
             <TouchableOpacity 
               style={styles.customPickerButton}
-              onPress={() => setShowStudentLevelPicker(true)}
+              onPress={() => {
+                playTabSound();
+                setShowStudentLevelPicker(true);
+              }}
             >
               <Text style={[
                 styles.customPickerButtonText,
@@ -460,7 +466,10 @@ export default function ProfileScreen() {
             <Text style={styles.inputHint}>(For academic calendars & holidays)</Text>
             <TouchableOpacity 
               style={styles.customPickerButton}
-              onPress={() => setShowCountryPicker(true)}
+              onPress={() => {
+                playTabSound();
+                setShowCountryPicker(true);
+              }}
             >
               <Text style={[
                 styles.customPickerButtonText,
@@ -485,7 +494,12 @@ export default function ProfileScreen() {
                 styles.customPickerButton,
                 !country && styles.customPickerButtonDisabled
               ]}
-              onPress={() => country && setShowTimezonePicker(true)}
+              onPress={() => {
+                if (country) {
+                  playTabSound();
+                  setShowTimezonePicker(true);
+                }
+              }}
               disabled={!country}
             >
               <Text style={[
@@ -505,7 +519,10 @@ export default function ProfileScreen() {
             {!country && (
               <TouchableOpacity
                 style={styles.detectButton}
-                onPress={detectLocation}
+                onPress={() => {
+                  playTabSound();
+                  detectLocation();
+                }}
               >
                 <Text style={styles.detectButtonText}>
                   📍 Detect my location automatically

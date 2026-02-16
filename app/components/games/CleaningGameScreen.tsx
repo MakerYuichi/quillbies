@@ -8,6 +8,7 @@ import {
   Modal,
   Animated,
 } from 'react-native';
+import { soundManager, SOUNDS } from '../../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -30,6 +31,7 @@ export default function CleaningGameScreen({
   const [totalStages, setTotalStages] = useState(1);
   const [isCompleted, setIsCompleted] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [dustClouds, setDustClouds] = useState<Array<{id: number, x: number, y: number, opacity: Animated.Value}>>([]);
 
   // Initialize game based on mess points
   useEffect(() => {
@@ -66,6 +68,32 @@ export default function CleaningGameScreen({
 
   const handleTap = () => {
     if (isCompleted) return;
+    
+    console.log('[CleaningGame] Tap detected, creating dust cloud...');
+    
+    // Create dust cloud animation
+    const dustId = Date.now();
+    const dustX = Math.random() * 160 - 80; // Random position around tap area
+    const dustY = Math.random() * 160 - 80;
+    const dustOpacity = new Animated.Value(1);
+    
+    console.log('[CleaningGame] Dust cloud created at:', dustX, dustY);
+    
+    setDustClouds(prev => [...prev, { id: dustId, x: dustX, y: dustY, opacity: dustOpacity }]);
+    
+    // Animate dust cloud fading out
+    Animated.timing(dustOpacity, {
+      toValue: 0,
+      duration: 800,
+      useNativeDriver: true,
+    }).start(() => {
+      setDustClouds(prev => prev.filter(cloud => cloud.id !== dustId));
+    });
+    
+    // Play cleaning sound based on stage (use scrub as fallback for broom)
+    const sound = stage === 1 ? SOUNDS.SCRUB : stage === 2 ? SOUNDS.SCRUB : SOUNDS.DEEP_CLEAN;
+    console.log('[CleaningGame] Playing sound:', sound, 'for stage:', stage);
+    soundManager.playSound(sound, 1.0, 0.6);
     
     const newTaps = currentTaps + 1;
     setCurrentTaps(newTaps);
@@ -161,18 +189,37 @@ export default function CleaningGameScreen({
 
           {/* Tap Area */}
           {!isCompleted ? (
-            <TouchableOpacity
-              style={styles.tapArea}
-              onPress={handleTap}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.tapText}>
-                TAP TO CLEAN
-              </Text>
-              <Text style={styles.tapEmoji}>
-                {stage === 1 ? '🧹' : stage === 2 ? '🧽' : stage === 3 ? '🚿' : '✨'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.tapAreaContainer}>
+              <TouchableOpacity
+                style={styles.tapArea}
+                onPress={handleTap}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.tapText}>
+                  TAP TO CLEAN
+                </Text>
+                <Text style={styles.tapEmoji}>
+                  {stage === 1 ? '🧹' : stage === 2 ? '🧽' : stage === 3 ? '🚿' : '✨'}
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Dust clouds */}
+              {dustClouds.map(cloud => (
+                <Animated.View
+                  key={cloud.id}
+                  style={[
+                    styles.dustCloud,
+                    {
+                      left: 100 + cloud.x,
+                      top: 100 + cloud.y,
+                      opacity: cloud.opacity,
+                    }
+                  ]}
+                >
+                  <Text style={styles.dustEmoji}>💨</Text>
+                </Animated.View>
+              ))}
+            </View>
           ) : (
             <View style={styles.completedArea}>
               <Text style={styles.completedText}>
@@ -259,6 +306,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  tapAreaContainer: {
+    position: 'relative',
+    width: 200,
+    height: 200,
+  },
   tapArea: {
     width: 200,
     height: 200,
@@ -271,6 +323,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  dustCloud: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dustEmoji: {
+    fontSize: 30,
   },
   tapText: {
     fontFamily: 'ChakraPetch_600SemiBold',

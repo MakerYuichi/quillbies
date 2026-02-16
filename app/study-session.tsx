@@ -5,6 +5,8 @@ import { useQuillbyStore } from './state/store-modular';
 import InteractiveTooltip from './components/ui/InteractiveTooltip';
 import SessionCompletionModal from './components/modals/SessionCompletionModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { playEndSessionSound } from '../lib/soundManager';
+import { soundManager, SOUNDS } from '../lib/soundManager';
 
 // Conditional import for keep awake to prevent crashes
 let activateKeepAwakeAsync: any = null;
@@ -46,6 +48,10 @@ function StudySessionContent() {
   // Keep awake management with simplified error handling
   useEffect(() => {
     let keepAwakeTag = 'study-session';
+    
+    // Stop main app background music when entering focus session
+    console.log('[StudySession] Stopping main app background music...');
+    soundManager.stopBackgroundMusic();
     
     const activateKeepAwake = async () => {
       if (!activateKeepAwakeAsync) {
@@ -89,6 +95,39 @@ function StudySessionContent() {
     // Deactivate when component unmounts
     return () => {
       deactivateKeepAwakeOnExit();
+    };
+  }, []);
+  
+  // Background music - birds chirping
+  useEffect(() => {
+    let musicLoopActive = true;
+    let musicTimeout: NodeJS.Timeout | null = null;
+    
+    // Start background music loop
+    (async () => {
+      while (musicLoopActive) {
+        try {
+          await soundManager.playSound(SOUNDS.BIRDS_CHIRPING, 1.0, 0.3); // Low volume background
+          // Wait for sound to finish (birds chirping is about 10 seconds)
+          await new Promise(resolve => {
+            musicTimeout = setTimeout(resolve, 10000);
+          });
+        } catch (error) {
+          console.warn('[StudySession] Background music error:', error);
+          await new Promise(resolve => {
+            musicTimeout = setTimeout(resolve, 10000);
+          });
+        }
+      }
+    })();
+    
+    return () => {
+      musicLoopActive = false;
+      if (musicTimeout) {
+        clearTimeout(musicTimeout);
+      }
+      soundManager.stopSound(SOUNDS.BIRDS_CHIRPING);
+      console.log('[StudySession] Background music stopped');
     };
   }, []);
   
@@ -234,6 +273,9 @@ function StudySessionContent() {
   // Handle session completion (auto or manual)
   const handleSessionComplete = () => {
     if (!session) return;
+    
+    // Play end session sound
+    playEndSessionSound();
     
     // Calculate coins earned based on focus score
     const coinsEarned = Math.floor(session.focusScore / 10);
@@ -402,10 +444,16 @@ function StudySessionContent() {
     // Set the animation
     setCurrentAnimation(animation);
     
-    // Return to focus after 3 seconds
+    // Return to focus after 3 seconds and stop sounds
     const timer = setTimeout(() => {
       setCurrentAnimation('focus');
       setAnimationTimer(null);
+      // Stop animation sounds
+      if (animation === 'eating') {
+        soundManager.stopSound(SOUNDS.EATING_APPLE);
+      } else if (animation === 'drinking') {
+        soundManager.stopSound(SOUNDS.COFFEE_SLURP);
+      }
     }, 3000);
     
     setAnimationTimer(timer);
@@ -524,14 +572,16 @@ function StudySessionContent() {
   const getSpeechBubbleMessage = () => {
     const buddyName = userData.buddyName || 'Hammy';
     
+    if (!session) return `${buddyName} is ready when you are!`;
+    
     console.log('[Speech] Break:', isOnBreak, 'Grace period:', session.isInGracePeriod, 'Warnings:', session.distractionWarnings);
     
     // Break state messages
     if (isOnBreak) {
       const minutes = Math.floor(breakTimeRemaining / 60);
       const seconds = breakTimeRemaining % 60;
-      const totalBreakUsed = session ? session.totalBreakTime : 0;
-      const maxBreak = session ? session.maxBreakTime : (session?.config?.breakDuration ? session.config.breakDuration * 60 : 5 * 60);
+      const totalBreakUsed = session.totalBreakTime;
+      const maxBreak = session.maxBreakTime || (session.config?.breakDuration ? session.config.breakDuration * 60 : 5 * 60);
       const remainingTotal = Math.max(0, maxBreak - totalBreakUsed);
       const remainingMinutes = Math.floor(remainingTotal / 60);
       
@@ -567,7 +617,7 @@ function StudySessionContent() {
     }
     
     // Different messages based on session progress
-    const sessionDurationSeconds = session?.config?.duration ? session.config.duration * 60 : 25 * 60;
+    const sessionDurationSeconds = session.config?.duration ? session.config.duration * 60 : 25 * 60;
     const progressPercent = (session.duration / sessionDurationSeconds) * 100;
     
     if (progressPercent < 25) {
@@ -689,12 +739,12 @@ function StudySessionContent() {
             <View 
               style={[
                 styles.timerBar, 
-                { width: `${Math.max(100 - (session.duration / (session?.config?.duration ? session.config.duration * 60 : 25 * 60)) * 100, 0)}%` }
+                { width: `${session ? Math.max(100 - (session.duration / (session.config?.duration ? session.config.duration * 60 : 25 * 60)) * 100, 0) : 0}%` }
               ]} 
             />
           </View>
           <Text style={styles.timerText}>
-            {formatTime(Math.max((session?.config?.duration ? session.config.duration * 60 : 25 * 60) - session.duration, 0))} remaining
+            {session ? formatTime(Math.max((session.config?.duration ? session.config.duration * 60 : 25 * 60) - session.duration, 0)) : '0:00'} remaining
           </Text>
         </View>
         
@@ -727,7 +777,7 @@ function StudySessionContent() {
         {/* Focus Score Display */}
         <View style={styles.focusScoreDisplay}>
           <Text style={styles.focusScoreLabel}>Focus</Text>
-          <Text style={styles.focusScoreValue}>{Math.round(session.focusScore)}</Text>
+          <Text style={styles.focusScoreValue}>{session ? Math.round(session.focusScore) : 0}</Text>
         </View>
         
         <TouchableOpacity 
@@ -737,14 +787,14 @@ function StudySessionContent() {
             session && session.totalBreakTime >= session.maxBreakTime && styles.buttonDisabled
           ]}
           onPress={handleBreakSession}
-          disabled={session ? session.totalBreakTime >= session.maxBreakTime && !isOnBreak : false}
+          disabled={session ? session.totalBreakTime >= session.maxBreakTime && !isOnBreak : true}
         >
           <Text style={styles.breakText}>
             {isOnBreak 
               ? 'Skip Break' 
               : session && session.totalBreakTime >= session.maxBreakTime
               ? 'No Break'
-              : `${Math.floor((session ? session.maxBreakTime - session.totalBreakTime : (session?.config?.breakDuration ? session.config.breakDuration * 60 : 5 * 60)) / 60)}m Break`
+              : `${session ? Math.floor((session.maxBreakTime - session.totalBreakTime) / 60) : 5}m Break`
             }
           </Text>
         </TouchableOpacity>
@@ -789,10 +839,12 @@ function StudySessionContent() {
               if (userData.coffeeTapsToday < 3) {
                 if (tapCoffeeInSession(false)) {
                   playAnimation('drinking');
+                  soundManager.playSound(SOUNDS.COFFEE_SLURP, 1.0, 0.8); // Play coffee sound
                 }
               } else if (!session.coffeePremiumUsedThisSession) {
                 if (tapCoffeeInSession(true)) {
                   playAnimation('drinking');
+                  soundManager.playSound(SOUNDS.COFFEE_SLURP, 1.0, 0.8); // Play coffee sound
                 }
               }
             }}
@@ -839,10 +891,12 @@ function StudySessionContent() {
               if (userData.appleTapsToday < 5) {
                 if (tapAppleInSession(false)) {
                   playAnimation('eating');
+                  soundManager.playSound(SOUNDS.EATING_APPLE, 1.0, 0.8); // Play apple eating sound
                 }
               } else if (!session.applePremiumUsedThisSession) {
                 if (tapAppleInSession(true)) {
                   playAnimation('eating');
+                  soundManager.playSound(SOUNDS.EATING_APPLE, 1.0, 0.8); // Play apple eating sound
                 }
               }
             }}

@@ -2,9 +2,14 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { playTabSound } from '../../lib/soundManager';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  
+  const handleTabPress = () => {
+    playTabSound();
+  };
   
   return (
     <Tabs
@@ -20,6 +25,9 @@ export default function TabLayout() {
           paddingTop: 8,
         },
         headerShown: false,
+      }}
+      screenListeners={{
+        tabPress: handleTabPress,
       }}
     >
       <Tabs.Screen

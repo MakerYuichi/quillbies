@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, Toucha
 import { useQuillbyStore } from '../state/store-modular';
 import QuillbyPlusModal from '../components/shop/QuillbyPlusSection';
 import { useImageLoading } from '../components/ImagePreloader';
+import { playEquipSound, playTabSound } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -44,6 +45,7 @@ export default function ShopScreen() {
     if (item.id === 'fairy-lights') {
       // Reset to default fairy lights (pass empty string to clear)
       console.log(`[Shop] Equipping default fairy lights (resetting customization)`);
+      playEquipSound(); // Play equip sound
       updateRoomCustomization('', undefined);
       setPreviewLight('fairy-lights');
       return;
@@ -52,6 +54,7 @@ export default function ShopScreen() {
     if (item.id === 'plant') {
       // Reset to default plant (pass empty string to clear)
       console.log(`[Shop] Equipping default plant (resetting customization)`);
+      playEquipSound(); // Play equip sound
       updateRoomCustomization(undefined, '');
       setPreviewPlant('plant');
       return;
@@ -59,6 +62,7 @@ export default function ShopScreen() {
     
     if (userData.purchasedItems?.includes(item.id)) {
       // Item already purchased, equip it
+      playEquipSound(); // Play equip sound
       if (item.category === 'light') {
         console.log(`[Shop] Equipping light: ${item.assetPath}`);
         updateRoomCustomization(item.assetPath, undefined);
@@ -82,6 +86,7 @@ export default function ShopScreen() {
       const success = await purchaseItem(item.id, item.price);
       if (success) {
         // Auto-equip after purchase
+        playEquipSound(); // Play equip sound
         if (item.category === 'light') {
           console.log(`[Shop] Purchasing and equipping light: ${item.assetPath}`);
           updateRoomCustomization(item.assetPath, undefined);
@@ -229,7 +234,10 @@ export default function ShopScreen() {
       <View style={styles.categoryContainer}>
         <TouchableOpacity
           style={[styles.categoryButton, selectedCategory === 'light' && styles.categoryButtonActive]}
-          onPress={() => setSelectedCategory('light')}
+          onPress={() => {
+            playTabSound();
+            setSelectedCategory('light');
+          }}
         >
           <Text style={[styles.categoryText, selectedCategory === 'light' && styles.categoryTextActive]}>
             ✨ Lights
@@ -237,7 +245,10 @@ export default function ShopScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.categoryButton, selectedCategory === 'plant' && styles.categoryButtonActive]}
-          onPress={() => setSelectedCategory('plant')}
+          onPress={() => {
+            playTabSound();
+            setSelectedCategory('plant');
+          }}
         >
           <Text style={[styles.categoryText, selectedCategory === 'plant' && styles.categoryTextActive]}>
             🌿 Plants
@@ -246,6 +257,7 @@ export default function ShopScreen() {
         <TouchableOpacity
           style={styles.categoryButton}
           onPress={() => {
+            playTabSound();
             setInsufficientCoins(false);
             setShowPlusModal(true);
           }}

@@ -7,6 +7,7 @@ import WeeklyLineGraph from '../components/stats/WeeklyLineGraph';
 import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
 import ActivityCard from '../components/stats/ActivityCard';
 import StreakCalendar from '../components/stats/StreakCalendar';
+import { playTabSound } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -314,6 +315,7 @@ export default function StatsScreen() {
           <TouchableOpacity 
             style={styles.premiumHeader}
             onPress={() => {
+              playTabSound();
               if (userData.isPremium) {
                 setIsPremiumExpanded(!isPremiumExpanded);
               } else {
@@ -370,7 +372,10 @@ export default function StatsScreen() {
             <TouchableOpacity 
               style={styles.blurContainerCompact}
               activeOpacity={0.9}
-              onPress={() => setShowPremiumModal(true)}
+              onPress={() => {
+                playTabSound();
+                setShowPremiumModal(true);
+              }}
             >
               {/* Compact preview - just one graph */}
               <View style={styles.graphPreviewCompact}>
@@ -399,7 +404,10 @@ export default function StatsScreen() {
                   </View>
                   <TouchableOpacity 
                     style={styles.upgradeButtonCompact}
-                    onPress={() => setShowPremiumModal(true)}
+                    onPress={() => {
+                      playTabSound();
+                      setShowPremiumModal(true);
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.upgradeButtonTextCompact}>⭐ Upgrade</Text>

@@ -7,6 +7,7 @@ import ChangeNameModal from '../components/modals/ChangeNameModal';
 import ManageHabitsModal from '../components/modals/ManageHabitsModal';
 import EditGoalsModal from '../components/modals/EditGoalsModal';
 import EditProfileModal from '../components/modals/EditProfileModal';
+import { playTabSound, playUISubmitSound } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -57,6 +58,7 @@ export default function SettingsScreen() {
   
   // Quillby reactions
   const reactToTap = (section: string) => {
+    playTabSound();
     const reactions: Record<string, { expression: typeof quillbyExpression; message: string }> = {
       profile: { expression: 'curious', message: "Let's see who we are! 🪞" },
       hamster: { expression: 'excited', message: "Ooh, makeover time! 🎨" },
@@ -98,11 +100,13 @@ export default function SettingsScreen() {
   };
 
   const handleChangeHamster = (character: string) => {
+    playUISubmitSound();
     setCharacter(character);
     Alert.alert('Success', 'Hamster changed successfully!');
   };
 
   const handleChangeName = (name: string) => {
+    playUISubmitSound();
     setBuddyName(name);
     Alert.alert('Success', 'Buddy name updated!');
   };
@@ -114,12 +118,14 @@ export default function SettingsScreen() {
     country: string;
     timezone: string;
   }) => {
+    playUISubmitSound();
     setBuddyName(profile.buddyName);
     setProfile(profile.userName, profile.studentLevel, profile.country, profile.timezone);
     Alert.alert('Success', 'Profile updated!');
   };
 
   const handleSaveHabits = (habits: string[]) => {
+    playUISubmitSound();
     setHabits(habits);
     Alert.alert('Success', 'Habits updated!');
   };
@@ -131,6 +137,7 @@ export default function SettingsScreen() {
     weightGoal?: 'lose' | 'maintain' | 'gain';
     sleepHours?: number;
   }) => {
+    playUISubmitSound();
     if (goals.studyHours !== undefined) {
       setStudyGoal(goals.studyHours, userData.studyCheckpoints || ['12 PM', '6 PM', '9 PM']);
     }

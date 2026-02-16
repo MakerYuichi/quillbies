@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Deadline } from '../../core/types';
 import { useQuillbyStore } from '../../state/store-modular';
+import { calculateFocusEnergyCost } from '../../core/engine';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -197,6 +198,7 @@ export default function DeadlineDetailModal({
   const workBreakdown = generateWorkBreakdown();
   const priorityInfo = getPriorityInfo();
   const quillbyReaction = getQuillbyReaction();
+  const energyCost = calculateFocusEnergyCost(userData);
 
   return (
     <Modal
@@ -325,23 +327,23 @@ export default function DeadlineDetailModal({
 
             {/* Launch Mission Button */}
             <TouchableOpacity 
-              style={[styles.launchButton, userData.energy < 20 && styles.launchButtonDisabled]}
+              style={[styles.launchButton, userData.energy < energyCost && styles.launchButtonDisabled]}
               onPress={() => {
                 onStartFocus(deadline.id);
                 onClose();
               }}
-              disabled={userData.energy < 20}
+              disabled={userData.energy < energyCost}
               activeOpacity={0.8}
             >
               <Text style={styles.launchButtonIcon}>🚀</Text>
               <View style={styles.launchButtonTextContainer}>
                 <Text style={styles.launchButtonText}>
-                  {userData.energy >= 20 ? 'Start FOCUSING Now' : 'NOT ENOUGH ENERGY'}
+                  {userData.energy >= energyCost ? 'Start Focus Session' : 'Too Tired to Focus'}
                 </Text>
                 <Text style={styles.launchButtonSubtext}>
-                  {userData.energy >= 20 
-                    ? `Costs 20 ⚡ • Ready to conquer!` 
-                    : `Need 20 ⚡ (have ${Math.round(userData.energy)})`}
+                  {userData.energy >= energyCost 
+                    ? `Costs ${energyCost} ⚡ • Ready to conquer!` 
+                    : `Need ${energyCost} ⚡ (have ${Math.round(userData.energy)})`}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -356,8 +358,8 @@ export default function DeadlineDetailModal({
               <View style={styles.reminderButtons}>
                 <TouchableOpacity 
                   style={[
-                    styles.reminderCard,
-                    reminder1Day && styles.reminderCardActive
+                    styles.reminderButton,
+                    reminder1Day && styles.reminderButtonActive
                   ]}
                   onPress={() => {
                     const newState = !reminder1Day;
@@ -368,19 +370,18 @@ export default function DeadlineDetailModal({
                     });
                   }}
                 >
-                  <Text style={styles.reminderIcon}>🔔</Text>
-                  <View style={styles.reminderContent}>
-                    <Text style={styles.reminderLabel}>1 day before</Text>
-                    <Text style={styles.reminderStatus}>
-                      {reminder1Day ? 'Active' : 'Inactive'}
-                    </Text>
-                  </View>
+                  <Text style={[
+                    styles.reminderButtonText,
+                    reminder1Day && styles.reminderButtonTextActive
+                  ]}>
+                    {reminder1Day ? '✓ 1 day before' : '1 day before'}
+                  </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={[
-                    styles.reminderCard,
-                    reminder3Day && styles.reminderCardActive
+                    styles.reminderButton,
+                    reminder3Day && styles.reminderButtonActive
                   ]}
                   onPress={() => {
                     const newState = !reminder3Day;
@@ -391,13 +392,12 @@ export default function DeadlineDetailModal({
                     });
                   }}
                 >
-                  <Text style={styles.reminderIcon}>⏰</Text>
-                  <View style={styles.reminderContent}>
-                    <Text style={styles.reminderLabel}>3 days before</Text>
-                    <Text style={styles.reminderStatus}>
-                      {reminder3Day ? 'Active' : 'Inactive'}
-                    </Text>
-                  </View>
+                  <Text style={[
+                    styles.reminderButtonText,
+                    reminder3Day && styles.reminderButtonTextActive
+                  ]}>
+                    {reminder3Day ? '✓ 3 days before' : '3 days before'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -724,38 +724,30 @@ const styles = StyleSheet.create({
     marginBottom: SCREEN_HEIGHT * 0.025,
   },
   reminderButtons: {
+    flexDirection: 'row',
     gap: SCREEN_WIDTH * 0.03,
   },
-  reminderCard: {
+  reminderButton: {
+    flex: 1,
     backgroundColor: '#F5F5F5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SCREEN_WIDTH * 0.04,
+    paddingHorizontal: SCREEN_WIDTH * 0.04,
+    paddingVertical: SCREEN_WIDTH * 0.03,
     borderRadius: 12,
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: '#E0E0E0',
   },
-  reminderCardActive: {
+  reminderButtonActive: {
     backgroundColor: '#2ECC71',
     borderColor: '#27AE60',
   },
-  reminderIcon: {
-    fontSize: SCREEN_WIDTH * 0.06,
-    marginRight: SCREEN_WIDTH * 0.03,
-  },
-  reminderContent: {
-    flex: 1,
-  },
-  reminderLabel: {
+  reminderButtonText: {
     fontSize: SCREEN_WIDTH * 0.035,
     color: '#2C3E50',
-    fontFamily: 'ChakraPetch_500Medium',
+    fontFamily: 'ChakraPetch_600SemiBold',
   },
-  reminderStatus: {
-    fontSize: SCREEN_WIDTH * 0.03,
-    color: '#7F8C8D',
-    marginTop: SCREEN_HEIGHT * 0.003,
-    fontFamily: 'ChakraPetch_400Regular',
+  reminderButtonTextActive: {
+    color: '#FFF',
   },
   actionsSection: {
     flexDirection: 'row',

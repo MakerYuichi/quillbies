@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, ImageBackground, TouchableOpacity, Text, ScrollView } from 'react-native';
+import { View, StyleSheet, Dimensions, ImageBackground, TouchableOpacity, Text, ScrollView, Animated } from 'react-native';
 import { CleaningPlan, CleaningStage } from '../core/types';
 import { useRouter } from 'expo-router';
 
 import { useQuillbyStore } from '../state/store-modular';
 import { calculateFocusEnergyCost } from '../core/engine';
+import { soundManager, SOUNDS } from '../../lib/soundManager';
 import EnergyBar from '../components/progress/EnergyBar';
 import RoomLayers from '../components/room/RoomLayers';
 import ExerciseEnvironment from '../components/games/ExerciseEnvironment';
@@ -87,12 +88,31 @@ function HomeScreenContent() {
   if (!imagesLoaded) {
     return null; // ImagePreloader will show loading overlay
   }
+  
+  // Start background music when entering main app
+  useEffect(() => {
+    console.log('[Home] Starting game background music...');
+    soundManager.playBackgroundMusic(
+      SOUNDS.GAME_MUSIC,
+      require('../../assets/sounds/background_music/gamemusic.mp3'),
+      0.15, // Very low volume (15%)
+      true // Loop
+    );
+    
+    // Cleanup when leaving
+    return () => {
+      console.log('[Home] Stopping game background music...');
+      soundManager.stopBackgroundMusic();
+    };
+  }, []);
+  
   const [isCleaning, setIsCleaning] = React.useState(false);
   const [cleaningStage, setCleaningStage] = React.useState(1);
   const [cleaningTaps, setCleaningTaps] = React.useState(0);
   const [tapsNeeded, setTapsNeeded] = React.useState(10);
   const [totalStages, setTotalStages] = React.useState(1);
   const [cleaningPlan, setCleaningPlan] = React.useState<CleaningPlan | null>(null);
+  const [dustClouds, setDustClouds] = React.useState<Array<{id: number, x: number, y: number, opacity: Animated.Value, scale: Animated.Value}>>([]);
   const [lastCheckpointCheck, setLastCheckpointCheck] = React.useState(Date.now());
   const [checkpointMessage, setCheckpointMessage] = React.useState<string>('');
   const [checkpointMessageTimestamp, setCheckpointMessageTimestamp] = React.useState<number>(0);
@@ -452,6 +472,7 @@ function HomeScreenContent() {
 
   // Handle cleaning system with room state transitions
   const handleStartCleaning = () => {
+    console.log('[Cleaning] Starting cleaning - current mess:', userData.messPoints);
     const mess = userData.messPoints;
     let stages: CleaningStage[] = [];
     let totalTaps = 0;
@@ -480,6 +501,8 @@ function HomeScreenContent() {
       totalTaps = 10;
     }
     
+    console.log('[Cleaning] Stages:', stages.length, 'Total taps needed:', totalTaps);
+    
     setIsCleaning(true);
     setCleaningStage(1);
     setTotalStages(stages.length);
@@ -488,10 +511,75 @@ function HomeScreenContent() {
     
     // Store cleaning plan for efficiency calculation
     setCleaningPlan({ stages, totalTaps, startMess: mess });
+    
+    console.log('[Cleaning] Cleaning mode activated - tap the screen!');
   };
 
-  const handleCleaningTap = () => {
+  const handleCleaningTap = async (event: any) => {
     if (!isCleaning || !cleaningPlan) return;
+    
+    console.log('[Cleaning] Tap detected - creating dust cloud and playing sound');
+    
+    // Get tap position from event
+    const tapX = event.nativeEvent.locationX || Math.random() * SCREEN_WIDTH;
+    const tapY = event.nativeEvent.locationY || Math.random() * SCREEN_HEIGHT;
+    
+    // Create dust cloud at tap position with unique ID using timestamp
+    const cloudId = Date.now() + Math.random(); // Ensure unique ID
+    
+    // Offset cloud position slightly so it's centered on tap
+    const cloudX = tapX - 75; // 150 = cloud width / 2
+    const cloudY = tapY - 75; // 150 = cloud height / 2
+    const opacity = new Animated.Value(1);
+    const scale = new Animated.Value(0.3); // Start smaller
+    
+    const newCloud = { id: cloudId, x: cloudX, y: cloudY, opacity, scale };
+    setDustClouds(prev => [...prev, newCloud]);
+    
+    // Animate dust cloud: grow and fade out
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 1200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 2.0, // Grow much bigger
+        duration: 1200,
+        useNativeDriver: true,
+      })
+    ]).start(() => {
+      // Remove cloud after animation
+      setDustClouds(prev => prev.filter(cloud => cloud.id !== cloudId));
+    });
+    
+    // Play appropriate cleaning sound based on stage
+    const currentStageIndex = cleaningStage - 1;
+    const stage = cleaningPlan.stages[currentStageIndex];
+    
+    if (stage) {
+      // Use different sounds based on cleaning stage NAME
+      try {
+        let soundKey = SOUNDS.SCRUB; // Default
+        
+        // Match sound to stage name
+        if (stage.name.includes('Sweeping')) {
+          soundKey = SOUNDS.BROOM;
+          console.log('[Cleaning] 🔊 Playing BROOM sound for', stage.name);
+        } else if (stage.name.includes('Scrubbing')) {
+          soundKey = SOUNDS.SCRUB;
+          console.log('[Cleaning] 🔊 Playing SCRUB sound for', stage.name);
+        } else if (stage.name.includes('Deep Clean')) {
+          soundKey = SOUNDS.DEEP_CLEAN;
+          console.log('[Cleaning] 🔊 Playing DEEP_CLEAN sound for', stage.name);
+        }
+        
+        const result = await soundManager.playSound(soundKey, 1.0, 1.0);
+        console.log('[Cleaning] ✅ Sound played successfully, result:', result);
+      } catch (err) {
+        console.error('[Cleaning] ❌ Sound playback error:', err);
+      }
+    }
     
     const newTaps = cleaningTaps + 1;
     setCleaningTaps(newTaps);
@@ -1002,11 +1090,37 @@ function HomeScreenContent() {
 
       {/* CLEANING TAP OVERLAY - Only when cleaning */}
       {isCleaning && (
-        <TouchableOpacity
-          style={styles.cleaningTapOverlay}
-          onPress={handleCleaningTap}
-          activeOpacity={0.1}
-        />
+        <>
+          <TouchableOpacity
+            style={styles.cleaningTapOverlay}
+            onPress={handleCleaningTap}
+            activeOpacity={0.1}
+          />
+          
+          {/* Dust Clouds */}
+          {dustClouds.map(cloud => (
+            <Animated.View
+              key={cloud.id}
+              style={[
+                styles.dustCloud,
+                {
+                  left: cloud.x,
+                  top: cloud.y,
+                  opacity: cloud.opacity,
+                  transform: [{ scale: cloud.scale }],
+                }
+              ]}
+              pointerEvents="none"
+            >
+              <View style={styles.dustCloudCircle}>
+                <View style={[styles.dustCloudBubble, styles.dustCloudBubble1]} />
+                <View style={[styles.dustCloudBubble, styles.dustCloudBubble2]} />
+                <View style={[styles.dustCloudBubble, styles.dustCloudBubble3]} />
+                <View style={[styles.dustCloudBubble, styles.dustCloudBubble4]} />
+              </View>
+            </Animated.View>
+          ))}
+        </>
       )}
       
 
@@ -1198,6 +1312,77 @@ function HomeScreenContent() {
         
         {/* SPACER - Allow more scrolling space */}
         <View style={styles.contentSpacer} />
+        
+        {/* TEST BUTTON - Add Mess Points */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#FFE082',
+            padding: 15,
+            borderRadius: 10,
+            marginHorizontal: 20,
+            marginBottom: 10,
+            borderWidth: 2,
+            borderColor: '#FFC107',
+          }}
+          onPress={() => {
+            // Add 5 mess points
+            const { addMissedCheckpoint } = useQuillbyStore.getState();
+            console.log('[TEST] Adding 5 mess points - current mess:', userData.messPoints);
+            for (let i = 0; i < 5; i++) {
+              addMissedCheckpoint();
+            }
+            const newMess = useQuillbyStore.getState().userData.messPoints;
+            console.log('[TEST] Added 5 mess points - new mess:', newMess);
+          }}
+        >
+          <Text style={{ fontFamily: 'Chakra Petch', fontSize: 14, color: '#8B4513', textAlign: 'center', fontWeight: 'bold' }}>
+            🗑️ TEST: Add 5 Mess Points
+          </Text>
+        </TouchableOpacity>
+        
+        {/* TEST BUTTON - Test Cleaning Sounds */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#B2DFDB',
+            padding: 15,
+            borderRadius: 10,
+            marginHorizontal: 20,
+            marginBottom: 10,
+            borderWidth: 2,
+            borderColor: '#00897B',
+          }}
+          onPress={async () => {
+            console.log('[TEST] 🔊 Testing cleaning sounds...');
+            const { testCleaningSounds } = await import('../../lib/soundManager');
+            await testCleaningSounds();
+          }}
+        >
+          <Text style={{ fontFamily: 'Chakra Petch', fontSize: 14, color: '#004D40', textAlign: 'center', fontWeight: 'bold' }}>
+            🔊 TEST: Play Cleaning Sounds
+          </Text>
+        </TouchableOpacity>
+        
+        {/* TEST BUTTON - Reload Cleaning Sounds */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#FFE0B2',
+            padding: 15,
+            borderRadius: 10,
+            marginHorizontal: 20,
+            marginBottom: 20,
+            borderWidth: 2,
+            borderColor: '#FF9800',
+          }}
+          onPress={async () => {
+            console.log('[TEST] 🔄 Reloading cleaning sounds...');
+            const { reloadCleaningSounds } = await import('../../lib/soundManager');
+            await reloadCleaningSounds();
+          }}
+        >
+          <Text style={{ fontFamily: 'Chakra Petch', fontSize: 14, color: '#E65100', textAlign: 'center', fontWeight: 'bold' }}>
+            🔄 RELOAD: Cleaning Sounds
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Dimming overlay when cleaning */}
@@ -1696,5 +1881,47 @@ const styles = StyleSheet.create({
     fontSize: (SCREEN_WIDTH * 14) / 393,
     color: '#FFF',
     textAlign: 'center',
+  },
+  // Dust cloud animation - cloud-shaped brown/tan dust
+  dustCloud: {
+    position: 'absolute',
+    zIndex: 16, // Above cleaning overlay (15)
+    pointerEvents: 'none',
+    width: 150, // Much bigger
+    height: 150,
+  },
+  dustCloudCircle: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  dustCloudBubble: {
+    position: 'absolute',
+    backgroundColor: 'rgba(139, 90, 43, 0.7)', // Brown/tan color
+    borderRadius: 100,
+  },
+  dustCloudBubble1: {
+    width: 90,
+    height: 90,
+    left: 0,
+    top: 30,
+  },
+  dustCloudBubble2: {
+    width: 80,
+    height: 80,
+    left: 55,
+    top: 10,
+  },
+  dustCloudBubble3: {
+    width: 70,
+    height: 70,
+    left: 40,
+    top: 55,
+  },
+  dustCloudBubble4: {
+    width: 65,
+    height: 65,
+    left: 85,
+    top: 65,
   },
 });

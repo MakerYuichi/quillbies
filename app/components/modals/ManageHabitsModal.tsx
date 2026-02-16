@@ -9,6 +9,7 @@ import {
   Dimensions,
   Switch,
 } from 'react-native';
+import { playToggleSound } from '../../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -67,6 +68,8 @@ export default function ManageHabitsModal({
 
   const toggleHabit = (habitId: string, isCore: boolean) => {
     if (isCore) return; // Can't disable core habits
+    
+    playToggleSound(); // Play toggle sound
     
     if (selectedHabits.includes(habitId)) {
       setSelectedHabits(selectedHabits.filter(h => h !== habitId));

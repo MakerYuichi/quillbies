@@ -1,5 +1,5 @@
 // Meal tracking hook with sound and animation
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuillbyStore } from '../state/store-modular';
 import { soundManager, SOUNDS } from '../../lib/soundManager';
 
@@ -8,21 +8,39 @@ export const useMealTracking = (buddyName: string) => {
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);
+  const soundLoopActive = useRef(false);
 
   const handleMealLog = async () => {
     console.log('[Meal] Logging meal...');
     
+    // Stop any previous sound loop
+    soundLoopActive.current = false;
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Log the meal
     logMeal();
-    
-    // Play eating sound at 1.5x speed and maximum volume
-    const soundDuration = await soundManager.playSound(SOUNDS.HAMSTER_EATING, 1.5, 1.0);
     
     // Show eating animation
     setCurrentAnimation('eating-normal');
     
-    // Calculate animation duration based on sound (or default to 3 seconds to match water)
-    const animationDuration = soundDuration > 0 ? soundDuration : 3000;
+    // Start new sound loop for exactly 3 seconds
+    soundLoopActive.current = true;
+    const startTime = Date.now();
+    
+    (async () => {
+      while (soundLoopActive.current && (Date.now() - startTime) < 3000) {
+        await soundManager.playSound(SOUNDS.HAMSTER_EATING, 1.5, 1.0);
+        // Small delay between loops
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      soundLoopActive.current = false;
+      console.log('[Meal] Sound loop stopped');
+    })();
+    
+    // Stop sound after exactly 3 seconds
+    setTimeout(() => {
+      soundLoopActive.current = false;
+    }, 3000);
     
     // Update message
     const mealsLogged = userData.mealsLogged + 1;
@@ -38,16 +56,12 @@ export const useMealTracking = (buddyName: string) => {
     setMessage(newMessage);
     setMessageTimestamp(Date.now());
     
-    console.log(`[Meal] Animation will last ${animationDuration}ms`);
-    console.log(`[Meal] Sound duration was: ${soundDuration}ms`);
-    
-    // Return to idle after animation completes
+    // Return to idle after 3 seconds
     setTimeout(() => {
       setCurrentAnimation('idle');
-      // Clear message after animation
       setMessage('');
       setMessageTimestamp(0);
-    }, animationDuration);
+    }, 3000);
   };
 
   // Calculate portion description

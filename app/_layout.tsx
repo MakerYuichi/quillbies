@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, Text, Image, AppState, AppStateStatus } from 'react-native';
+import { View, ActivityIndicator, Text, Image, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { useQuillbyStore } from './state/store-modular';
@@ -130,6 +130,7 @@ export default function RootLayout() {
   const userData = useQuillbyStore((state) => state.userData);
   
   const [isReady, setIsReady] = useState(false);
+  const [showStartButton, setShowStartButton] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
   const lastMessPoints = useRef<number>(0);
@@ -176,11 +177,11 @@ export default function RootLayout() {
       // Preload images first for instant display
       await preloadImages();
       
-      // Preload sounds
+      // Preload sounds (don't activate yet - needs user gesture)
       try {
         const { preloadSounds } = await import('../lib/soundManager');
         await preloadSounds();
-        console.log('[App] Sounds preloaded');
+        console.log('[App] Sounds preloaded (activation will happen on first user interaction)');
       } catch (soundError) {
         console.warn('[App] Sound preloading failed:', soundError);
       }
@@ -242,11 +243,13 @@ export default function RootLayout() {
       }
       
       setIsReady(true);
+      setShowStartButton(true); // Show start button instead of going directly to app
     } catch (err) {
       console.error('[App] Critical initialization error:', err);
       setAuthError(String(err));
       // Still mark as ready - app can work with basic functionality
       setIsReady(true);
+      setShowStartButton(true);
     }
   }, [initializeUser, loadFromDatabase]);
   
@@ -258,6 +261,32 @@ export default function RootLayout() {
     initializeAuth();
   }, [initializeAuth]);
   
+  // Handle start button press - activate audio and prime sounds
+  const handleStartPress = async () => {
+    try {
+      console.log('[App] Start button pressed - activating audio...');
+      const { soundManager, SOUNDS } = await import('../lib/soundManager');
+      
+      // Activate audio system
+      await soundManager.activate();
+      
+      // Prime all UI sounds by playing them silently
+      console.log('[App] Priming UI sounds...');
+      await soundManager.playSound(SOUNDS.TOGGLE, 1.0, 0.0);
+      await soundManager.playSound(SOUNDS.TAB, 1.0, 0.0);
+      await soundManager.playSound(SOUNDS.END_SESSION, 1.0, 0.0);
+      await soundManager.playSound(SOUNDS.EQUIP, 1.0, 0.0);
+      await soundManager.playSound(SOUNDS.UI_SUBMIT, 1.0, 0.0);
+      
+      console.log('[App] Audio system ready!');
+      setShowStartButton(false);
+    } catch (error) {
+      console.warn('[App] Failed to activate audio:', error);
+      // Continue anyway
+      setShowStartButton(false);
+    }
+  };
+  
   if (!isReady || !fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
@@ -265,6 +294,114 @@ export default function RootLayout() {
         <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>
           Loading Quillby...
         </Text>
+      </View>
+    );
+  }
+  
+  // Show start button after loading
+  if (showStartButton) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        backgroundColor: '#FFF8E1',
+      }}>
+        {/* Background */}
+        <Image
+          source={require('../assets/backgrounds/theme.png')}
+          style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+          }}
+          resizeMode="cover"
+        />
+        
+        {/* Content */}
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        }}>
+          {/* Hamster Character */}
+          <Image
+            source={require('../assets/hamsters/casual/idle-sit-happy.png')}
+            style={{
+              width: 180,
+              height: 180,
+              marginBottom: 30,
+            }}
+            resizeMode="contain"
+          />
+          
+          {/* Title */}
+          <Text style={{ 
+            fontSize: 42, 
+            fontWeight: 'bold', 
+            color: '#FF9800', 
+            marginBottom: 10,
+            fontFamily: 'Chakra Petch',
+            textShadowColor: 'rgba(255, 152, 0, 0.3)',
+            textShadowOffset: { width: 0, height: 2 },
+            textShadowRadius: 4,
+          }}>
+            Quillby
+          </Text>
+          
+          {/* Subtitle */}
+          <Text style={{ 
+            fontSize: 17, 
+            color: '#666', 
+            marginBottom: 50, 
+            textAlign: 'center', 
+            paddingHorizontal: 40,
+            lineHeight: 26,
+            fontFamily: 'Chakra Petch',
+          }}>
+            Ready to boost your productivity{'\n'}with your new hamster buddy?
+          </Text>
+          
+          {/* Start Button */}
+          <TouchableOpacity
+            onPress={handleStartPress}
+            activeOpacity={0.8}
+            style={{
+              backgroundColor: '#FF9800',
+              paddingHorizontal: 60,
+              paddingVertical: 20,
+              borderRadius: 35,
+              shadowColor: '#FF9800',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.4,
+              shadowRadius: 10,
+              elevation: 10,
+              borderWidth: 4,
+              borderColor: '#FFA726',
+            }}
+          >
+            <Text style={{ 
+              fontSize: 22, 
+              fontWeight: 'bold', 
+              color: '#FFF',
+              letterSpacing: 1,
+              fontFamily: 'Chakra Petch',
+            }}>
+              Let's do it! 🚀
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Q-Coins decoration */}
+          <Image
+            source={require('../assets/overall/qbies.png')}
+            style={{
+              width: 40,
+              height: 40,
+              marginTop: 40,
+              opacity: 0.6,
+            }}
+            resizeMode="contain"
+          />
+        </View>
       </View>
     );
   }

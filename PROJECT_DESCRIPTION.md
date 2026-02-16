@@ -1,0 +1,20 @@
+# Quillby - Gamified Study Companion App
+
+Quillby is a cross-platform mobile application built with React Native and Expo that gamifies studying through virtual pet mechanics. Students build consistent study habits by caring for an animated hamster companion whose wellbeing reflects their productivity and lifestyle choices.
+
+The app is built on React Native 0.81.4 with Expo SDK 54, utilizing TypeScript 5.9 for type safety and Expo Router 6.0 for file-based navigation. State management is handled through Zustand 5.0, while Supabase provides backend services including authentication, PostgreSQL database, and real-time sync. The UI features smooth 60fps animations powered by React Native Reanimated 3.15, with custom fonts and glassmorphism effects creating a polished, modern interface.
+
+At its core, Quillby implements a sophisticated psychological engine with interconnected systems: a dynamic energy bar (0-100) that drains based on activity and is modified by daily habits like sleep and water intake; a real-time focus meter with distraction detection during study sessions; a mess points accountability system that accumulates when missing study checkpoints; and configurable checkpoint tracking (9 AM, 12 PM, 3 PM, 6 PM, 9 PM) with automatic notifications.
+
+The user journey begins with a seven-screen onboarding flow featuring an animated egg-hatching sequence, character selection between three personalities, personalized goal setup for study hours and habits, automatic timezone detection, and an interactive tutorial. The home screen serves as the central hub with an animated hamster displaying twelve emotional states, a color-coded energy bar, dynamic room backgrounds reflecting cleanliness, contextual speech bubbles with over fifty unique messages, and quick-action habit trackers.
+
+The focus session system offers Pomodoro-inspired study sessions with customizable durations (15-120 minutes), session types (Study, Exercise, Sleep), real-time distraction detection, ambient sound options, and completion rewards including Q-Coins and streak bonuses. Progress tracking features flippable 3D activity cards, an interactive calendar with month navigation, weekly trend graphs as a premium feature, and detailed daily breakdowns.
+
+The virtual economy allows users to earn Q-Coins through focus sessions and habit completion, which can be spent in the integrated shop on room decorations, hamster outfits, and consumable items like apples and coffee for temporary energy boosts. A comprehensive settings panel enables goal adjustments, notification preferences, sound settings, and account management.
+
+Technical achievements include an image preloading system for 37 assets, memoized components to prevent unnecessary re-renders, debounced database sync with five-second throttling, responsive layouts tested across multiple screen sizes and aspect ratios, and a modular Zustand store architecture with automatic daily reset and streak evaluation. The notification system intelligently schedules alerts based on user checkpoints with contextual messages, while an offline-first approach with AsyncStorage ensures functionality without connectivity.
+
+Development highlights include building the complete onboarding flow with cinematic animations, implementing complex state management with Zustand slices, creating over sixty reusable UI components and twelve custom hooks, integrating Supabase for real-time data sync, and fixing critical bugs including mess points tracking, text overflow in activity cards, and calendar button interactions. The codebase maintains 100% TypeScript with strict type checking, comprehensive error boundaries, and detailed documentation across twenty-five markdown files.
+
+The current production-ready MVP successfully gamifies studying through psychological triggers including responsibility for the virtual pet, immediate progress visualization, and reward systems that reinforce positive behaviors, all delivered through a delightful user experience with smooth animations and intuitive interactions that encourage daily engagement and long-term habit formation.
+
