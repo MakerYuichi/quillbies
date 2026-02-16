@@ -9,6 +9,7 @@ import {
   Modal,
   StatusBar,
   ImageBackground,
+  Image,
   Alert
 } from 'react-native';
 import { Deadline } from '../../core/types';
@@ -33,7 +34,7 @@ export default function DeadlineDetailModal({
   onEdit, 
   onDelete 
 }: DeadlineDetailModalProps) {
-  const { updateReminders } = useQuillbyStore();
+  const { updateReminders, userData } = useQuillbyStore();
   
   // Reminder states - initialize from deadline
   const [reminder1Day, setReminder1Day] = useState(deadline?.reminders?.oneDayBefore ?? true);
@@ -91,11 +92,11 @@ export default function DeadlineDetailModal({
 
   const getCheckpointDescription = (index: number, work: number) => {
     const descriptions = [
-      `${work.toFixed(1)}h (Getting started)`,
-      `${work.toFixed(1)}h (Building momentum)`, 
-      `${work.toFixed(1)}h (Core work)`,
+      `${work.toFixed(1)}h (Start the mission)`,
+      `${work.toFixed(1)}h (Build momentum)`, 
+      `${work.toFixed(1)}h (Core battle)`,
       `${work.toFixed(1)}h (Review & polish)`,
-      `${work.toFixed(1)}h (Final preparation)`
+      `${work.toFixed(1)}h (Final preparations)`
     ];
     return descriptions[index] || `${work.toFixed(1)}h (Continue work)`;
   };
@@ -127,25 +128,60 @@ export default function DeadlineDetailModal({
   // Get priority info
   const getPriorityInfo = () => {
     switch (deadline.priority) {
-      case 'high': return { emoji: '🔴', text: 'High' };
-      case 'medium': return { emoji: '🟡', text: 'Medium' };
-      case 'low': return { emoji: '🟢', text: 'Low' };
-      default: return { emoji: '⚪', text: 'Normal' };
+      case 'high': return { emoji: '🔴', text: 'HIGH', color: '#FF5252' };
+      case 'medium': return { emoji: '🟡', text: 'MEDIUM', color: '#FF9800' };
+      case 'low': return { emoji: '🟢', text: 'LOW', color: '#4CAF50' };
+      default: return { emoji: '⚪', text: 'NORMAL', color: '#9E9E9E' };
     }
   };
 
   // Calculate progress percentage
   const progressPercentage = Math.min((deadline.workCompleted / deadline.estimatedHours) * 100, 100);
 
+  // Get Quillby's reaction based on deadline status
+  const getQuillbyReaction = () => {
+    const daysLeft = calculateDaysLeft();
+    const progress = progressPercentage;
+    
+    if (daysLeft <= 0) {
+      return {
+        image: require('../../../assets/hamsters/casual/sad.png'),
+        message: "Captain! We're out of time! 😱"
+      };
+    }
+    if (daysLeft <= 2 && progress < 50) {
+      return {
+        image: require('../../../assets/hamsters/casual/sad.png'),
+        message: "We need to move faster! I'm with you!"
+      };
+    }
+    if (progress >= 100) {
+      return {
+        image: require('../../../assets/hamsters/casual/idle-sit-happy.png'),
+        message: "Mission accomplished! You're amazing! 🎉"
+      };
+    }
+    if (progress > 50) {
+      return {
+        image: require('../../../assets/hamsters/casual/focus.png'),
+        message: "Great progress! Let's keep pushing!"
+      };
+    }
+    return {
+      image: require('../../../assets/hamsters/casual/studying.png'),
+      message: "Ready when you are, captain!"
+    };
+  };
+
   // Handle delete with confirmation
   const handleDelete = () => {
     Alert.alert(
-      'Delete Deadline',
-      `Are you sure you want to delete "${deadline.title}"? This action cannot be undone.`,
+      'Archive Mission',
+      `Are you sure you want to archive "${deadline.title}"? This mission will be marked as completed.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Delete', 
+          text: 'Archive', 
           style: 'destructive',
           onPress: () => {
             onDelete(deadline.id);
@@ -160,6 +196,7 @@ export default function DeadlineDetailModal({
   const dailyTarget = calculateDailyTarget();
   const workBreakdown = generateWorkBreakdown();
   const priorityInfo = getPriorityInfo();
+  const quillbyReaction = getQuillbyReaction();
 
   return (
     <Modal
@@ -168,141 +205,221 @@ export default function DeadlineDetailModal({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <StatusBar barStyle="light-content" backgroundColor="#2C3E50" />
       <ImageBackground
         source={require('../../../assets/backgrounds/theme.png')}
         style={styles.container}
         resizeMode="cover"
       >
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Mission Header with Quillby */}
+        <View style={styles.missionHeader}>
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={styles.backButtonText}>← Back to Command</Text>
           </TouchableOpacity>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.editButton} onPress={() => onEdit(deadline)}>
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
+          
+          <View style={styles.commanderSection}>
+            <Image
+              source={quillbyReaction.image}
+              style={styles.commanderImage}
+              resizeMode="contain"
+            />
+            <View style={styles.speechBubble}>
+              <Text style={styles.speechText}>{quillbyReaction.message}</Text>
+              <View style={styles.bubbleTail} />
+            </View>
           </View>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Title */}
-          <Text style={styles.title}>📝 {deadline.title}</Text>
+          {/* Mission Dossier */}
+          <View style={styles.dossierContainer}>
+            {/* Mission Title & Priority */}
+            <View style={styles.missionTitleSection}>
+              <Text style={styles.missionEmoji}>📜</Text>
+              <Text style={styles.missionTitle}>{deadline.title}</Text>
+              <View style={[styles.priorityBadge, { backgroundColor: priorityInfo.color }]}>
+                <Text style={styles.priorityText}>{priorityInfo.emoji} {priorityInfo.text}</Text>
+              </View>
+            </View>
 
-          {/* Basic Info */}
-          <View style={styles.infoSection}>
-            <Text style={styles.dueDate}>Due: {formatDueDate()}</Text>
-            <Text style={styles.daysLeft}>
-              Days Left: {daysLeft > 0 ? `${daysLeft} days` : daysLeft === 0 ? 'Due today!' : 'Overdue!'}
-            </Text>
-            <Text style={styles.priority}>
-              Priority: {priorityInfo.emoji} {priorityInfo.text}
-            </Text>
-          </View>
-
-          {/* Work Breakdown */}
-          <View style={styles.breakdownSection}>
-            <Text style={styles.sectionTitle}>⏱️ WORK BREAKDOWN (Auto-generated)</Text>
-            <View style={styles.breakdownCard}>
-              <Text style={styles.breakdownItem}>Total work needed: {deadline.estimatedHours} hours</Text>
-              <Text style={styles.breakdownItem}>Days available: {Math.max(daysLeft, 0)}</Text>
-              <Text style={styles.breakdownItem}>
-                Daily target: {dailyTarget.toFixed(1)}h ({Math.round(dailyTarget * 60)} mins)
-              </Text>
+            {/* D-Day Info */}
+            <View style={styles.ddaySection}>
+              <View style={styles.ddayCard}>
+                <Text style={styles.ddayLabel}>D-DAY</Text>
+                <Text style={styles.ddayDate}>{formatDueDate()}</Text>
+              </View>
               
-              {workBreakdown.length > 0 && (
-                <>
-                  <Text style={styles.checkpointsTitle}>Suggested checkpoints:</Text>
-                  {workBreakdown.map((checkpoint, index) => (
-                    <Text key={index} style={styles.checkpointItem}>
-                      ✓ {checkpoint.isToday ? 'Today' : formatDate(checkpoint.date)}: {checkpoint.description}
-                    </Text>
-                  ))}
-                </>
-              )}
+              <View style={[styles.ddayCard, daysLeft <= 2 && styles.urgentCard]}>
+                <Text style={styles.ddayLabel}>TIME REMAINING</Text>
+                <Text style={[styles.ddayValue, daysLeft <= 2 && styles.urgentText]}>
+                  {daysLeft > 0 ? `${daysLeft} days` : daysLeft === 0 ? 'TODAY!' : 'OVERDUE!'}
+                </Text>
+              </View>
             </View>
-          </View>
 
-          {/* Progress */}
-          <View style={styles.progressSection}>
-            <Text style={styles.sectionTitle}>📊 PROGRESS</Text>
-            <Text style={styles.progressText}>
-              Work completed: {deadline.workCompleted.toFixed(1)}h / {deadline.estimatedHours}h
-            </Text>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
+            {/* Mission Progress */}
+            <View style={styles.progressSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionIcon}>📊</Text>
+                <Text style={styles.sectionTitle}>MISSION PROGRESS</Text>
+              </View>
+              
+              <View style={styles.progressCard}>
+                <Text style={styles.progressText}>
+                  {deadline.workCompleted.toFixed(1)}h / {deadline.estimatedHours}h completed
+                </Text>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${progressPercentage}%` },
+                      progressPercentage >= 100 && styles.progressComplete
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.progressPercentage}>{Math.round(progressPercentage)}%</Text>
+                
+                {progressPercentage >= 100 && (
+                  <View style={styles.completeBadge}>
+                    <Text style={styles.completeText}>✓ MISSION ACCOMPLISHED</Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <Text style={styles.progressPercentage}>{Math.round(progressPercentage)}%</Text>
-          </View>
 
-          {/* Today's Focus */}
-          <View style={styles.focusSection}>
-            <Text style={styles.sectionTitle}>🎯 TODAY'S FOCUS</Text>
+            {/* Battle Plan */}
+            <View style={styles.battlePlanSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionIcon}>🗺️</Text>
+                <Text style={styles.sectionTitle}>BATTLE PLAN</Text>
+              </View>
+              
+              <View style={styles.battlePlanCard}>
+                <View style={styles.planStats}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Total Work</Text>
+                    <Text style={styles.statValue}>{deadline.estimatedHours}h</Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Daily Target</Text>
+                    <Text style={styles.statValue}>{dailyTarget.toFixed(1)}h</Text>
+                  </View>
+                </View>
+                
+                {workBreakdown.length > 0 && (
+                  <View style={styles.checkpoints}>
+                    <Text style={styles.checkpointsTitle}>Suggested Checkpoints:</Text>
+                    {workBreakdown.map((checkpoint, index) => (
+                      <View key={index} style={styles.checkpointRow}>
+                        <Text style={styles.checkpointBullet}>⚔️</Text>
+                        <Text style={styles.checkpointText}>
+                          {checkpoint.isToday ? 'TODAY' : formatDate(checkpoint.date)}: {checkpoint.description}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Launch Mission Button */}
             <TouchableOpacity 
-              style={styles.focusButton}
+              style={[styles.launchButton, userData.energy < 20 && styles.launchButtonDisabled]}
               onPress={() => {
                 onStartFocus(deadline.id);
                 onClose();
               }}
+              disabled={userData.energy < 20}
+              activeOpacity={0.8}
             >
-              <Text style={styles.focusButtonText}>Start Focus Session for this deadline</Text>
+              <Text style={styles.launchButtonIcon}>🚀</Text>
+              <View style={styles.launchButtonTextContainer}>
+                <Text style={styles.launchButtonText}>
+                  {userData.energy >= 20 ? 'Start FOCUSING Now' : 'NOT ENOUGH ENERGY'}
+                </Text>
+                <Text style={styles.launchButtonSubtext}>
+                  {userData.energy >= 20 
+                    ? `Costs 20 ⚡ • Ready to conquer!` 
+                    : `Need 20 ⚡ (have ${Math.round(userData.energy)})`}
+                </Text>
+              </View>
             </TouchableOpacity>
-          </View>
 
-          {/* Reminders */}
-          <View style={styles.remindersSection}>
-            <Text style={styles.sectionTitle}>🔔 REMINDERS</Text>
-            <View style={styles.reminderButtons}>
+            {/* Reminders & Alerts */}
+            <View style={styles.remindersSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionIcon}>🔔</Text>
+                <Text style={styles.sectionTitle}>ALERTS</Text>
+              </View>
+              
+              <View style={styles.reminderButtons}>
+                <TouchableOpacity 
+                  style={[
+                    styles.reminderCard,
+                    reminder1Day && styles.reminderCardActive
+                  ]}
+                  onPress={() => {
+                    const newState = !reminder1Day;
+                    setReminder1Day(newState);
+                    updateReminders(deadline.id, {
+                      oneDayBefore: newState,
+                      threeDaysBefore: reminder3Day
+                    });
+                  }}
+                >
+                  <Text style={styles.reminderIcon}>🔔</Text>
+                  <View style={styles.reminderContent}>
+                    <Text style={styles.reminderLabel}>1 day before</Text>
+                    <Text style={styles.reminderStatus}>
+                      {reminder1Day ? 'Active' : 'Inactive'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.reminderCard,
+                    reminder3Day && styles.reminderCardActive
+                  ]}
+                  onPress={() => {
+                    const newState = !reminder3Day;
+                    setReminder3Day(newState);
+                    updateReminders(deadline.id, {
+                      oneDayBefore: reminder1Day,
+                      threeDaysBefore: newState
+                    });
+                  }}
+                >
+                  <Text style={styles.reminderIcon}>⏰</Text>
+                  <View style={styles.reminderContent}>
+                    <Text style={styles.reminderLabel}>3 days before</Text>
+                    <Text style={styles.reminderStatus}>
+                      {reminder3Day ? 'Active' : 'Inactive'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Mission Actions */}
+            <View style={styles.actionsSection}>
               <TouchableOpacity 
-                style={[
-                  styles.reminderButton,
-                  reminder1Day && styles.reminderButtonActive
-                ]}
-                onPress={() => {
-                  const newState = !reminder1Day;
-                  setReminder1Day(newState);
-                  updateReminders(deadline.id, {
-                    oneDayBefore: newState,
-                    threeDaysBefore: reminder3Day
-                  });
-                }}
+                style={styles.actionEdit}
+                onPress={() => onEdit(deadline)}
               >
-                <Text style={[
-                  styles.reminderButtonText,
-                  reminder1Day && styles.reminderButtonTextActive
-                ]}>
-                  {reminder1Day ? '✓ 1 day before' : '1 day before'}
-                </Text>
+                <Text style={styles.actionEditText}>✏️ Edit Mission</Text>
               </TouchableOpacity>
+              
               <TouchableOpacity 
-                style={[
-                  styles.reminderButton,
-                  reminder3Day && styles.reminderButtonActive
-                ]}
-                onPress={() => {
-                  const newState = !reminder3Day;
-                  setReminder3Day(newState);
-                  updateReminders(deadline.id, {
-                    oneDayBefore: reminder1Day,
-                    threeDaysBefore: newState
-                  });
-                }}
+                style={styles.actionArchive}
+                onPress={handleDelete}
               >
-                <Text style={[
-                  styles.reminderButtonText,
-                  reminder3Day && styles.reminderButtonTextActive
-                ]}>
-                  {reminder3Day ? '✓ 3 days before' : '3 days before'}
-                </Text>
+                <Text style={styles.actionArchiveText}>📦 Archive Mission</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Bottom spacing */}
           <View style={styles.bottomSpacing} />
         </ScrollView>
       </ImageBackground>
@@ -316,213 +433,361 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  missionHeader: {
+    backgroundColor: '#12b5ddff',
     paddingHorizontal: SCREEN_WIDTH * 0.05,
     paddingTop: SCREEN_HEIGHT * 0.06,
     paddingBottom: SCREEN_HEIGHT * 0.02,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomWidth: 3,
+    borderBottomColor: '#34495E',
   },
   backButton: {
-    padding: SCREEN_WIDTH * 0.02,
+    marginBottom: SCREEN_HEIGHT * 0.015,
   },
   backButtonText: {
     fontSize: SCREEN_WIDTH * 0.04,
-    color: '#666',
-    fontWeight: '600',
+    color: '#ECF0F1',
     fontFamily: 'ChakraPetch_600SemiBold',
   },
-  headerActions: {
+  commanderSection: {
     flexDirection: 'row',
-    gap: SCREEN_WIDTH * 0.03,
+    alignItems: 'center',
   },
-  editButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: SCREEN_WIDTH * 0.03,
-    paddingVertical: SCREEN_WIDTH * 0.02,
-    borderRadius: 8,
+  commanderImage: {
+    width: SCREEN_WIDTH * 0.18,
+    height: SCREEN_WIDTH * 0.18,
+    marginRight: SCREEN_WIDTH * 0.03,
   },
-  editButtonText: {
+  speechBubble: {
+    flex: 1,
+    backgroundColor: '#ECF0F1',
+    padding: SCREEN_WIDTH * 0.03,
+    borderRadius: 16,
+    position: 'relative',
+  },
+  speechText: {
     fontSize: SCREEN_WIDTH * 0.035,
-    color: '#FFF',
-    fontWeight: '600',
-    fontFamily: 'ChakraPetch_600SemiBold',
+    color: '#2C3E50',
+    fontFamily: 'Schoolbell',
   },
-  deleteButton: {
-    backgroundColor: '#F44336',
-    paddingHorizontal: SCREEN_WIDTH * 0.03,
-    paddingVertical: SCREEN_WIDTH * 0.02,
-    borderRadius: 8,
-  },
-  deleteButtonText: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#FFF',
-    fontWeight: '600',
-    fontFamily: 'ChakraPetch_600SemiBold',
+  bubbleTail: {
+    position: 'absolute',
+    left: -8,
+    top: '50%',
+    marginTop: -8,
+    width: 0,
+    height: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderRightWidth: 8,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderRightColor: '#ECF0F1',
   },
   content: {
     flex: 1,
-    paddingHorizontal: SCREEN_WIDTH * 0.05,
   },
-  title: {
-    fontSize: SCREEN_WIDTH * 0.06,
-    fontWeight: '700',
-    color: '#333',
+  dossierContainer: {
+    backgroundColor: 'rgba(218, 253, 158, 0.43)',
+    margin: SCREEN_WIDTH * 0.05,
+    borderRadius: 20,
+    padding: SCREEN_WIDTH * 0.05,
+    borderWidth: 3,
+    borderColor: '#bdc7c1ff',
+    shadowColor: '#bbe924ff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  missionTitleSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: SCREEN_HEIGHT * 0.02,
+  },
+  missionEmoji: {
+    fontSize: SCREEN_WIDTH * 0.07,
+    marginRight: SCREEN_WIDTH * 0.02,
+  },
+  missionTitle: {
+    flex: 1,
+    fontSize: SCREEN_WIDTH * 0.055,
+    color: '#2C3E50',
     fontFamily: 'ChakraPetch_700Bold',
   },
-  infoSection: {
-    backgroundColor: '#FFF',
+  priorityBadge: {
+    paddingHorizontal: SCREEN_WIDTH * 0.03,
+    paddingVertical: SCREEN_WIDTH * 0.01,
+    borderRadius: 8,
+  },
+  priorityText: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: '#FFF',
+    fontFamily: 'ChakraPetch_600SemiBold',
+  },
+  ddaySection: {
+    flexDirection: 'row',
+    gap: SCREEN_WIDTH * 0.03,
+    marginBottom: SCREEN_HEIGHT * 0.02,
+  },
+  ddayCard: {
+    flex: 1,
+    backgroundColor: '#006d89ff',
     padding: SCREEN_WIDTH * 0.04,
     borderRadius: 12,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    alignItems: 'center',
   },
-  dueDate: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.01,
+  urgentCard: {
+    backgroundColor: '#E74C3C',
+  },
+  ddayLabel: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: '#BDC3C7',
+    marginBottom: SCREEN_HEIGHT * 0.005,
     fontFamily: 'ChakraPetch_500Medium',
   },
-  daysLeft: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.01,
-    fontFamily: 'ChakraPetch_500Medium',
+  ddayDate: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#FFF',
+    textAlign: 'center',
+    fontFamily: 'ChakraPetch_600SemiBold',
   },
-  priority: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
-    fontFamily: 'ChakraPetch_500Medium',
-  },
-  breakdownSection: {
-    marginBottom: SCREEN_HEIGHT * 0.02,
-  },
-  sectionTitle: {
+  ddayValue: {
     fontSize: SCREEN_WIDTH * 0.045,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.01,
+    color: '#FFF',
     fontFamily: 'ChakraPetch_700Bold',
   },
-  breakdownCard: {
+  urgentText: {
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.05,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.015,
+  },
+  sectionIcon: {
+    fontSize: SCREEN_WIDTH * 0.06,
+    marginRight: SCREEN_WIDTH * 0.02,
+  },
+  sectionTitle: {
+    fontSize: SCREEN_WIDTH * 0.042,
+    color: '#2C3E50',
+    fontFamily: 'ChakraPetch_700Bold',
+  },
+  progressSection: {
+    marginBottom: SCREEN_HEIGHT * 0.025,
+  },
+  progressCard: {
     backgroundColor: '#F5F5F5',
     padding: SCREEN_WIDTH * 0.04,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E0E0E0',
   },
-  breakdownItem: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#333',
-    marginBottom: SCREEN_HEIGHT * 0.008,
-    fontFamily: 'ChakraPetch_400Regular',
-  },
-  checkpointsTitle: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: SCREEN_HEIGHT * 0.01,
-    marginBottom: SCREEN_HEIGHT * 0.008,
-    fontFamily: 'ChakraPetch_600SemiBold',
-  },
-  checkpointItem: {
-    fontSize: SCREEN_WIDTH * 0.032,
-    color: '#666',
-    marginBottom: SCREEN_HEIGHT * 0.005,
-    paddingLeft: SCREEN_WIDTH * 0.02,
-    fontFamily: 'ChakraPetch_400Regular',
-  },
-  progressSection: {
-    backgroundColor: '#FFF',
-    padding: SCREEN_WIDTH * 0.04,
-    borderRadius: 12,
-    marginBottom: SCREEN_HEIGHT * 0.02,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   progressText: {
-    fontSize: SCREEN_WIDTH * 0.04,
-    color: '#333',
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#2C3E50',
     marginBottom: SCREEN_HEIGHT * 0.01,
     fontFamily: 'ChakraPetch_500Medium',
   },
   progressBar: {
-    height: SCREEN_HEIGHT * 0.015,
+    height: SCREEN_HEIGHT * 0.018,
     backgroundColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: 9,
     overflow: 'hidden',
     marginBottom: SCREEN_HEIGHT * 0.01,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
+    backgroundColor: '#3498DB',
+  },
+  progressComplete: {
+    backgroundColor: '#2ECC71',
   },
   progressPercentage: {
-    fontSize: SCREEN_WIDTH * 0.035,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: SCREEN_WIDTH * 0.04,
+    color: '#3498DB',
     textAlign: 'right',
     fontFamily: 'ChakraPetch_600SemiBold',
   },
-  focusSection: {
-    marginBottom: SCREEN_HEIGHT * 0.02,
+  completeBadge: {
+    backgroundColor: '#2ECC71',
+    padding: SCREEN_WIDTH * 0.02,
+    borderRadius: 8,
+    marginTop: SCREEN_HEIGHT * 0.01,
   },
-  focusButton: {
-    backgroundColor: '#6200EA',
-    padding: SCREEN_WIDTH * 0.04,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  focusButtonText: {
-    fontSize: SCREEN_WIDTH * 0.04,
+  completeText: {
     color: '#FFF',
-    fontWeight: '600',
+    textAlign: 'center',
     fontFamily: 'ChakraPetch_600SemiBold',
   },
-  remindersSection: {
-    marginBottom: SCREEN_HEIGHT * 0.02,
+  battlePlanSection: {
+    marginBottom: SCREEN_HEIGHT * 0.025,
   },
-  reminderButtons: {
-    flexDirection: 'row',
-    gap: SCREEN_WIDTH * 0.03,
-  },
-  reminderButton: {
-    backgroundColor: '#FFF',
-    paddingHorizontal: SCREEN_WIDTH * 0.04,
-    paddingVertical: SCREEN_WIDTH * 0.03,
-    borderRadius: 8,
+  battlePlanCard: {
+    backgroundColor: '#F5F5F5',
+    padding: SCREEN_WIDTH * 0.04,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E0E0E0',
   },
-  reminderButtonActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+  planStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: SCREEN_HEIGHT * 0.015,
   },
-  reminderButtonText: {
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: '#7F8C8D',
+    marginBottom: SCREEN_HEIGHT * 0.005,
+    fontFamily: 'ChakraPetch_400Regular',
+  },
+  statValue: {
+    fontSize: SCREEN_WIDTH * 0.05,
+    color: '#2C3E50',
+    fontFamily: 'ChakraPetch_700Bold',
+  },
+  statDivider: {
+    width: 2,
+    backgroundColor: '#E0E0E0',
+  },
+  checkpoints: {
+    borderTopWidth: 2,
+    borderTopColor: '#E0E0E0',
+    paddingTop: SCREEN_HEIGHT * 0.015,
+  },
+  checkpointsTitle: {
     fontSize: SCREEN_WIDTH * 0.035,
-    color: '#666',
-    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: SCREEN_HEIGHT * 0.01,
     fontFamily: 'ChakraPetch_600SemiBold',
   },
-  reminderButtonTextActive: {
+  checkpointRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.008,
+  },
+  checkpointBullet: {
+    fontSize: SCREEN_WIDTH * 0.04,
+    marginRight: SCREEN_WIDTH * 0.02,
+  },
+  checkpointText: {
+    flex: 1,
+    fontSize: SCREEN_WIDTH * 0.032,
+    color: '#7F8C8D',
+    fontFamily: 'ChakraPetch_400Regular',
+  },
+  launchButton: {
+    backgroundColor: '#4761e1ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SCREEN_WIDTH * 0.05,
+    borderRadius: 16,
+    marginBottom: SCREEN_HEIGHT * 0.025,
+    borderWidth: 3,
+    borderColor: '#2b3fc0ff',
+    shadowColor: '#e7753cff',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  launchButtonDisabled: {
+    backgroundColor: '#95A5A6',
+    borderColor: '#7F8C8D',
+    shadowColor: '#000',
+  },
+  launchButtonIcon: {
+    fontSize: SCREEN_WIDTH * 0.08,
+    marginRight: SCREEN_WIDTH * 0.04,
+  },
+  launchButtonTextContainer: {
+    flex: 1,
+  },
+  launchButtonText: {
+    fontSize: SCREEN_WIDTH * 0.045,
     color: '#FFF',
+    fontFamily: 'ChakraPetch_700Bold',
+  },
+  launchButtonSubtext: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: SCREEN_HEIGHT * 0.005,
+    fontFamily: 'ChakraPetch_400Regular',
+  },
+  remindersSection: {
+    marginBottom: SCREEN_HEIGHT * 0.025,
+  },
+  reminderButtons: {
+    gap: SCREEN_WIDTH * 0.03,
+  },
+  reminderCard: {
+    backgroundColor: '#F5F5F5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SCREEN_WIDTH * 0.04,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  reminderCardActive: {
+    backgroundColor: '#2ECC71',
+    borderColor: '#27AE60',
+  },
+  reminderIcon: {
+    fontSize: SCREEN_WIDTH * 0.06,
+    marginRight: SCREEN_WIDTH * 0.03,
+  },
+  reminderContent: {
+    flex: 1,
+  },
+  reminderLabel: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#2C3E50',
+    fontFamily: 'ChakraPetch_500Medium',
+  },
+  reminderStatus: {
+    fontSize: SCREEN_WIDTH * 0.03,
+    color: '#7F8C8D',
+    marginTop: SCREEN_HEIGHT * 0.003,
+    fontFamily: 'ChakraPetch_400Regular',
+  },
+  actionsSection: {
+    flexDirection: 'row',
+    gap: SCREEN_WIDTH * 0.03,
+  },
+  actionEdit: {
+    flex: 1,
+    backgroundColor: '#3498DB',
+    padding: SCREEN_WIDTH * 0.04,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#2980B9',
+  },
+  actionEditText: {
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontFamily: 'ChakraPetch_600SemiBold',
+  },
+  actionArchive: {
+    flex: 1,
+    backgroundColor: '#95A5A6',
+    padding: SCREEN_WIDTH * 0.04,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#7F8C8D',
+  },
+  actionArchiveText: {
+    color: '#FFF',
+    fontSize: SCREEN_WIDTH * 0.035,
+    fontFamily: 'ChakraPetch_600SemiBold',
   },
   bottomSpacing: {
     height: SCREEN_HEIGHT * 0.05,
