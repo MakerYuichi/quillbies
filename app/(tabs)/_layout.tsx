@@ -3,33 +3,81 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { playTabSound } from '../../lib/soundManager';
+import { useState, useEffect } from 'react';
+import { useQuillbyStore } from '../state/store-modular';
+import AchievementUnlockedModal from '../components/modals/AchievementUnlockedModal';
+import { ACHIEVEMENTS } from '../core/achievements';
+import { Achievement } from '../core/types';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationAchievement, setCelebrationAchievement] = useState<Achievement | null>(null);
   
   const handleTabPress = () => {
     playTabSound();
   };
   
+  // Listen for achievement unlocks
+  useEffect(() => {
+    console.log('[Achievements] 🎧 Setting up achievement listener...');
+    
+    // Use subscribeWithSelector for better change detection
+    const unsubscribe = useQuillbyStore.subscribe(
+      (state) => state.userData.achievements,
+      (newAchievements, prevAchievements) => {
+        console.log('[Achievements] 📡 Achievements changed!');
+        console.log('[Achievements] Previous:', prevAchievements);
+        console.log('[Achievements] New:', newAchievements);
+        
+        if (!newAchievements || !prevAchievements) {
+          console.log('[Achievements] ⚠️ Missing achievements data');
+          return;
+        }
+        
+        // Check for newly unlocked achievements
+        Object.keys(newAchievements).forEach(id => {
+          const wasUnlocked = prevAchievements[id]?.unlocked;
+          const isNowUnlocked = newAchievements[id]?.unlocked;
+          
+          console.log(`[Achievements] ${id}: was=${wasUnlocked}, now=${isNowUnlocked}`);
+          
+          if (isNowUnlocked && !wasUnlocked) {
+            // Achievement just unlocked!
+            console.log('[Achievements] 🎉 Showing celebration for:', id);
+            const achievement = ACHIEVEMENTS[id];
+            console.log('[Achievements] Achievement data:', achievement);
+            setCelebrationAchievement(achievement);
+            setShowCelebration(true);
+          }
+        });
+      }
+    );
+    
+    console.log('[Achievements] ✅ Listener setup complete');
+    return unsubscribe;
+  }, []);
+  
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#FF9800',
-        tabBarInactiveTintColor: '#666',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#EEE',
-          height: 60 + insets.bottom, // Add bottom inset for safe area
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 8, // Use inset or default padding
-          paddingTop: 8,
-        },
-        headerShown: false,
-      }}
-      screenListeners={{
-        tabPress: handleTabPress,
-      }}
-    >
+    <>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: '#FF9800',
+          tabBarInactiveTintColor: '#666',
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',
+            borderTopWidth: 1,
+            borderTopColor: '#EEE',
+            height: 60 + insets.bottom, // Add bottom inset for safe area
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 8, // Use inset or default padding
+            paddingTop: 8,
+          },
+          headerShown: false,
+        }}
+        screenListeners={{
+          tabPress: handleTabPress,
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -76,5 +124,16 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    
+    {/* Achievement Celebration Modal */}
+    <AchievementUnlockedModal
+      visible={showCelebration}
+      achievement={celebrationAchievement}
+      onClose={() => {
+        setShowCelebration(false);
+        setCelebrationAchievement(null);
+      }}
+    />
+    </>
   );
 }

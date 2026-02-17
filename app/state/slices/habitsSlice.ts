@@ -25,12 +25,9 @@ export const createHabitsSlice: StateCreator<
 > = (set, get) => ({
   logWater: () => {
     const { userData } = get();
+    const hydrationGoal = userData.hydrationGoalGlasses || 8;
     
-    if (userData.waterGlasses >= 8) {
-      console.log('[Water] Already at daily limit (8 glasses)');
-      return;
-    }
-    
+    // Allow logging beyond goal (no hard limit)
     const newCount = userData.waterGlasses + 1;
     const energyGain = 5;
     
@@ -42,6 +39,8 @@ export const createHabitsSlice: StateCreator<
         qCoins: userData.qCoins + 5
       }
     });
+    
+    console.log(`[Water] Logged glass ${newCount} (goal: ${hydrationGoal})`);
   },
 
   logBreakfast: () => {

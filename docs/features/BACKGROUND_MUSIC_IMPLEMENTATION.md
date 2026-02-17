@@ -1,7 +1,7 @@
 # Background Music Implementation
 
 ## Overview
-Added background music support to enhance the user experience during onboarding and in the main app.
+Added background music support to enhance the user experience during onboarding and in the main app. Music automatically stops during focus sessions and sleep to avoid distractions.
 
 ## Changes Made
 
@@ -27,7 +27,18 @@ Added background music support to enhance the user experience during onboarding 
 - Starts background music when entering main app
 - Uses `gamemusic.mp3` at 15% volume (lower than onboarding)
 - Loops continuously while in main app
+- Automatically restarts when returning from focus session or sleep
 - Stops when leaving the app
+
+### 4. Focus Session Silence (`app/study-session.tsx`)
+- Stops background music when focus session starts
+- Allows user to concentrate without distractions
+- Music automatically restarts when returning to home screen
+
+### 5. Sleep Silence (`app/hooks/useSleepTracking.tsx`)
+- Stops background music when sleep session starts
+- Provides quiet environment for rest
+- Music automatically restarts after waking up (3 seconds after wake-up animation)
 
 ## Music Files Used
 - **Onboarding**: `assets/sounds/background_music/gamemusic.mp3`
@@ -36,6 +47,27 @@ Added background music support to enhance the user experience during onboarding 
 ## Volume Levels
 - **Onboarding**: 0.2 (20%) - Slightly higher for welcoming feel
 - **Main App**: 0.15 (15%) - Lower to not interfere with focus sessions
+
+## Music Behavior
+
+### When Music Plays:
+- ✅ Onboarding flow (welcome → character select → name → profile → habits → goals)
+- ✅ Main app home screen
+- ✅ Stats screen
+- ✅ Focus screen (mission control)
+- ✅ Shop screen
+- ✅ Settings screen
+
+### When Music Stops:
+- ❌ During focus sessions (study time)
+- ❌ During sleep sessions
+- ❌ When completing onboarding (transitions to main app music)
+
+### Automatic Restart:
+- Music automatically restarts when:
+  - Returning from focus session to home screen
+  - Waking up from sleep (after 3-second wake-up animation)
+  - Navigating back to any main app tab
 
 ## Technical Details
 
@@ -48,6 +80,8 @@ Added background music support to enhance the user experience during onboarding 
 ### Cleanup
 - Music is properly cleaned up when:
   - User completes onboarding
+  - User starts a focus session
+  - User starts sleeping
   - User leaves the main app
   - Component unmounts
 - Uses React useEffect cleanup functions for proper memory management
@@ -56,4 +90,6 @@ Added background music support to enhance the user experience during onboarding 
 - Add user preference to enable/disable background music
 - Add different music tracks for different times of day
 - Add fade in/out transitions between tracks
-- Add music for focus sessions (separate from main app)
+- Add separate ambient sounds for focus sessions (optional)
+- Add volume control in settings
+

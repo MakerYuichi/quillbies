@@ -1,6 +1,6 @@
 // Modular Zustand store combining all slices
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { createStorage } from './utils/storageUtils';
 import { syncToDatabase } from './utils/syncUtils';
 import { loadAllUserData } from '../../lib/syncManager';
@@ -12,9 +12,10 @@ import { SessionSlice, createSessionSlice } from './slices/sessionSlice';
 import { HabitsSlice, createHabitsSlice } from './slices/habitsSlice';
 import { DeadlinesSlice, createDeadlinesSlice } from './slices/deadlinesSlice';
 import { ShopSlice, createShopSlice } from './slices/shopSlice';
+import { AchievementsSlice, createAchievementsSlice } from './slices/achievementsSlice';
 
 // Combined store type
-export type QuillbyStore = UserSlice & SessionSlice & HabitsSlice & DeadlinesSlice & ShopSlice & {
+export type QuillbyStore = UserSlice & SessionSlice & HabitsSlice & DeadlinesSlice & ShopSlice & AchievementsSlice & {
   // Additional store-level actions
   loadFromDatabase: () => Promise<void>;
   checkStudyCheckpoints: () => any;
@@ -130,7 +131,8 @@ const loadFromDatabase = async () => {
 };
 
 export const useQuillbyStore = create<QuillbyStore>()(
-  persist(
+  subscribeWithSelector(
+    persist(
     (...args) => ({
       // Combine all slices
       ...createUserSlice(...args),
@@ -138,6 +140,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
       ...createHabitsSlice(...args),
       ...createDeadlinesSlice(...args),
       ...createShopSlice(...args),
+      ...createAchievementsSlice(...args),
 
       // Store-level actions
       loadFromDatabase: async () => {
@@ -163,6 +166,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
               country: dbData.userProfile.country ?? userData.country,
               timezone: dbData.userProfile.timezone ?? userData.timezone,
               qCoins: dbData.userProfile.q_coins ?? userData.qCoins,
+              gems: dbData.userProfile.gems ?? userData.gems ?? 0,
               messPoints: dbData.userProfile.mess_points ?? userData.messPoints,
               currentStreak: dbData.userProfile.current_streak ?? userData.currentStreak,
               enabledHabits: dbData.userProfile.enabled_habits ?? userData.enabledHabits,
@@ -463,5 +467,6 @@ Room: ${roomState}`;
         };
       }
     }
+  )
   )
 );

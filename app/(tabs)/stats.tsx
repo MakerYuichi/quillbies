@@ -7,6 +7,7 @@ import WeeklyLineGraph from '../components/stats/WeeklyLineGraph';
 import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
 import ActivityCard from '../components/stats/ActivityCard';
 import StreakCalendar from '../components/stats/StreakCalendar';
+import AchievementsSection from '../components/stats/AchievementsSection';
 import { playTabSound } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -128,7 +129,6 @@ export default function StatsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>📊 Your Progress</Text>
-          <Text style={styles.subtitle}>Track your journey with {buddyName}</Text>
         </View>
 
         {/* Overview Card */}
@@ -141,11 +141,11 @@ export default function StatsScreen() {
             </View>
             <View style={styles.overviewItem}>
               <Text style={styles.overviewValue}>{userData.qCoins}</Text>
-              <Text style={styles.overviewLabel}>Q-Coins</Text>
+              <Text style={styles.overviewLabel}>Qbies</Text>
             </View>
             <View style={styles.overviewItem}>
-              <Text style={styles.overviewValue}>{userData.currentStreak}</Text>
-              <Text style={styles.overviewLabel}>Day Streak</Text>
+              <Text style={[styles.overviewValue, styles.gemsValue]}>{userData.gems || 0}</Text>
+              <Text style={styles.overviewLabel}>Gems</Text>
             </View>
             <View style={styles.overviewItem}>
               <Text style={styles.overviewValue}>{userData.messPoints.toFixed(0)}</Text>
@@ -418,6 +418,9 @@ export default function StatsScreen() {
           )}
         </View>
 
+        {/* Achievements Section */}
+        <AchievementsSection />
+
         {/* Streak Calendar */}
         <StreakCalendar
           completedDays={[]} // TODO: Track completed days as day numbers (1-31)
@@ -471,12 +474,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(25, 118, 210, 0.2)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
-  },
-  subtitle: {
-    fontSize: SCREEN_WIDTH * 0.042,
-    color: '#666',
-    textAlign: 'center',
-    fontWeight: '500',
   },
   
   // Detail Stats (for flipped cards)
@@ -533,6 +530,9 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     fontWeight: '500',
+  },
+  gemsValue: {
+    color: '#7E57C2', // Purple color for gems
   },
   
   // Stats Cards

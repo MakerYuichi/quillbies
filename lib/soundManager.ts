@@ -370,6 +370,8 @@ export const SOUNDS = {
   BROOM: 'broom',
   SCRUB: 'scrub',
   DEEP_CLEAN: 'deep_clean',
+  // Achievement Sound
+  ACHIEVEMENT: 'achievement',
   // Background Music
   ONBOARDING_MUSIC: 'onboarding_music',
   GAME_MUSIC: 'game_music',
@@ -446,6 +448,13 @@ export async function preloadSounds(): Promise<void> {
       require('../assets/sounds/ui_buttons/ui-submit.mp3')
     );
     console.log('[Sound] UI submit sound loaded');
+    
+    // Achievement Sound
+    await soundManager.loadSound(
+      SOUNDS.ACHIEVEMENT,
+      require('../assets/sounds/background_music/achievement.mp3')
+    );
+    console.log('[Sound] Achievement sound loaded');
     
     // Study Action Sounds
     await soundManager.loadSound(

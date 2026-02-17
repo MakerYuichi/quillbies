@@ -131,14 +131,23 @@ export default function ShopScreen() {
           resizeMode="cover"
         />
 
-        {/* Q-Coin Display - Match study session design */}
-        <View style={styles.qCoinsContainer}>
-          <Image
-            source={require('../../assets/overall/qbies.png')}
-            style={styles.qCoinIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.qCoinText}>{Number(userData.qCoins) || 0}</Text>
+        {/* Currency Display - Qbies and Gems side by side */}
+        <View style={styles.currencyContainer}>
+          {/* Qbies */}
+          <View style={styles.qbiesDisplay}>
+            <Image
+              source={require('../../assets/overall/qbies.png')}
+              style={styles.currencyIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.currencyText}>{Number(userData.qCoins) || 0}</Text>
+          </View>
+          
+          {/* Gems */}
+          <View style={styles.gemsDisplay}>
+            <Text style={styles.gemIconSmall}>💎</Text>
+            <Text style={styles.currencyText}>{Number(userData.gems) || 0}</Text>
+          </View>
         </View>
         
         {/* Walls */}
@@ -385,12 +394,21 @@ export default function ShopScreen() {
 
         {/* How to Earn */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>💰 How to Earn Q-Coins</Text>
-          <Text style={styles.infoText}>💧 Log water: +5 coins per glass</Text>
-          <Text style={styles.infoText}>📚 Complete focus sessions: +10-50 coins</Text>
-          <Text style={styles.infoText}>🍎 Log meals: +10 coins</Text>
-          <Text style={styles.infoText}>😴 Good sleep: +20 coins</Text>
-          <Text style={styles.infoText}>🔥 Daily streaks: Bonus coins!</Text>
+          <Text style={styles.infoTitle}>💰 How to Earn Qbies</Text>
+          <Text style={styles.infoText}>💧 Log water: +5 qbies per glass</Text>
+          <Text style={styles.infoText}>📚 Complete focus sessions: +10-50 qbies</Text>
+          <Text style={styles.infoText}>🍎 Log meals: +10 qbies</Text>
+          <Text style={styles.infoText}>😴 Good sleep: +20 qbies</Text>
+          <Text style={styles.infoText}>🔥 Daily streaks: Bonus qbies!</Text>
+        </View>
+
+        {/* How to Earn Gems */}
+        <View style={styles.gemsInfoCard}>
+          <Text style={styles.gemsInfoTitle}>💎 How to Earn Gems</Text>
+          <Text style={styles.gemsInfoTextShop}>🏆 Unlock achievements: +1-5 gems</Text>
+          <Text style={styles.gemsInfoTextShop}>🔥 Reach streak milestones: +3-10 gems</Text>
+          <Text style={styles.gemsInfoTextShop}>⭐ Complete special challenges: +5-20 gems</Text>
+          <Text style={styles.gemsInfoTextShop}>🎯 Perfect study days: +2 gems</Text>
         </View>
 
         {/* Bottom Spacer */}
@@ -443,27 +461,44 @@ const styles = StyleSheet.create({
     zIndex: 10, // Ensure it's above other elements
   },
   
-  // Q-Coin Display - Match study session design
-  qCoinsContainer: {
+  // Currency Display - Side by side
+  currencyContainer: {
     position: 'absolute',
     right: 16,
     top: 3,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     zIndex: 100,
   },
-  qCoinIcon: {
-    width: (SCREEN_WIDTH * 47) / 393,
-    height: (SCREEN_HEIGHT * 47) / 852,
+  qbiesDisplay: {
+    alignItems: 'center',
   },
-  qCoinText: {
+  gemsDisplay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(126, 87, 194, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#7E57C2',
+  },
+  currencyIcon: {
+    width: (SCREEN_WIDTH * 32) / 393,
+    height: (SCREEN_HEIGHT * 32) / 852,
+  },
+  currencyText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 21) / 393,
-    lineHeight: (SCREEN_HEIGHT * 27) / 852,
+    fontSize: (SCREEN_WIDTH * 16) / 393,
     color: '#000000',
     opacity: 0.7,
-    marginTop: 5,
+    marginTop: 2,
     textAlign: 'center',
+  },
+  gemIconSmall: {
+    fontSize: (SCREEN_WIDTH * 18) / 393,
+    marginBottom: 2,
   },
   
   // Blue Background
@@ -806,6 +841,28 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: SCREEN_WIDTH * 0.035,
     color: '#2E7D32',
+    marginVertical: SCREEN_HEIGHT * 0.005,
+    lineHeight: SCREEN_WIDTH * 0.05,
+  },
+  
+  // Gems Info Card
+  gemsInfoCard: {
+    backgroundColor: '#F3E5F5',
+    padding: SCREEN_WIDTH * 0.05,
+    borderRadius: 16,
+    marginBottom: SCREEN_HEIGHT * 0.025,
+    borderWidth: 2,
+    borderColor: '#7E57C2',
+  },
+  gemsInfoTitle: {
+    fontSize: SCREEN_WIDTH * 0.045,
+    fontWeight: '700',
+    color: '#7E57C2',
+    marginBottom: SCREEN_HEIGHT * 0.015,
+  },
+  gemsInfoTextShop: {
+    fontSize: SCREEN_WIDTH * 0.035,
+    color: '#7E57C2',
     marginVertical: SCREEN_HEIGHT * 0.005,
     lineHeight: SCREEN_WIDTH * 0.05,
   },

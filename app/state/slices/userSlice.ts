@@ -10,6 +10,8 @@ export interface UserSlice {
   initializeUser: () => void;
   updateEnergy: () => void;
   resetDay: () => void;
+  addGems: (amount: number, reason?: string) => void;
+  spendGems: (amount: number, reason?: string) => boolean;
   
   // Onboarding actions
   completeOnboarding: () => Promise<void>;
@@ -30,6 +32,7 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     energy: 100,
     maxEnergyCap: 100,
     qCoins: 100,
+    gems: 0, // Start with 0 gems
     messPoints: 0,
     lastActiveTimestamp: Date.now(),
     onboardingCompleted: false,
@@ -76,6 +79,7 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
       energy: userData?.energy ?? 100,
       maxEnergyCap: userData?.maxEnergyCap ?? 100,
       qCoins: userData?.qCoins ?? 100,
+      gems: userData?.gems ?? 0,
       messPoints: userData?.messPoints ?? 0,
       lastActiveTimestamp: now,
       onboardingCompleted: userData?.onboardingCompleted ?? false,
@@ -458,5 +462,38 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     set({ userData: updatedUserData });
     console.log('[UserSlice] Calling syncToDatabase for sleep goal...');
     syncToDatabase(updatedUserData);
+  },
+
+  addGems: (amount: number, reason?: string) => {
+    const { userData } = get();
+    const newGems = userData.gems + amount;
+    console.log(`[Gems] Adding ${amount} gems. Reason: ${reason || 'N/A'}. Total: ${userData.gems} → ${newGems}`);
+    
+    const updatedUserData = {
+      ...userData,
+      gems: newGems
+    };
+    set({ userData: updatedUserData });
+    syncToDatabase(updatedUserData);
+  },
+
+  spendGems: (amount: number, reason?: string) => {
+    const { userData } = get();
+    
+    if (userData.gems < amount) {
+      console.log(`[Gems] Insufficient gems. Have: ${userData.gems}, Need: ${amount}`);
+      return false;
+    }
+    
+    const newGems = userData.gems - amount;
+    console.log(`[Gems] Spending ${amount} gems. Reason: ${reason || 'N/A'}. Total: ${userData.gems} → ${newGems}`);
+    
+    const updatedUserData = {
+      ...userData,
+      gems: newGems
+    };
+    set({ userData: updatedUserData });
+    syncToDatabase(updatedUserData);
+    return true;
   }
 });

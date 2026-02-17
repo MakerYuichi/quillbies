@@ -35,6 +35,7 @@ export interface UserData {
   energy: number;
   maxEnergyCap: number;
   qCoins: number;
+  gems: number; // Premium currency for exclusive items
   messPoints: number;
   lastActiveTimestamp: number;
   
@@ -131,6 +132,10 @@ export interface UserData {
   
   // Account Creation
   createdAt?: string; // ISO timestamp when account was created
+  
+  // Achievements
+  achievements?: AchievementProgress; // Achievement progress tracking
+  totalXP?: number; // Total XP earned
 }
 
 export interface SessionData {
@@ -223,4 +228,27 @@ export interface DeadlineFormData {
   priority: 'high' | 'medium' | 'low';
   estimatedHours: string;
   category: 'study' | 'work' | 'project' | 'other';
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  xpReward: number;
+  coinReward: number;
+  unlocked: boolean;
+  unlockedAt?: string; // ISO timestamp
+  progress?: number; // Current progress (e.g., 3/10)
+  target?: number; // Target to unlock (e.g., 10)
+  icon: string; // Emoji icon
+  category: 'study' | 'habits' | 'premium' | 'special';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+export interface AchievementProgress {
+  [achievementId: string]: {
+    progress: number;
+    unlocked: boolean;
+    unlockedAt?: string;
+  };
 }
