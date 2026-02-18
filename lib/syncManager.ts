@@ -38,6 +38,7 @@ export const syncAllUserData = async (userData: any) => {
         energy: userData.energy,
         max_energy_cap: userData.maxEnergyCap || 100,
         q_coins: userData.qCoins,
+        gems: userData.gems || 0, // Add gems sync
         mess_points: userData.messPoints,
         current_streak: userData.currentStreak || 0,
         last_check_in_date: userData.lastCheckInDate || new Date().toISOString().split('T')[0],
@@ -113,8 +114,8 @@ export const loadAllUserData = async () => {
       // Deadlines
       supabase.from('deadlines').select('*').eq('user_id', user.id).order('due_date', { ascending: true }),
       
-      // Purchased items
-      supabase.from('purchased_items').select('item_id').eq('user_id', user.id),
+      // Purchased items - use user_shop_items table with equipped status
+      supabase.from('user_shop_items').select('item_id, category, is_equipped').eq('user_id', user.id),
       
       // Sleep sessions (last 30 days)
       supabase.from('sleep_sessions').select('*').eq('user_id', user.id).gte('date_assigned', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
@@ -190,6 +191,7 @@ const ensureAllUserProfiles = async (userId: string, userData: any) => {
             energy: userData.energy || 100,
             max_energy_cap: userData.maxEnergyCap || 100,
             q_coins: userData.qCoins || 100,
+            gems: userData.gems || 0, // Add gems to initial profile creation
             mess_points: userData.messPoints || 0,
             current_streak: userData.currentStreak || 0,
             enabled_habits: userData.enabledHabits || ['study', 'hydration', 'sleep', 'exercise'],

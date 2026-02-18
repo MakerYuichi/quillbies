@@ -73,6 +73,10 @@ function HomeScreenContent() {
   
   const { userData, updateEnergy, cleanRoom, addMissedCheckpoint, checkAndProcessCheckpoints, startFocusSession, getUrgentDeadlines, getUpcomingDeadlines, getTodaysSleepHours } = storeData;
   
+  // Get theme info
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = themeType ? require('../utils/themeColors').getThemeColors(themeType) : null;
+  
   // Safety check: ensure userData is properly initialized
   if (!userData || typeof userData !== 'object') {
     console.warn('[HomeScreen] UserData not properly initialized, showing loading...');
@@ -461,20 +465,38 @@ function HomeScreenContent() {
 
     return (
       <TouchableOpacity 
-        style={styles.todaysDeadlineCard}
+        style={[
+          styles.todaysDeadlineCard,
+          themeType && {
+            backgroundColor: themeColors.isDark ? 'rgba(255, 243, 224, 0.2)' : '#FFF3E0',
+            borderColor: themeColors.isDark ? 'rgba(255, 152, 0, 0.5)' : '#FF9800',
+          }
+        ]}
         onPress={() => router.push('/(tabs)/focus')}
         activeOpacity={0.7}
       >
-        <Text style={styles.todaysDeadlineHeader}>
+        <Text style={[
+          styles.todaysDeadlineHeader,
+          themeType && { color: themeColors.isDark ? '#FFB74D' : '#E65100' }
+        ]}>
           {getPriorityEmoji(deadline.priority)} {deadline.title}
         </Text>
-        <Text style={styles.todaysDeadlineDate}>
+        <Text style={[
+          styles.todaysDeadlineDate,
+          themeType && { color: themeColors.isDark ? '#FFA726' : '#FF6F00' }
+        ]}>
           {formatDate(deadline.dueDate)}
         </Text>
-        <Text style={styles.todaysDeadlineProgress}>
+        <Text style={[
+          styles.todaysDeadlineProgress,
+          themeType && { color: themeColors.isDark ? '#FFFFFF' : '#333' }
+        ]}>
           {formatHours(deadline.workCompleted)}/{formatHours(deadline.estimatedHours)} {progressDisplay}
         </Text>
-        <Text style={styles.todaysDeadlineGoal}>
+        <Text style={[
+          styles.todaysDeadlineGoal,
+          themeType && { color: themeColors.isDark ? '#64B5F6' : '#1976D2' }
+        ]}>
           Today's goal: 2h [Focus on This →]
         </Text>
       </TouchableOpacity>
@@ -691,6 +713,9 @@ function HomeScreenContent() {
       currentHour = new Date().getHours();
     }
     
+    console.log('[HappyCheck] Checking habits at hour:', currentHour);
+    console.log('[HappyCheck] Enabled habits:', enabledHabits);
+    
     // Check each enabled habit based on time expectations
     for (const habit of enabledHabits) {
       switch (habit) {
@@ -712,6 +737,7 @@ function HomeScreenContent() {
           }
           
           const expectedHours = studyGoal * expectedProgress;
+          console.log('[HappyCheck] Study:', { studyHours, expectedHours, pass: studyHours >= expectedHours });
           if (studyHours < expectedHours) return false;
           break;
           
@@ -725,6 +751,7 @@ function HomeScreenContent() {
           else if (currentHour >= 10) expectedWater = waterGoal * 0.4; // 10 AM - 40%
           else if (currentHour >= 7) expectedWater = waterGoal * 0.2; // 7 AM - 20%
           
+          console.log('[HappyCheck] Hydration:', { waterGlasses: userData.waterGlasses, expectedWater, pass: userData.waterGlasses >= expectedWater });
           if (userData.waterGlasses < expectedWater) return false;
           break;
           
@@ -736,15 +763,19 @@ function HomeScreenContent() {
           else if (currentHour >= 14) expectedMeals = 2; // 2 PM - breakfast + lunch
           else if (currentHour >= 10) expectedMeals = 1; // 10 AM - breakfast
           
+          console.log('[HappyCheck] Meals:', { mealsLogged: userData.mealsLogged, expectedMeals, pass: userData.mealsLogged >= expectedMeals });
           if (userData.mealsLogged < expectedMeals) return false;
           break;
           
         case 'exercise':
           // Exercise can be done anytime, but expect it by evening
           const exerciseGoal = userData.exerciseGoalMinutes || 30;
+          let exercisePass = true;
           if (currentHour >= 18) { // After 6 PM, should have some exercise
-            if (userData.exerciseMinutes < exerciseGoal * 0.5) return false;
+            exercisePass = userData.exerciseMinutes >= exerciseGoal * 0.5;
           }
+          console.log('[HappyCheck] Exercise:', { exerciseMinutes: userData.exerciseMinutes, expectedMin: currentHour >= 18 ? exerciseGoal * 0.5 : 0, pass: exercisePass });
+          if (!exercisePass) return false;
           break;
           
         case 'sleep':
@@ -752,30 +783,57 @@ function HomeScreenContent() {
           const sleepGoal = userData.sleepGoalHours || 7;
           if (currentHour >= 6 && currentHour <= 14) { // Morning to afternoon
             const todaysSleepHours = getTodaysSleepHours();
-            if (todaysSleepHours < sleepGoal * 0.8) return false; // At least 80% of sleep goal
+            const sleepPass = todaysSleepHours >= sleepGoal * 0.8;
+            console.log('[HappyCheck] Sleep:', { todaysSleepHours, expectedMin: sleepGoal * 0.8, pass: sleepPass });
+            if (!sleepPass) return false;
+          } else {
+            console.log('[HappyCheck] Sleep: Not checked at this hour');
           }
           break;
       }
     }
     
+    console.log('[HappyCheck] ✅ All habits passed! Quillby should be happy');
     return true; // All enabled habits are on track for current time
   };
 
   // Determine current animation based on priority: sleep > exercise > meal > water > habit completion
   const getBaseAnimation = () => {
     // First check activity animations (highest priority - these should always show for user feedback)
-    if (sleepAnimation !== 'idle') return sleepAnimation;
-    if (exerciseAnimation !== 'idle') return exerciseAnimation;
-    if (mealAnimation !== 'idle') return mealAnimation;
-    if (waterAnimation !== 'idle') return waterAnimation;
+    // Only use these if they're actual activity animations (not idle states)
+    if (sleepAnimation !== 'idle' && sleepAnimation !== 'idle-sit' && sleepAnimation !== 'idle-sit-happy') {
+      console.log('[Animation] Using sleep animation:', sleepAnimation);
+      return sleepAnimation;
+    }
+    if (exerciseAnimation !== 'idle' && exerciseAnimation !== 'idle-sit' && exerciseAnimation !== 'idle-sit-happy') {
+      console.log('[Animation] Using exercise animation:', exerciseAnimation);
+      return exerciseAnimation;
+    }
+    if (mealAnimation !== 'idle' && mealAnimation !== 'idle-sit' && mealAnimation !== 'idle-sit-happy') {
+      console.log('[Animation] Using meal animation:', mealAnimation);
+      return mealAnimation;
+    }
+    if (waterAnimation !== 'idle' && waterAnimation !== 'idle-sit' && waterAnimation !== 'idle-sit-happy') {
+      console.log('[Animation] Using water animation:', waterAnimation);
+      return waterAnimation;
+    }
     
     // Show happy animation during welcome message
-    if (isShowingWelcome) return 'idle-sit-happy';
+    if (isShowingWelcome) {
+      console.log('[Animation] Showing welcome - using happy animation');
+      return 'idle-sit-happy';
+    }
     
     // Then check if all habits are completed for current time for happy idle
-    if (areAllHabitsCompletedForCurrentTime()) return 'idle-sit-happy';
+    const allHabitsComplete = areAllHabitsCompletedForCurrentTime();
+    console.log('[Animation] All habits complete check:', allHabitsComplete);
+    if (allHabitsComplete) {
+      console.log('[Animation] Using happy animation - all habits on track!');
+      return 'idle-sit-happy';
+    }
     
     // Default to regular idle
+    console.log('[Animation] Using regular idle animation');
     return 'idle-sit';
   };
   
@@ -1044,6 +1102,7 @@ function HomeScreenContent() {
           sleepAnimation={sleepAnimation} 
           qCoins={userData.qCoins}
           gems={userData.gems || 0}
+          showDefaultBackground={true}
         />
         {/* Sleep Timer Overlay - Show when sleeping */}
         {isSleeping && (
@@ -1198,11 +1257,58 @@ function HomeScreenContent() {
       
       {/* SCROLLABLE CONTENT AREA - Inside orange theme background */}
       <ScrollView 
-        style={styles.scrollableContent}
-        contentContainerStyle={styles.scrollContentContainer}
+        style={[
+          styles.scrollableContent,
+          themeType && {
+            backgroundColor: themeColors.background, // Use same background as theme
+          }
+        ]}
+        contentContainerStyle={[
+          styles.scrollContentContainer,
+          themeType && themeColors.isDark && {
+            // Force white text for dark themes
+          }
+        ]}
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
+        {/* Orange theme background image for unthemed */}
+        {!themeType && (
+          <ImageBackground
+            source={require('../../assets/backgrounds/orange-theme.png')}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            resizeMode="cover"
+          />
+        )}
+        
+        <View style={themeType && themeColors.isDark ? { opacity: 1 } : {}}>
+        {/* Decorative elements for scrollable area */}
+        {themeType && require('../utils/themeColors').getThemeDecorations(themeType)
+          .filter((d: any) => d.top >= 60 && d.top <= 90) // Only scrollable area decorations
+          .map((decoration: any, index: number) => {
+            // Calculate absolute position in pixels
+            const scrollAreaStartPx = (SCREEN_HEIGHT * 415) / 852; // Where scrollable area starts
+            const decorationTopPx = (SCREEN_HEIGHT * decoration.top) / 100; // Decoration's absolute position
+            const relativeTopPx = decorationTopPx - scrollAreaStartPx; // Position relative to scroll area
+            
+            return (
+              <Text 
+                key={`scroll-${index}`}
+                style={{
+                  position: 'absolute',
+                  top: relativeTopPx,
+                  left: `${decoration.left}%`,
+                  fontSize: decoration.size,
+                  opacity: 0.4,
+                  zIndex: 1,
+                }}
+              >
+                {decoration.emoji}
+              </Text>
+            );
+          })
+        }
+        
         {/* NOTIFICATION BANNERS - Show at the top */}
         {notifications.length > 0 && (
           <View style={{ marginBottom: 10 }}>
@@ -1218,7 +1324,11 @@ function HomeScreenContent() {
 
         {/* ENERGY BAR - First in scrollable area (status bar) */}
         <View style={styles.scrollableEnergyBarContainer}>
-          <EnergyBar current={userData.energy} max={userData.maxEnergyCap} />
+          <EnergyBar 
+            current={userData.energy} 
+            max={userData.maxEnergyCap} 
+            textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
+          />
         </View>
 
         {/* BUTTONS ROW - Second in scrollable area */}
@@ -1231,6 +1341,7 @@ function HomeScreenContent() {
                   waterGlasses={waterGlasses}
                   hydrationGoal={userData.hydrationGoalGlasses || 8}
                   onPress={handleDrinkWaterWithReset}
+                  textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
                 />
                 
                 {/* Meal Button - Only when NOT in any active mode */}
@@ -1239,6 +1350,7 @@ function HomeScreenContent() {
                   mealGoal={userData.mealGoalCount || 3}
                   portionDescription={portionDescription}
                   onPress={handleLogMealWithReset}
+                  textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
                 />
                 
                 {/* Exercise Button - Only when exercise habit is enabled */}
@@ -1249,6 +1361,7 @@ function HomeScreenContent() {
                     exerciseElapsedTime={exerciseElapsedTime}
                     onStartExercise={handleStartExerciseWithReset}
                     onFinishExercise={handleFinishExerciseWithReset}
+                    textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
                   />
                 )}
                 
@@ -1256,6 +1369,7 @@ function HomeScreenContent() {
                 <CleanButton 
                   messPoints={userData.messPoints}
                   onPress={handleStartCleaning}
+                  textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
                 />
                 
                 {/* Sleep Button - Only when NOT in any active mode */}
@@ -1265,6 +1379,7 @@ function HomeScreenContent() {
                   sleepElapsedTime={sleepElapsedTime}
                   onSleep={handleStartSleepWithReset}
                   onWakeUp={handleWakeUpButtonWithReset}
+                  textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
                 />
               </>
             ) : isSleeping ? (
@@ -1276,6 +1391,7 @@ function HomeScreenContent() {
                   sleepElapsedTime={sleepElapsedTime}
                   onSleep={handleStartSleepWithReset}
                   onWakeUp={handleWakeUpButtonWithReset}
+                  textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
                 />
               </>
             ) : isExercising ? (
@@ -1287,6 +1403,7 @@ function HomeScreenContent() {
                   exerciseElapsedTime={exerciseElapsedTime}
                   onStartExercise={handleStartExerciseWithReset}
                   onFinishExercise={handleFinishExerciseWithReset}
+                  textColor={themeType && themeColors.isDark ? '#FFFFFF' : undefined}
                 />
               </>
             ) : isCleaning ? (
@@ -1313,7 +1430,11 @@ function HomeScreenContent() {
               <TouchableOpacity
                 style={[
                   styles.focusSessionButton,
-                  userData.energy < calculateFocusEnergyCost(userData) && styles.focusSessionButtonDisabled
+                  userData.energy < calculateFocusEnergyCost(userData) && styles.focusSessionButtonDisabled,
+                  themeType && !(userData.energy < calculateFocusEnergyCost(userData)) && {
+                    backgroundColor: themeColors.isDark ? 'rgba(25, 118, 210, 0.3)' : '#1976D2',
+                    borderColor: themeColors.isDark ? 'rgba(13, 71, 161, 0.5)' : '#0D47A1',
+                  }
                 ]}
                 onPress={handleStartFocusSession}
                 disabled={userData.energy < calculateFocusEnergyCost(userData)}
@@ -1340,14 +1461,17 @@ function HomeScreenContent() {
         {/* TODAY'S DEADLINE SECTION - Show under study section */}
         {userData.enabledHabits?.includes('study') && getTodaysDeadline() && (
           <View style={styles.todaysDeadlineSection}>
-            <Text style={styles.todaysDeadlineTitle}>📅 Today's Priority</Text>
+            <Text style={[
+              styles.todaysDeadlineTitle,
+              themeType && { color: themeColors.isDark ? '#FFFFFF' : '#333' }
+            ]}>📅 Today's Priority</Text>
             {renderTodaysDeadline()}
           </View>
         )}
         
         {/* SPACER - Allow more scrolling space */}
         <View style={styles.contentSpacer} />
-        
+        </View>
       </ScrollView>
 
       {/* Dimming overlay when cleaning - only dim the tab bar area */}

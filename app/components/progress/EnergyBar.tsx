@@ -7,9 +7,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface EnergyBarProps {
   current: number;
   max: number;
+  textColor?: string;
 }
 
-export default function EnergyBar({ current, max }: EnergyBarProps) {
+export default function EnergyBar({ current, max, textColor }: EnergyBarProps) {
   const percentage = Math.min((current / max) * 100, 100);
   
   // Gradient colors based on energy level
@@ -36,8 +37,8 @@ export default function EnergyBar({ current, max }: EnergyBarProps) {
         <View style={styles.iconContainer}>
           <Text style={styles.icon}>⚡</Text>
         </View>
-        <Text style={styles.label}>Energy</Text>
-        <Text style={styles.value}>{Math.round(current)}/{max}</Text>
+        <Text style={[styles.label, textColor && { color: textColor }]}>Energy</Text>
+        <Text style={[styles.value, textColor && { color: textColor }]}>{Math.round(current)}/{max}</Text>
       </View>
       
       {/* Energy bar with gradient */}

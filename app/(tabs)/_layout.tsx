@@ -8,11 +8,17 @@ import { useQuillbyStore } from '../state/store-modular';
 import AchievementUnlockedModal from '../components/modals/AchievementUnlockedModal';
 import { ACHIEVEMENTS } from '../core/achievements';
 import { Achievement } from '../core/types';
+import { getThemeColors } from '../utils/themeColors';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationAchievement, setCelebrationAchievement] = useState<Achievement | null>(null);
+  const { userData } = useQuillbyStore();
+  
+  // Get theme colors
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = getThemeColors(themeType);
   
   const handleTabPress = () => {
     playTabSound();
@@ -62,14 +68,14 @@ export default function TabLayout() {
     <>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#FF9800',
-          tabBarInactiveTintColor: '#666',
+          tabBarActiveTintColor: themeType ? themeColors.tabBarActive : '#FF9800',
+          tabBarInactiveTintColor: themeType ? (themeColors.isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)') : '#666',
           tabBarStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: themeType ? themeColors.tabBar : '#FFFFFF',
             borderTopWidth: 1,
-            borderTopColor: '#EEE',
-            height: 60 + insets.bottom, // Add bottom inset for safe area
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 8, // Use inset or default padding
+            borderTopColor: themeType ? (themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)') : '#EEE',
+            height: 60 + insets.bottom,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
             paddingTop: 8,
           },
           headerShown: false,

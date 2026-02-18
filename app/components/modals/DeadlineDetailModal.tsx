@@ -37,6 +37,11 @@ export default function DeadlineDetailModal({
 }: DeadlineDetailModalProps) {
   const { updateReminders, userData } = useQuillbyStore();
   
+  // Get theme colors
+  const themeType = userData.roomCustomization?.themeType;
+  const { getThemeColors } = require('../../utils/themeColors');
+  const themeColors = getThemeColors(themeType);
+  
   // Format hours to "Xh Ymin" format
   const formatHours = (hours: number): string => {
     const h = Math.floor(hours);
@@ -222,14 +227,39 @@ export default function DeadlineDetailModal({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#2C3E50" />
-      <ImageBackground
-        source={require('../../../assets/backgrounds/theme.png')}
-        style={styles.container}
-        resizeMode="cover"
-      >
+      <StatusBar barStyle="light-content" backgroundColor={themeType ? themeColors.statusBar : "#2C3E50"} />
+      <View style={styles.container}>
+        {/* Background - themed or default */}
+        {!themeType && (
+          <ImageBackground
+            source={require('../../../assets/backgrounds/theme.png')}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        )}
+        {themeType && (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: themeColors.background }]} />
+        )}
+        
+        {/* Theme decorations */}
+        {themeType && require('../../utils/themeColors').getThemeDecorations(themeType).map((decoration: any, index: number) => (
+          <Text 
+            key={index}
+            style={{
+              position: 'absolute',
+              top: `${decoration.top}%`,
+              left: `${decoration.left}%`,
+              fontSize: decoration.size,
+              opacity: 0.3,
+              zIndex: 1,
+            }}
+          >
+            {decoration.emoji}
+          </Text>
+        ))}
+        
         {/* Mission Header with Quillby */}
-        <View style={styles.missionHeader}>
+        <View style={[styles.missionHeader, themeType && { backgroundColor: themeColors.statusBar }]}>
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
             <Text style={styles.backButtonText}>← Back to Command</Text>
           </TouchableOpacity>
@@ -249,11 +279,21 @@ export default function DeadlineDetailModal({
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Mission Dossier */}
-          <View style={styles.dossierContainer}>
+          <View style={[
+            styles.dossierContainer,
+            themeType && {
+              backgroundColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+              borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+              shadowColor: themeColors.background,
+            }
+          ]}>
             {/* Mission Title & Priority */}
             <View style={styles.missionTitleSection}>
               <Text style={styles.missionEmoji}>📜</Text>
-              <Text style={styles.missionTitle}>{deadline.title}</Text>
+              <Text style={[
+                styles.missionTitle,
+                themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+              ]}>{deadline.title}</Text>
               <View style={[styles.priorityBadge, { backgroundColor: priorityInfo.color }]}>
                 <Text style={styles.priorityText}>{priorityInfo.emoji} {priorityInfo.text}</Text>
               </View>
@@ -278,11 +318,23 @@ export default function DeadlineDetailModal({
             <View style={styles.progressSection}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionIcon}>📊</Text>
-                <Text style={styles.sectionTitle}>MISSION PROGRESS</Text>
+                <Text style={[
+                  styles.sectionTitle,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                ]}>MISSION PROGRESS</Text>
               </View>
               
-              <View style={styles.progressCard}>
-                <Text style={styles.progressText}>
+              <View style={[
+                styles.progressCard,
+                themeType && {
+                  backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                }
+              ]}>
+                <Text style={[
+                  styles.progressText,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                ]}>
                   {formatHours(deadline.workCompleted)} / {formatHours(deadline.estimatedHours)} completed
                 </Text>
                 <View style={styles.progressBar}>
@@ -308,29 +360,56 @@ export default function DeadlineDetailModal({
             <View style={styles.battlePlanSection}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionIcon}>🗺️</Text>
-                <Text style={styles.sectionTitle}>BATTLE PLAN</Text>
+                <Text style={[
+                  styles.sectionTitle,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                ]}>BATTLE PLAN</Text>
               </View>
               
-              <View style={styles.battlePlanCard}>
+              <View style={[
+                styles.battlePlanCard,
+                themeType && {
+                  backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                }
+              ]}>
                 <View style={styles.planStats}>
                   <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Total Work</Text>
-                    <Text style={styles.statValue}>{formatHours(deadline.estimatedHours)}</Text>
+                    <Text style={[
+                      styles.statLabel,
+                      themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.7)' : '#7F8C8D' }
+                    ]}>Total Work</Text>
+                    <Text style={[
+                      styles.statValue,
+                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                    ]}>{formatHours(deadline.estimatedHours)}</Text>
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Daily Target</Text>
-                    <Text style={styles.statValue}>{formatHours(dailyTarget)}</Text>
+                    <Text style={[
+                      styles.statLabel,
+                      themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.7)' : '#7F8C8D' }
+                    ]}>Daily Target</Text>
+                    <Text style={[
+                      styles.statValue,
+                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                    ]}>{formatHours(dailyTarget)}</Text>
                   </View>
                 </View>
                 
                 {workBreakdown.length > 0 && (
                   <View style={styles.checkpoints}>
-                    <Text style={styles.checkpointsTitle}>Suggested Checkpoints:</Text>
+                    <Text style={[
+                      styles.checkpointsTitle,
+                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                    ]}>Suggested Checkpoints:</Text>
                     {workBreakdown.map((checkpoint, index) => (
                       <View key={index} style={styles.checkpointRow}>
                         <Text style={styles.checkpointBullet}>⚔️</Text>
-                        <Text style={styles.checkpointText}>
+                        <Text style={[
+                          styles.checkpointText,
+                          themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.8)' : '#7F8C8D' }
+                        ]}>
                           {checkpoint.isToday ? 'TODAY' : formatDate(checkpoint.date)}: {checkpoint.description}
                         </Text>
                       </View>
@@ -367,14 +446,21 @@ export default function DeadlineDetailModal({
             <View style={styles.remindersSection}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionIcon}>🔔</Text>
-                <Text style={styles.sectionTitle}>ALERTS</Text>
+                <Text style={[
+                  styles.sectionTitle,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                ]}>ALERTS</Text>
               </View>
               
               <View style={styles.reminderButtons}>
                 <TouchableOpacity 
                   style={[
                     styles.reminderButton,
-                    reminder1Day && styles.reminderButtonActive
+                    reminder1Day && styles.reminderButtonActive,
+                    themeType && !reminder1Day && {
+                      backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                    }
                   ]}
                   onPress={() => {
                     const newState = !reminder1Day;
@@ -387,7 +473,8 @@ export default function DeadlineDetailModal({
                 >
                   <Text style={[
                     styles.reminderButtonText,
-                    reminder1Day && styles.reminderButtonTextActive
+                    reminder1Day && styles.reminderButtonTextActive,
+                    themeType && !reminder1Day && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
                   ]}>
                     {reminder1Day ? '✓ 1 day before' : '1 day before'}
                   </Text>
@@ -396,7 +483,11 @@ export default function DeadlineDetailModal({
                 <TouchableOpacity 
                   style={[
                     styles.reminderButton,
-                    reminder3Day && styles.reminderButtonActive
+                    reminder3Day && styles.reminderButtonActive,
+                    themeType && !reminder3Day && {
+                      backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                    }
                   ]}
                   onPress={() => {
                     const newState = !reminder3Day;
@@ -409,7 +500,8 @@ export default function DeadlineDetailModal({
                 >
                   <Text style={[
                     styles.reminderButtonText,
-                    reminder3Day && styles.reminderButtonTextActive
+                    reminder3Day && styles.reminderButtonTextActive,
+                    themeType && !reminder3Day && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
                   ]}>
                     {reminder3Day ? '✓ 3 days before' : '3 days before'}
                   </Text>
@@ -420,14 +512,24 @@ export default function DeadlineDetailModal({
             {/* Mission Actions */}
             <View style={styles.actionsSection}>
               <TouchableOpacity 
-                style={styles.actionEdit}
+                style={[
+                  styles.actionEdit,
+                  themeType && {
+                    backgroundColor: themeColors.isDark ? 'rgba(52, 152, 219, 0.8)' : '#3498DB',
+                  }
+                ]}
                 onPress={() => onEdit(deadline)}
               >
                 <Text style={styles.actionEditText}>✏️ Edit Mission</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.actionArchive}
+                style={[
+                  styles.actionArchive,
+                  themeType && {
+                    backgroundColor: themeColors.isDark ? 'rgba(149, 165, 166, 0.8)' : '#95A5A6',
+                  }
+                ]}
                 onPress={handleDelete}
               >
                 <Text style={styles.actionArchiveText}>📦 Archive Mission</Text>
@@ -437,7 +539,7 @@ export default function DeadlineDetailModal({
 
           <View style={styles.bottomSpacing} />
         </ScrollView>
-      </ImageBackground>
+      </View>
     </Modal>
   );
 }

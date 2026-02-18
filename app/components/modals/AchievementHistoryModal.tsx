@@ -59,6 +59,41 @@ export default function AchievementHistoryModal({ visible, onClose, userId }: Ac
       year: 'numeric'
     });
   };
+  
+  const formatDateHeader = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Check if it's today
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    }
+    
+    // Check if it's yesterday
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+    
+    // Otherwise return formatted date
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long',
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+  
+  // Group history by date
+  const groupedHistory = history.reduce((groups, record) => {
+    const date = new Date(record.unlocked_at).toDateString();
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(record);
+    return groups;
+  }, {} as Record<string, AchievementHistoryRecord[]>);
 
   const getTypeColor = (type: string): [string, string] => {
     switch (type) {
@@ -163,30 +198,52 @@ export default function AchievementHistoryModal({ visible, onClose, userId }: Ac
                 <Text style={styles.emptySubtext}>Start completing challenges!</Text>
               </View>
             ) : (
-              history.map((record) => {
-                const [color1, color2] = getTypeColor(record.achievement_type);
+              Object.keys(groupedHistory).map((dateKey) => {
+                const records = groupedHistory[dateKey];
+                const firstRecord = records[0];
+                
                 return (
-                  <View key={record.id} style={styles.historyCard}>
-                    <LinearGradient
-                      colors={[color1, color2]}
-                      style={styles.cardGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <View style={styles.cardContent}>
-                        <View style={styles.cardHeader}>
-                          <Text style={styles.cardIcon}>{getTypeIcon(record.achievement_type)}</Text>
-                          <View style={styles.cardInfo}>
-                            <Text style={styles.cardName}>{record.achievement_name}</Text>
-                            <Text style={styles.cardDate}>{formatDate(record.unlocked_at)}</Text>
-                          </View>
+                  <View key={dateKey}>
+                    {/* Date Header */}
+                    <View style={styles.dateHeader}>
+                      <Text style={styles.dateHeaderText}>{formatDateHeader(firstRecord.unlocked_at)}</Text>
+                      <View style={styles.dateHeaderLine} />
+                    </View>
+                    
+                    {/* Achievements for this date */}
+                    {records.map((record) => {
+                      const [color1, color2] = getTypeColor(record.achievement_type);
+                      return (
+                        <View key={record.id} style={styles.historyCard}>
+                          <LinearGradient
+                            colors={[color1, color2]}
+                            style={styles.cardGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                          >
+                            <View style={styles.cardContent}>
+                              <View style={styles.cardHeader}>
+                                <Text style={styles.cardIcon}>{getTypeIcon(record.achievement_type)}</Text>
+                                <View style={styles.cardInfo}>
+                                  <Text style={styles.cardName}>{record.achievement_name}</Text>
+                                  <Text style={styles.cardDate}>
+                                    {new Date(record.unlocked_at).toLocaleTimeString('en-US', { 
+                                      hour: 'numeric', 
+                                      minute: '2-digit',
+                                      hour12: true 
+                                    })}
+                                  </Text>
+                                </View>
+                              </View>
+                              <View style={styles.cardRewards}>
+                                <Text style={styles.rewardText}>+{record.gems_earned} 💎</Text>
+                                <Text style={styles.rewardText}>+{record.qbies_earned} Q-Bies</Text>
+                              </View>
+                            </View>
+                          </LinearGradient>
                         </View>
-                        <View style={styles.cardRewards}>
-                          <Text style={styles.rewardText}>+{record.gems_earned} 💎</Text>
-                          <Text style={styles.rewardText}>+{record.qbies_earned} Q-Bies</Text>
-                        </View>
-                      </View>
-                    </LinearGradient>
+                      );
+                    })}
                   </View>
                 );
               })
@@ -333,6 +390,30 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
+  },
+  
+  // Date Headers
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  dateHeaderText: {
+    fontFamily: 'ChakraPetch_700Bold',
+    fontSize: 14,
+    color: '#5D4037',
+    marginRight: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  dateHeaderLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: 'rgba(93, 64, 55, 0.2)',
+    borderRadius: 1,
   },
   
   // History Cards

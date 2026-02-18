@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Dimensions, Image, StatusBar, ImageBackground } from 'react-native';
 import { useQuillbyStore } from '../../state/store-modular';
 import { getDeviceUser } from '../../../lib/deviceAuth';
 import { saveCalendarDayNote, getCalendarDayNote } from '../../../lib/calendarNotes';
@@ -7,6 +7,7 @@ import DeadlineDetailModal from './DeadlineDetailModal';
 import CreateDeadlineModal from './CreateDeadlineModal';
 import { Deadline } from '../../core/types';
 import { useRouter } from 'expo-router';
+import { getThemeColors } from '../../utils/themeColors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -20,6 +21,11 @@ interface DayDetailsModalProps {
 export default function DayDetailsModal({ visible, onClose, date, onEmojiChange }: DayDetailsModalProps) {
   const { userData, deadlines, deleteDeadline, startFocusSession } = useQuillbyStore();
   const router = useRouter();
+  
+  // Get theme colors
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = getThemeColors(themeType);
+  
   const [note, setNote] = useState('');
   const [selectedDayEmoji, setSelectedDayEmoji] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -206,8 +212,44 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
       animationType="slide"
       onRequestClose={onClose}
     >
+      <StatusBar barStyle="light-content" backgroundColor={themeType ? themeColors.statusBar : "#2C3E50"} />
       <View style={styles.overlay}>
-        <View style={styles.container}>
+        <View style={[
+          styles.container,
+          themeType && {
+            backgroundColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+            borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+          }
+        ]}>
+          {/* Background - themed or default */}
+          {!themeType && (
+            <ImageBackground
+              source={require('../../../assets/backgrounds/theme.png')}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
+          )}
+          {themeType && (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: themeColors.background }]} />
+          )}
+          
+          {/* Theme decorations */}
+          {themeType && require('../../utils/themeColors').getThemeDecorations(themeType).map((decoration: any, index: number) => (
+            <Text 
+              key={index}
+              style={{
+                position: 'absolute',
+                top: `${decoration.top}%`,
+                left: `${decoration.left}%`,
+                fontSize: decoration.size,
+                opacity: 0.3,
+                zIndex: 1,
+              }}
+            >
+              {decoration.emoji}
+            </Text>
+          ))}
+          
           {/* Decorative corners */}
           <Text style={styles.cornerLeft}>🌈</Text>
           <Text style={styles.cornerRight}>⭐</Text>
@@ -218,7 +260,12 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
           </TouchableOpacity>
           
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[
+            styles.header,
+            themeType && {
+              backgroundColor: themeColors.accentColor || themeColors.cardBackground,
+            }
+          ]}>
             <View style={styles.dateBadge}>
               <Text style={styles.dateText}>📅 {formattedDate}</Text>
             </View>
@@ -371,35 +418,68 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
             </View>
             
             {/* Stats Strip */}
-            <View style={styles.statsStrip}>
+            <View style={[
+              styles.statsStrip,
+              themeType && {
+                backgroundColor: themeColors.accentColor || themeColors.cardBackground,
+                borderColor: themeColors.accentBorder || themeColors.tabBarActive,
+              }
+            ]}>
               <View style={styles.statBox}>
                 <Text style={styles.statIcon}>🧹</Text>
-                <Text style={styles.statLabel}>Mess</Text>
-                <Text style={styles.statValue}>{dayData.messPoints.toFixed(0)}</Text>
+                <Text style={[
+                  styles.statLabel,
+                  themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.7)' : '#666' }
+                ]}>Mess</Text>
+                <Text style={[
+                  styles.statValue,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#333' }
+                ]}>{dayData.messPoints.toFixed(0)}</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statIcon}>🔥</Text>
-                <Text style={styles.statLabel}>Streak</Text>
+                <Text style={[
+                  styles.statLabel,
+                  themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.7)' : '#666' }
+                ]}>Streak</Text>
                 <Text style={[styles.statValue, styles.statValueOrange]}>{dayData.currentStreak}</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statIcon}>⏱️</Text>
-                <Text style={styles.statLabel}>Missed</Text>
-                <Text style={styles.statValue}>{dayData.missedCheckpoints}</Text>
+                <Text style={[
+                  styles.statLabel,
+                  themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.7)' : '#666' }
+                ]}>Missed</Text>
+                <Text style={[
+                  styles.statValue,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#333' }
+                ]}>{dayData.missedCheckpoints}</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statIcon}>🪙</Text>
-                <Text style={styles.statLabel}>Coins</Text>
+                <Text style={[
+                  styles.statLabel,
+                  themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.7)' : '#666' }
+                ]}>Coins</Text>
                 <Text style={[styles.statValue, styles.statValueGold]}>{dayData.qCoins}</Text>
               </View>
             </View>
             
             {/* Achievements Section */}
             {isToday && userData.achievements && Object.keys(userData.achievements).length > 0 && (
-              <View style={styles.achievementsCard}>
+              <View style={[
+                styles.achievementsCard,
+                themeType && {
+                  backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                }
+              ]}>
                 <View style={styles.achievementsHeader}>
                   <Text style={styles.achievementsIcon}>🏆</Text>
-                  <Text style={styles.achievementsTitle}>Today's Achievements</Text>
+                  <Text style={[
+                    styles.achievementsTitle,
+                    themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                  ]}>Today's Achievements</Text>
                 </View>
                 <ScrollView 
                   horizontal 
@@ -417,13 +497,60 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
                       const achievement = require('../../core/achievements').ACHIEVEMENTS[achievementId];
                       if (!achievement) return null;
                       
+                      // Get achievement asset
+                      const getAchievementAsset = () => {
+                        const assetMap: { [key: string]: any } = {
+                          'daily-session': require('../../../assets/acheivements/daily/daily-session.png'),
+                          'daily-water': require('../../../assets/acheivements/daily/daily-water.png'),
+                          'daily-meals': require('../../../assets/acheivements/daily/daily-meals.png'),
+                          'daily-hours': require('../../../assets/acheivements/daily/daily-hours.png'),
+                          'daily-early': require('../../../assets/acheivements/daily/daily-early.png'),
+                          'weekly-streak': require('../../../assets/acheivements/weekly/weekly-streak.png'),
+                          'weekly-sessions': require('../../../assets/acheivements/weekly/weekly-sessions.png'),
+                          'weekly-hours': require('../../../assets/acheivements/weekly/weekly-hours.png'),
+                          'weekly-clean': require('../../../assets/acheivements/weekly/weekly-clean.png'),
+                          'weekly-hydration': require('../../../assets/acheivements/weekly/weekly-hydration.png'),
+                          'monthly-hours': require('../../../assets/acheivements/monthly/monthly-hours.png'),
+                          'monthly-streak': require('../../../assets/acheivements/monthly/monthly-streak.png'),
+                          'monthly-deadlines': require('../../../assets/acheivements/monthly/monthly-deadlines.png'),
+                          'monthly-perfect': require('../../../assets/acheivements/monthly/monthly-perfect.png'),
+                          'monthly-sessions': require('../../../assets/acheivements/monthly/monthly-sessions.png'),
+                        };
+                        return assetMap[achievementId] || null;
+                      };
+                      
+                      const asset = getAchievementAsset();
+                      
                       return (
-                        <View key={achievementId} style={styles.achievementBadge}>
-                          <Text style={styles.achievementBadgeIcon}>{achievement.icon}</Text>
-                          <Text style={styles.achievementBadgeName}>{achievement.name}</Text>
+                        <View key={achievementId} style={[
+                          styles.achievementBadge,
+                          themeType && {
+                            backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
+                            borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+                          }
+                        ]}>
+                          {asset ? (
+                            <Image 
+                              source={asset}
+                              style={styles.achievementBadgeImage}
+                              resizeMode="contain"
+                            />
+                          ) : (
+                            <Text style={styles.achievementBadgeIcon}>{achievement.icon}</Text>
+                          )}
+                          <Text style={[
+                            styles.achievementBadgeName,
+                            themeType && { color: themeColors.isDark ? '#FFFFFF' : '#2C3E50' }
+                          ]}>{achievement.name}</Text>
                           <View style={styles.achievementRewards}>
-                            <Text style={styles.achievementReward}>💎 {achievement.xpReward}</Text>
-                            <Text style={styles.achievementReward}>🪙 {achievement.coinReward}</Text>
+                            <Text style={[
+                              styles.achievementReward,
+                              themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.8)' : '#666' }
+                            ]}>💎 {achievement.xpReward}</Text>
+                            <Text style={[
+                              styles.achievementReward,
+                              themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.8)' : '#666' }
+                            ]}>🪙 {achievement.coinReward}</Text>
                           </View>
                         </View>
                       );
@@ -434,8 +561,16 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
                     const today = new Date().toDateString();
                     return unlockedDate === today;
                   }).length === 0 && (
-                    <View style={styles.noAchievementsToday}>
-                      <Text style={styles.noAchievementsTodayText}>✨ No achievements unlocked today yet</Text>
+                    <View style={[
+                      styles.noAchievementsToday,
+                      themeType && {
+                        backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.5)',
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.noAchievementsTodayText,
+                        themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.6)' : '#999' }
+                      ]}>✨ No achievements unlocked today yet</Text>
                     </View>
                   )}
                 </ScrollView>
@@ -463,7 +598,10 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
             <View style={styles.deadlinesSection}>
               <View style={styles.deadlinesHeader}>
                 <Text style={styles.deadlinesIcon}>⚡</Text>
-                <Text style={styles.deadlinesTitle}>Deadlines</Text>
+                <Text style={[
+                  styles.deadlinesTitle,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#333' }
+                ]}>Deadlines</Text>
               </View>
               {dayDeadlines.length > 0 ? (
                 dayDeadlines.map((deadline) => {
@@ -487,7 +625,12 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
                   return (
                     <TouchableOpacity 
                       key={deadline.id} 
-                      style={styles.deadlineCard}
+                      style={[
+                        styles.deadlineCard,
+                        themeType && {
+                          backgroundColor: themeColors.isDark ? 'rgba(255, 235, 238, 0.2)' : '#FFEBEE',
+                        }
+                      ]}
                       onPress={() => {
                         setSelectedDeadline(deadline);
                         setShowDeadlineDetail(true);
@@ -500,9 +643,15 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
                          deadline.category === 'project' ? '📝' : '📌'}
                       </Text>
                       <View style={styles.deadlineContent}>
-                        <Text style={styles.deadlineTitle}>{deadline.title}</Text>
+                        <Text style={[
+                          styles.deadlineTitle,
+                          themeType && { color: themeColors.isDark ? '#FFFFFF' : '#333' }
+                        ]}>{deadline.title}</Text>
                         {deadline.dueTime && (
-                          <Text style={styles.deadlineTime}>⏰ {deadline.dueTime}</Text>
+                          <Text style={[
+                            styles.deadlineTime,
+                            themeType && { color: themeColors.isDark ? 'rgba(255, 255, 255, 0.8)' : '#666' }
+                          ]}>⏰ {deadline.dueTime}</Text>
                         )}
                         <TouchableOpacity
                           style={styles.focusButton}
@@ -1190,6 +1339,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  achievementBadgeImage: {
+    width: 48,
+    height: 48,
+    marginBottom: 6,
   },
   achievementBadgeIcon: {
     fontSize: 32,

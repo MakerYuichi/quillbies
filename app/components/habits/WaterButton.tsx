@@ -8,9 +8,10 @@ interface WaterButtonProps {
   waterGlasses: number;
   hydrationGoal?: number;
   onPress: () => void;
+  textColor?: string;
 }
 
-export default function WaterButton({ waterGlasses, hydrationGoal = 8, onPress }: WaterButtonProps) {
+export default function WaterButton({ waterGlasses, hydrationGoal = 8, onPress, textColor }: WaterButtonProps) {
   const progress = Math.min(waterGlasses / hydrationGoal, 1);
   
   return (
@@ -38,7 +39,7 @@ export default function WaterButton({ waterGlasses, hydrationGoal = 8, onPress }
       </View>
       
       {/* Label */}
-      <Text style={styles.label}>{waterGlasses}/{hydrationGoal}</Text>
+      <Text style={[styles.label, textColor && { color: textColor }]}>{waterGlasses}/{hydrationGoal}</Text>
     </TouchableOpacity>
   );
 }

@@ -24,17 +24,17 @@ export const homeStyles = StyleSheet.create({
   // Hamster container - must be above environment layers
   hamsterContainer: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, // Move up by 20px
+    left: 0, // Move left by 15px
+    right: 0, // Compensate right to maintain width
+    bottom: 0, // Compensate bottom
     zIndex: 10, // Above environment layers (zIndex: 1)
     pointerEvents: 'none',
   },
-  // Speech bubble container - now in top area (where energy bar was)
+  // Speech bubble container - now below asset area
   speechBubbleContainer: {
     position: 'absolute',
-    top: (SCREEN_HEIGHT * 450) / 852, // Slightly higher than energy bar was
+    top: (SCREEN_HEIGHT * 380) / 852, // Below asset area (after 490px)
     left: (SCREEN_WIDTH * 17) / 393,  // Align with original speech bubble positioning
     width: (SCREEN_WIDTH * 355) / 393, // Match speech bubble width
     zIndex: 25, // Above scrollable content (20)
@@ -47,6 +47,7 @@ export const homeStyles = StyleSheet.create({
     right: 0,
     bottom: 30, // Small padding from bottom edge
     zIndex: 20, // Above cleaning overlay (15) and other overlays
+    backgroundColor: 'transparent', // Transparent by default to show orange background
   },
   scrollContentContainer: {
     paddingHorizontal: (SCREEN_WIDTH * 17) / 393,

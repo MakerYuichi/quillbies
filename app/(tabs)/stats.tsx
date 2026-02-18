@@ -8,6 +8,7 @@ import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
 import ActivityCard from '../components/stats/ActivityCard';
 import StreakCalendar from '../components/stats/StreakCalendar';
 import AchievementsSection from '../components/stats/AchievementsSection';
+import ThemedScreen from '../components/themed/ThemedScreen';
 import { playTabSound } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -119,12 +120,7 @@ export default function StatsScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require('../../assets/backgrounds/theme.png')}
-      style={styles.background}
-      resizeMode="cover"
-      defaultSource={require('../../assets/backgrounds/theme.png')}
-    >
+    <ThemedScreen showBackground={false}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
@@ -494,7 +490,7 @@ export default function StatsScreen() {
           setShowPremiumModal(false);
         }}
       />
-    </ImageBackground>
+    </ThemedScreen>
   );
 }
 

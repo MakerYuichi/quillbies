@@ -29,10 +29,10 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'lamp',
     name: 'Desk Lamp',
-    category: 'light',
+    category: 'furniture',
     rarity: 'common',
     price: 0, // Free default
-    assetPath: 'assets/rooms/lamp.png',
+    assetPath: 'assets/shop/common/furniture/lamp.png',
     description: 'Classic desk lamp',
     icon: '💡'
   },

@@ -175,10 +175,10 @@ const styles = StyleSheet.create({
   },
   petContainer: {
     position: 'absolute',
-    right: (SCREEN_WIDTH * 46) / 393,
-    top: (SCREEN_HEIGHT * 192) / 852,
-    width: (SCREEN_WIDTH * 312) / 393,
-    height: (SCREEN_HEIGHT * 234) / 852,
+    right: (SCREEN_WIDTH * 80) / 393, // Moved left (was 46)
+    top: (SCREEN_HEIGHT * 160) / 852, // Moved up (was 192)
+    width: (SCREEN_WIDTH * 250) / 393,
+    height: (SCREEN_HEIGHT * 187) / 852,
     zIndex: 10,
     justifyContent: 'center',
     alignItems: 'center',

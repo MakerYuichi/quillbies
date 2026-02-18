@@ -7,7 +7,9 @@ import { calculateFocusEnergyCost } from '../core/engine';
 import CreateDeadlineModal from '../components/modals/CreateDeadlineModal';
 import DeadlineDetailModal from '../components/modals/DeadlineDetailModal';
 import SessionCustomizationModal, { SessionConfig } from '../components/modals/SessionCustomizationModal';
+import ThemedScreen from '../components/themed/ThemedScreen';
 import { playTabSound } from '../../lib/soundManager';
+import { getThemeColors } from '../utils/themeColors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -25,6 +27,10 @@ export default function FocusScreen() {
   } = useQuillbyStore();
   
   const buddyName = userData.buddyName || 'Quillby';
+  
+  // Get theme colors
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = getThemeColors(themeType);
   
   // Format hours to "Xh Ymin" format
   const formatHours = (hours: number): string => {
@@ -159,42 +165,55 @@ export default function FocusScreen() {
 
   return (
     <>
-      <ImageBackground
-        source={require('../../assets/backgrounds/theme.png')}
-        style={styles.background}
-        resizeMode="cover"
-        defaultSource={require('../../assets/backgrounds/theme.png')}
-      >
+      <ThemedScreen showBackground={false}>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          {/* Mission Control Header - Quillby as Commander */}
-          <View style={styles.commandCenter}>
-            <View style={styles.commanderSection}>
-              <Image
-                source={getQuillbyImage()}
-                style={styles.commanderImage}
-                resizeMode="contain"
-              />
-              <View style={styles.speechBubble}>
-                <Text style={styles.speechText}>{getMissionBriefing()}</Text>
-                <View style={styles.bubbleTail} />
-              </View>
+          {/* Quillby Commander Section */}
+          <View style={styles.commanderSection}>
+            <Image
+              source={getQuillbyImage()}
+              style={styles.commanderImage}
+              resizeMode="contain"
+            />
+            <View style={styles.speechBubble}>
+              <Text style={styles.speechText}>{getMissionBriefing()}</Text>
+              <View style={styles.bubbleTail} />
             </View>
-            
-            <Text style={styles.commandTitle}>🎯 {buddyName}'s Mission Control</Text>
-            
-            {/* Energy Shield Display */}
-            <View style={styles.energyShield}>
-              <Text style={styles.shieldIcon}>⚡</Text>
-              <View style={styles.shieldInfo}>
-                <Text style={styles.shieldLabel}>POWER</Text>
-                <Text style={styles.shieldValue}>{Math.round(userData.energy)}</Text>
-              </View>
+          </View>
+          
+          <Text style={[
+            styles.commandTitle,
+            themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000' }
+          ]}>🎯 {buddyName}'s Mission Control</Text>
+          
+          {/* Energy Shield Display */}
+          <View style={[
+            styles.energyShield,
+            themeType && {
+              backgroundColor: themeColors.isDark ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 215, 0, 0.9)',
+            }
+          ]}>
+            <Text style={styles.shieldIcon}>⚡</Text>
+            <View style={styles.shieldInfo}>
+              <Text style={[styles.shieldLabel, themeType && { color: themeColors.isDark ? '#FFF' : '#000' }]}>POWER</Text>
+              <Text style={[styles.shieldValue, themeType && { color: themeColors.isDark ? '#FFD700' : '#FF6F00' }]}>{Math.round(userData.energy)}</Text>
             </View>
           </View>
 
           {/* Start Focus Session Button */}
           <TouchableOpacity
-            style={[styles.startFocusButton, userData.energy < calculateFocusEnergyCost(userData) && styles.startFocusButtonDisabled]}
+            style={[
+              styles.startFocusButton, 
+              userData.energy < calculateFocusEnergyCost(userData) && styles.startFocusButtonDisabled,
+              themeType && !( userData.energy < calculateFocusEnergyCost(userData)) && {
+                backgroundColor: themeColors.isDark ? 'rgba(59, 130, 246, 0.9)' : 'rgba(0, 187, 255, 0.9)',
+                borderColor: themeColors.isDark ? 'rgba(96, 165, 250, 1)' : '#0084ffff',
+                shadowColor: themeColors.isDark ? '#60a5fa' : '#4CAF50',
+              },
+              themeType && userData.energy < calculateFocusEnergyCost(userData) && themeColors.isDark && {
+                backgroundColor: 'rgba(75, 85, 99, 0.6)',
+                borderColor: 'rgba(107, 114, 128, 0.8)',
+              }
+            ]}
             onPress={() => handleStartSession()}
             disabled={userData.energy < calculateFocusEnergyCost(userData)}
             activeOpacity={0.8}
@@ -202,10 +221,16 @@ export default function FocusScreen() {
             <Text style={styles.startFocusIcon}>
               {userData.energy >= calculateFocusEnergyCost(userData) ? '📚' : '😴'}
             </Text>
-            <Text style={styles.startFocusText}>
+            <Text style={[
+              styles.startFocusText,
+              themeType && themeColors.isDark && { color: '#FFFFFF' }
+            ]}>
               {userData.energy >= calculateFocusEnergyCost(userData) ? 'Start Focus Session' : 'Too Tired to Focus'}
             </Text>
-            <Text style={styles.startFocusSubtext}>
+            <Text style={[
+              styles.startFocusSubtext,
+              themeType && themeColors.isDark && { color: 'rgba(255, 255, 255, 0.8)' }
+            ]}>
               {userData.energy >= calculateFocusEnergyCost(userData)
                 ? `Costs ${calculateFocusEnergyCost(userData)} energy • Ready!`
                 : `Need ${calculateFocusEnergyCost(userData)} energy (have ${Math.round(userData.energy)})`}
@@ -215,9 +240,22 @@ export default function FocusScreen() {
           {/* Mission Briefings */}
           {/* RED ALERT - Urgent Missions */}
           {urgentDeadlines.length > 0 && (
-            <View style={styles.collapsibleBox}>
+            <View style={[
+              styles.collapsibleBox,
+              themeType && {
+                backgroundColor: themeColors.isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                borderWidth: 2,
+                borderColor: themeColors.isDark ? 'rgba(239, 68, 68, 0.5)' : 'rgba(239, 68, 68, 0.3)',
+              }
+            ]}>
               <TouchableOpacity 
-                style={styles.alertHeader}
+                style={[
+                  styles.alertHeader,
+                  themeType && {
+                    backgroundColor: themeColors.isDark ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 205, 210, 0.8)',
+                    borderColor: themeColors.isDark ? 'rgba(239, 68, 68, 0.6)' : '#D32F2F',
+                  }
+                ]}
                 onPress={() => {
                   playTabSound();
                   setUrgentExpanded(!urgentExpanded);
@@ -226,10 +264,19 @@ export default function FocusScreen() {
               >
                 <View style={styles.sectionHeaderRow}>
                   <View>
-                    <Text style={styles.alertTitle}>🔴 Red Alert!</Text>
-                    <Text style={styles.alertSubtitle}>Urgent Missions ({urgentDeadlines.length})</Text>
+                    <Text style={[
+                      styles.alertTitle,
+                      themeType && themeColors.isDark && { color: '#fca5a5' }
+                    ]}>🔴 Red Alert!</Text>
+                    <Text style={[
+                      styles.alertSubtitle,
+                      themeType && themeColors.isDark && { color: '#f87171' }
+                    ]}>Urgent Missions ({urgentDeadlines.length})</Text>
                   </View>
-                  <Text style={styles.expandArrow}>{urgentExpanded ? '▼' : '▶'}</Text>
+                  <Text style={[
+                    styles.expandArrow,
+                    themeType && themeColors.isDark && { color: '#fca5a5' }
+                  ]}>{urgentExpanded ? '▼' : '▶'}</Text>
                 </View>
               </TouchableOpacity>
               
@@ -240,27 +287,42 @@ export default function FocusScreen() {
                       key={deadline.id} 
                       style={[
                         styles.deadlineItem,
-                        index < urgentDeadlines.length - 1 && styles.deadlineItemBorder
+                        index < urgentDeadlines.length - 1 && styles.deadlineItemBorder,
+                        themeType && themeColors.isDark && {
+                          borderBottomColor: 'rgba(239, 68, 68, 0.3)',
+                        }
                       ]}
                       onPress={() => handleDeadlinePress(deadline)}
                       activeOpacity={0.7}
                     >
                       <View style={styles.deadlineContent}>
                         <View style={styles.missionHeader}>
-                          <Text style={styles.missionTitle}>
+                          <Text style={[
+                            styles.missionTitle,
+                            themeType && themeColors.isDark && { color: '#f8fafc' }
+                          ]}>
                             📜 {deadline.title}
                           </Text>
                           <Text style={styles.urgencyBadge}>🔥</Text>
                         </View>
                         
-                        <Text style={styles.missionDueDate}>
+                        <Text style={[
+                          styles.missionDueDate,
+                          themeType && themeColors.isDark && { color: '#fca5a5' }
+                        ]}>
                           ⏰ {formatDate(deadline.dueDate)}
                           {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
                         </Text>
                         
                         {/* Visual Progress Bar */}
                         <View style={styles.progressSection}>
-                          <View style={styles.progressBar}>
+                          <View style={[
+                            styles.progressBar,
+                            themeType && themeColors.isDark && {
+                              backgroundColor: 'rgba(75, 85, 99, 0.5)',
+                              borderColor: 'rgba(107, 114, 128, 0.6)',
+                            }
+                          ]}>
                             <View 
                               style={[
                                 styles.progressFill, 
@@ -268,13 +330,27 @@ export default function FocusScreen() {
                               ]} 
                             />
                           </View>
-                          <Text style={styles.progressText}>
+                          <Text style={[
+                            styles.progressText,
+                            themeType && themeColors.isDark && { color: '#e2e8f0' }
+                          ]}>
                             {formatHours(deadline.workCompleted)} / {formatHours(deadline.estimatedHours)}
                           </Text>
                         </View>
                         
                         <TouchableOpacity 
-                          style={styles.attackButton}
+                          style={[
+                            styles.attackButton,
+                            themeType && themeColors.isDark && {
+                              backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                              borderColor: 'rgba(220, 38, 38, 1)',
+                              shadowColor: '#ef4444',
+                            },
+                            userData.energy < calculateFocusEnergyCost(userData) && themeType && themeColors.isDark && {
+                              backgroundColor: 'rgba(75, 85, 99, 0.6)',
+                              borderColor: 'rgba(107, 114, 128, 0.8)',
+                            }
+                          ]}
                           onPress={(e) => {
                             e.stopPropagation();
                             handleStartSession(deadline.id);
@@ -295,9 +371,22 @@ export default function FocusScreen() {
 
           {/* UPCOMING MISSIONS */}
           {upcomingDeadlines.length > 0 && (
-            <View style={styles.collapsibleBox}>
+            <View style={[
+              styles.collapsibleBox,
+              themeType && {
+                backgroundColor: themeColors.isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                borderWidth: 2,
+                borderColor: themeColors.isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.3)',
+              }
+            ]}>
               <TouchableOpacity 
-                style={styles.upcomingHeader}
+                style={[
+                  styles.upcomingHeader,
+                  themeType && {
+                    backgroundColor: themeColors.isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(187, 222, 251, 0.8)',
+                    borderColor: themeColors.isDark ? 'rgba(59, 130, 246, 0.6)' : '#42A5F5',
+                  }
+                ]}
                 onPress={() => {
                   playTabSound();
                   setUpcomingExpanded(!upcomingExpanded);
@@ -306,10 +395,19 @@ export default function FocusScreen() {
               >
                 <View style={styles.sectionHeaderRow}>
                   <View>
-                    <Text style={styles.upcomingTitle}>📋 Upcoming Missions</Text>
-                    <Text style={styles.upcomingSubtitle}>Plan Your Strategy ({upcomingDeadlines.length})</Text>
+                    <Text style={[
+                      styles.upcomingTitle,
+                      themeType && themeColors.isDark && { color: '#93c5fd' }
+                    ]}>📋 Upcoming Missions</Text>
+                    <Text style={[
+                      styles.upcomingSubtitle,
+                      themeType && themeColors.isDark && { color: '#60a5fa' }
+                    ]}>Plan Your Strategy ({upcomingDeadlines.length})</Text>
                   </View>
-                  <Text style={styles.expandArrow}>{upcomingExpanded ? '▼' : '▶'}</Text>
+                  <Text style={[
+                    styles.expandArrow,
+                    themeType && themeColors.isDark && { color: '#93c5fd' }
+                  ]}>{upcomingExpanded ? '▼' : '▶'}</Text>
                 </View>
               </TouchableOpacity>
               
@@ -325,14 +423,20 @@ export default function FocusScreen() {
                         key={deadline.id} 
                         style={[
                           styles.deadlineItem,
-                          index < upcomingDeadlines.length - 1 && styles.deadlineItemBorder
+                          index < upcomingDeadlines.length - 1 && styles.deadlineItemBorder,
+                          themeType && themeColors.isDark && {
+                            borderBottomColor: 'rgba(59, 130, 246, 0.3)',
+                          }
                         ]}
                         onPress={() => handleDeadlinePress(deadline)}
                         activeOpacity={0.7}
                       >
                         <View style={styles.deadlineContent}>
                           <View style={styles.missionHeader}>
-                            <Text style={styles.missionTitle}>
+                            <Text style={[
+                              styles.missionTitle,
+                              themeType && themeColors.isDark && { color: '#f8fafc' }
+                            ]}>
                               📜 {deadline.title}
                             </Text>
                             <Text style={styles.priorityBadge}>
@@ -340,14 +444,23 @@ export default function FocusScreen() {
                             </Text>
                           </View>
                           
-                          <Text style={styles.missionDueDate}>
+                          <Text style={[
+                            styles.missionDueDate,
+                            themeType && themeColors.isDark && { color: '#93c5fd' }
+                          ]}>
                             🗓️ {formatDate(deadline.dueDate)}
                             {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
                           </Text>
                           
                           {/* Visual Progress Bar */}
                           <View style={styles.progressSection}>
-                            <View style={styles.progressBar}>
+                            <View style={[
+                              styles.progressBar,
+                              themeType && themeColors.isDark && {
+                                backgroundColor: 'rgba(75, 85, 99, 0.5)',
+                                borderColor: 'rgba(107, 114, 128, 0.6)',
+                              }
+                            ]}>
                               <View 
                                 style={[
                                   styles.progressFill, 
@@ -355,7 +468,10 @@ export default function FocusScreen() {
                                 ]} 
                               />
                             </View>
-                            <Text style={styles.progressText}>
+                            <Text style={[
+                              styles.progressText,
+                              themeType && themeColors.isDark && { color: '#e2e8f0' }
+                            ]}>
                               {formatHours(deadline.workCompleted)} / {formatHours(deadline.estimatedHours)}
                             </Text>
                           </View>
@@ -366,6 +482,18 @@ export default function FocusScreen() {
                               isHighPriority && styles.planButtonHigh,
                               isMediumPriority && styles.planButtonMedium,
                               isLowPriority && styles.planButtonLow,
+                              themeType && themeColors.isDark && {
+                                backgroundColor: isHighPriority ? 'rgba(239, 68, 68, 0.9)' : 
+                                                 isMediumPriority ? 'rgba(251, 146, 60, 0.9)' : 
+                                                 'rgba(34, 197, 94, 0.9)',
+                                borderColor: isHighPriority ? 'rgba(220, 38, 38, 1)' : 
+                                            isMediumPriority ? 'rgba(234, 88, 12, 1)' : 
+                                            'rgba(22, 163, 74, 1)',
+                              },
+                              userData.energy < calculateFocusEnergyCost(userData) && themeType && themeColors.isDark && {
+                                backgroundColor: 'rgba(75, 85, 99, 0.6)',
+                                borderColor: 'rgba(107, 114, 128, 0.8)',
+                              }
                             ]}
                             onPress={(e) => {
                               e.stopPropagation();
@@ -388,9 +516,22 @@ export default function FocusScreen() {
 
           {/* VICTORIES - Completed */}
           {completedDeadlines.length > 0 && (
-            <View style={styles.missionSection}>
+            <View style={[
+              styles.collapsibleBox,
+              themeType && {
+                backgroundColor: themeColors.isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                borderWidth: 2,
+                borderColor: themeColors.isDark ? 'rgba(34, 197, 94, 0.5)' : 'rgba(34, 197, 94, 0.3)',
+              }
+            ]}>
               <TouchableOpacity 
-                style={styles.victoryHeader}
+                style={[
+                  styles.victoryHeader,
+                  themeType && {
+                    backgroundColor: themeColors.isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(200, 230, 201, 0.8)',
+                    borderColor: themeColors.isDark ? 'rgba(34, 197, 94, 0.6)' : '#66BB6A',
+                  }
+                ]}
                 onPress={() => {
                   playTabSound();
                   setVictoriesExpanded(!victoriesExpanded);
@@ -399,24 +540,45 @@ export default function FocusScreen() {
               >
                 <View style={styles.sectionHeaderRow}>
                   <View>
-                    <Text style={styles.victoryTitle}>🏆 Victories</Text>
-                    <Text style={styles.victorySubtitle}>Completed Missions ({completedDeadlines.length})</Text>
+                    <Text style={[
+                      styles.victoryTitle,
+                      themeType && themeColors.isDark && { color: '#86efac' }
+                    ]}>🏆 Victories</Text>
+                    <Text style={[
+                      styles.victorySubtitle,
+                      themeType && themeColors.isDark && { color: '#4ade80' }
+                    ]}>Completed Missions ({completedDeadlines.length})</Text>
                   </View>
-                  <Text style={styles.expandArrow}>{victoriesExpanded ? '▼' : '▶'}</Text>
+                  <Text style={[
+                    styles.expandArrow,
+                    themeType && themeColors.isDark && { color: '#86efac' }
+                  ]}>{victoriesExpanded ? '▼' : '▶'}</Text>
                 </View>
               </TouchableOpacity>
               
-              {victoriesExpanded && completedDeadlines.map(deadline => (
-                <TouchableOpacity 
-                  key={deadline.id} 
-                  style={styles.victoryScroll}
+              {victoriesExpanded && (
+                <View style={styles.deadlinesContainer}>
+                  {completedDeadlines.map((deadline, index) => (
+                    <TouchableOpacity 
+                      key={deadline.id} 
+                      style={[
+                    styles.victoryScroll,
+                    themeType && themeColors.isDark && {
+                      borderColor: 'rgba(34, 197, 94, 0.5)',
+                    }
+                  ]}
                   onPress={() => handleDeadlinePress(deadline)}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.victoryText}>✓ {deadline.title}</Text>
+                  <Text style={[
+                    styles.victoryText,
+                    themeType && themeColors.isDark && { color: '#86efac' }
+                  ]}>✓ {deadline.title}</Text>
                   <Text style={styles.victoryBadge}>🎖️</Text>
                 </TouchableOpacity>
-              ))}
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
@@ -446,7 +608,7 @@ export default function FocusScreen() {
           </TouchableOpacity>
 
         </ScrollView>
-      </ImageBackground>
+      </ThemedScreen>
 
       {/* Create / Edit Deadline Modal */}
       <CreateDeadlineModal
@@ -518,6 +680,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: SCREEN_HEIGHT * 0.015,
+    marginTop: SCREEN_HEIGHT * 0.01,
   },
   commanderImage: {
     width: SCREEN_WIDTH * 0.2,
@@ -559,7 +722,7 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH * 0.048,
     color: '#000',
     textAlign: 'center',
-    marginBottom: SCREEN_HEIGHT * 0.01,
+    marginBottom: SCREEN_HEIGHT * 0.015,
     fontWeight: '700',
   },
   energyShield: {
@@ -570,6 +733,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: SCREEN_WIDTH * 0.02,
     alignSelf: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.02,
     shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
@@ -636,7 +800,7 @@ const styles = StyleSheet.create({
     marginBottom: SCREEN_HEIGHT * 0.025,
   },
   collapsibleBox: {
-    backgroundColor: '#FFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 12,
     marginBottom: SCREEN_HEIGHT * 0.025,
     shadowColor: '#000',
@@ -645,12 +809,15 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
   },
   deadlinesContainer: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: 'transparent',
   },
   deadlineItem: {
     padding: SCREEN_WIDTH * 0.04,
+    backgroundColor: 'transparent',
   },
   deadlineItemBorder: {
     borderBottomWidth: 1,
@@ -916,7 +1083,7 @@ const styles = StyleSheet.create({
   
   // Victory Scroll
   victoryScroll: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'transparent',
     padding: SCREEN_WIDTH * 0.04,
     borderRadius: 12,
     marginBottom: SCREEN_HEIGHT * 0.01,

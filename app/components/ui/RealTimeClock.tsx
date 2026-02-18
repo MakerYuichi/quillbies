@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useQuillbyStore } from '../../state/store-modular';
+import { getThemeColors } from '../../utils/themeColors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface RealTimeClockProps {
   isExercising?: boolean;
+  customLabel?: string; // Custom label like "Shop" instead of "Room"
 }
 
-export default function RealTimeClock({ isExercising = false }: RealTimeClockProps) {
+export default function RealTimeClock({ isExercising = false, customLabel }: RealTimeClockProps) {
   const { userData } = useQuillbyStore();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [fadeAnim] = useState(new Animated.Value(1));
+  
+  // Get theme colors for text
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = getThemeColors(themeType);
+  const textColor = themeType ? themeColors.textPrimary : '#000000';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -70,12 +77,14 @@ export default function RealTimeClock({ isExercising = false }: RealTimeClockPro
       return `${time} 💪 ${buddyName}'s Exercise Session`;
     }
     
-    return `${time} ${timeEmoji} ${buddyName}'s Room`;
+    // Use custom label if provided
+    const label = customLabel || 'Room';
+    return `${time} ${timeEmoji} ${buddyName}'s ${label}`;
   };
 
   return (
     <View style={styles.container} pointerEvents="none">
-      <Animated.Text style={[styles.clockText, { opacity: fadeAnim }]}>
+      <Animated.Text style={[styles.clockText, { opacity: fadeAnim, color: textColor }]}>
         {getClockText()}
       </Animated.Text>
     </View>

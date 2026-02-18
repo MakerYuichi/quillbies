@@ -114,8 +114,10 @@ export interface UserData {
   
   // Room Customization
   roomCustomization?: {
-    lightType: 'lamp' | 'colored-fairy-lights'; // Default: 'lamp'
-    plantType: 'plant' | 'succulent-plant' | 'swiss-cheese-plant'; // Default: 'plant'
+    lightType?: string; // e.g., 'lamp', 'fairy-lights', 'colored-fairy-lights'
+    plantType?: string; // e.g., 'plant', 'succulent-plant', 'swiss-cheese-plant'
+    furnitureType?: string; // e.g., 'chair', 'comfy-sofa', 'gaming-setup'
+    themeType?: string; // e.g., 'library', 'castle', 'space', 'galaxy'
   };
   
   // Shop Purchases

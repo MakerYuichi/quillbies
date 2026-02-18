@@ -6,9 +6,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface CleanButtonProps {
   messPoints: number;
   onPress: () => void;
+  textColor?: string;
 }
 
-export default function CleanButton({ messPoints, onPress }: CleanButtonProps) {
+export default function CleanButton({ messPoints, onPress, textColor }: CleanButtonProps) {
   // Only show clean button when mess points > 5
   if (messPoints <= 5) return null;
 
@@ -44,7 +45,7 @@ export default function CleanButton({ messPoints, onPress }: CleanButtonProps) {
       </View>
       
       {/* Label */}
-      <Text style={styles.label}>Clean</Text>
+      <Text style={[styles.label, textColor && { color: textColor }]}>Clean</Text>
     </TouchableOpacity>
   );
 }

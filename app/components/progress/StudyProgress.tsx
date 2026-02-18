@@ -6,6 +6,12 @@ import { CheckpointResult } from '../../core/types';
 export default function StudyProgress() {
   const { userData, checkStudyCheckpoints } = useQuillbyStore();
   
+  // Get theme colors
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = require('../../utils/themeColors').getThemeColors(themeType);
+  const textColor = themeType && themeColors.isDark ? '#FFFFFF' : '#333';
+  const secondaryTextColor = themeType && themeColors.isDark ? '#E0E0E0' : '#666';
+  
   // Only show if study habit is enabled
   if (!userData.enabledHabits?.includes('study') || !userData.studyGoalHours) {
     return null;
@@ -48,9 +54,15 @@ export default function StudyProgress() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      themeType && {
+        backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.95)',
+        borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0',
+      }
+    ]}>
       <View style={styles.header}>
-        <Text style={styles.title}>📚 Study Progress</Text>
+        <Text style={[styles.title, { color: textColor }]}>📚 Study Progress</Text>
         <Text style={[styles.status, { color: getProgressColor() }]}>
           {getStatusText()}
         </Text>
@@ -68,7 +80,7 @@ export default function StudyProgress() {
             ]}
           />
         </View>
-        <Text style={styles.progressText}>
+        <Text style={[styles.progressText, { color: secondaryTextColor }]}>
           {(() => {
             const h = Math.floor(studyHours);
             const m = Math.round((studyHours - h) * 60);

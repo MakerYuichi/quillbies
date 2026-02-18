@@ -119,6 +119,12 @@ export const createSessionSlice: StateCreator<
     const qCoinsEarned = Math.floor(session.focusScore / 10);
     const energyGained = Math.min(15, Math.floor(session.focusScore / 20));
     
+    // Remove mess points (always -2 per session)
+    const MESS_REMOVAL_PER_SESSION = 2;
+    const newMessPoints = Math.max(0, userData.messPoints - MESS_REMOVAL_PER_SESSION);
+    
+    console.log(`[Session] Mess points: ${userData.messPoints.toFixed(1)} → ${newMessPoints.toFixed(1)} (-${MESS_REMOVAL_PER_SESSION})`);
+    
     // Track completed session
     const completedSession = {
       id: `session-${Date.now()}`,
@@ -135,6 +141,7 @@ export const createSessionSlice: StateCreator<
       ...userData,
       qCoins: userData.qCoins + qCoinsEarned,
       energy: Math.min(userData.energy + energyGained, 100),
+      messPoints: newMessPoints,
       studyMinutesToday: (userData.studyMinutesToday || 0) + sessionMinutes,
       totalStudyMinutes: (userData.totalStudyMinutes || 0) + sessionMinutes,
       completedFocusSessions: completedSessions

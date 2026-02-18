@@ -9,6 +9,7 @@ interface SleepButtonProps {
   sleepElapsedTime?: string;
   onSleep: () => void;
   onWakeUp: () => void;
+  textColor?: string;
 }
 
 export default function SleepButton({ 
@@ -16,7 +17,8 @@ export default function SleepButton({
   sleepDisplay, 
   sleepElapsedTime = '00:00',
   onSleep, 
-  onWakeUp 
+  onWakeUp,
+  textColor
 }: SleepButtonProps) {
   const handlePress = () => {
     if (isSleeping) {
@@ -46,7 +48,7 @@ export default function SleepButton({
       </View>
       
       {/* Label */}
-      <Text style={styles.label}>
+      <Text style={[styles.label, textColor && { color: textColor }]}>
         {isSleeping ? sleepElapsedTime : sleepDisplay}
       </Text>
     </TouchableOpacity>

@@ -7,6 +7,7 @@ import SessionCompletionModal from './components/modals/SessionCompletionModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { playEndSessionSound } from '../lib/soundManager';
 import { soundManager, SOUNDS } from '../lib/soundManager';
+import { getThemeColors } from './utils/themeColors';
 
 // Conditional import for keep awake to prevent crashes
 let activateKeepAwakeAsync: any = null;
@@ -42,6 +43,10 @@ function StudySessionContent() {
     tapAppleInSession,
     tapCoffeeInSession
   } = useQuillbyStore();
+  
+  // Get theme colors
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = getThemeColors(themeType);
   
   console.log('[StudySession] Render - session exists:', !!session);
   
@@ -635,107 +640,207 @@ function StudySessionContent() {
 
   return (
     <View style={styles.container}>
-      {/* Blue Background - Sky/Top Decoration */}
-      <ImageBackground
-        source={require('../assets/backgrounds/bluebg.png')}
-        style={styles.blueBgDecor}
-        resizeMode="cover"
-        defaultSource={require('../assets/backgrounds/bluebg.png')}
-      />
-      
-      {/* Background Walls */}
-      <ImageBackground
-        source={require('../assets/rooms/walls.png')}
-        style={styles.wallsBackground}
-        resizeMode="cover"
-        defaultSource={require('../assets/rooms/walls.png')}
-      />
-      
-      {/* Floor */}
-      <ImageBackground
-        source={require('../assets/rooms/floor.png')}
-        style={styles.floorBackground}
-        resizeMode="cover"
-        defaultSource={require('../assets/rooms/floor.png')}
-      />
-      
-      {/* Blue Background - Sky/Top Decoration */}
-      <ImageBackground
-        source={require('../assets/backgrounds/bluebg.png')}
-        style={styles.blueBgDecor}
-        resizeMode="cover"
-        defaultSource={require('../assets/backgrounds/bluebg.png')}
-      />
+      {/* Background - themed or default */}
+      {!themeType ? (
+        <>
+          {/* Blue Background - Sky/Top Decoration */}
+          <ImageBackground
+            source={require('../assets/backgrounds/bluebg.png')}
+            style={styles.blueBgDecor}
+            resizeMode="cover"
+            defaultSource={require('../assets/backgrounds/bluebg.png')}
+          />
+          
+          {/* Background Walls */}
+          <ImageBackground
+            source={require('../assets/rooms/walls.png')}
+            style={styles.wallsBackground}
+            resizeMode="cover"
+            defaultSource={require('../assets/rooms/walls.png')}
+          />
+          
+          {/* Floor */}
+          <ImageBackground
+            source={require('../assets/rooms/floor.png')}
+            style={styles.floorBackground}
+            resizeMode="cover"
+            defaultSource={require('../assets/rooms/floor.png')}
+          />
+        </>
+      ) : (
+        <>
+          {/* Themed background */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: themeColors.background }]} />
+          
+          {/* Theme decorations */}
+          {require('./utils/themeColors').getThemeDecorations(themeType).map((decoration: any, index: number) => (
+            <Text 
+              key={index}
+              style={{
+                position: 'absolute',
+                top: `${decoration.top}%`,
+                left: `${decoration.left}%`,
+                fontSize: decoration.size,
+                opacity: 0.3,
+                zIndex: 1,
+              }}
+            >
+              {decoration.emoji}
+            </Text>
+          ))}
+        </>
+      )}
 
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerText}>
+        <Text style={[
+          styles.headerText,
+          themeType && themeColors.isDark && { color: '#FFFFFF' }
+        ]}>
           {getCurrentTime()} 🐹 {userData.buddyName || 'Hammy'}'s Focus Session
         </Text>
       </View>
 
-      {/* Q-Coins Display */}
-      <View style={styles.qCoinsContainer}>
-        <ImageBackground
-          source={require('../assets/overall/qbies.png')}
-          style={styles.qCoinIcon}
-          resizeMode="contain"
-        />
-        <Text style={styles.qCoinsText}>{userData.qCoins}</Text>
+      {/* Currency Display - Q-Coins and Gems */}
+      <View style={styles.currencyContainer}>
+        {/* Q-Coins */}
+        <View style={[
+          styles.qCoinsContainer,
+          themeType && {
+            backgroundColor: themeColors.isDark ? 'rgba(255, 152, 0, 0.5)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: themeColors.isDark ? '#FFB74D' : '#FF9800',
+            borderWidth: 2.5,
+          }
+        ]}>
+          <ImageBackground
+            source={require('../assets/overall/qbies.png')}
+            style={styles.qCoinIcon}
+            resizeMode="contain"
+          />
+          <Text style={[
+            styles.qCoinsText,
+            themeType && {
+              color: themeColors.isDark ? '#FFFFFF' : '#333',
+              fontWeight: '700',
+              textShadowColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.8)' : 'transparent',
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 3,
+            }
+          ]}>{userData.qCoins}</Text>
+        </View>
+        
+        {/* Gems */}
+        <View style={[
+          styles.gemsContainer,
+          themeType && {
+            backgroundColor: themeColors.isDark ? 'rgba(126, 87, 194, 0.5)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: themeColors.isDark ? '#BA68C8' : '#7E57C2',
+            borderWidth: 2.5,
+          }
+        ]}>
+          <Text style={styles.gemIcon}>💎</Text>
+          <Text style={[
+            styles.currencyText,
+            themeType && {
+              color: themeColors.isDark ? '#FFFFFF' : '#333',
+              fontWeight: '700',
+              textShadowColor: themeColors.isDark ? 'rgba(0, 0, 0, 0.8)' : 'transparent',
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 3,
+            }
+          ]}>{userData.gems || 0}</Text>
+        </View>
       </View>
 
-      {/* Study Room Decorations */}
-      <ImageBackground
-        source={require('../assets/study-session/studyroom-shelf.png')}
-        style={styles.studyShelf}
-        resizeMode="cover"
-      />
-      <ImageBackground
-        source={require('../assets/hamsters/photo-frame2.png')}
-        style={styles.photoFrame1}
-        resizeMode="contain"
-      />
-      <ImageBackground
-        source={require('../assets/hamsters/casual/photo-frame.png')}
-        style={styles.photoFrame2}
-        resizeMode="contain"
-      />
+      {/* Study Room Decorations - Only show when unthemed */}
+      {!themeType && (
+        <>
+          <ImageBackground
+            source={require('../assets/hamsters/photo-frame2.png')}
+            style={styles.photoFrame1}
+            resizeMode="contain"
+          />
+          <ImageBackground
+            source={require('../assets/hamsters/casual/photo-frame.png')}
+            style={styles.photoFrame2}
+            resizeMode="contain"
+          />
+          
+          {/* Customizable Plants */}
+          <ImageBackground
+            source={
+              userData.roomCustomization?.plantType === 'succulent-plant' 
+                ? require('../assets/rooms/plant.png')
+                : userData.roomCustomization?.plantType === 'swiss-cheese-plant'
+                ? require('../assets/rooms/plant.png')
+                : require('../assets/rooms/plant.png')
+            }
+            style={styles.plant1}
+            resizeMode="contain"
+          />
+          <ImageBackground
+            source={
+              userData.roomCustomization?.plantType === 'succulent-plant' 
+                ? require('../assets/rooms/plant.png')
+                : userData.roomCustomization?.plantType === 'swiss-cheese-plant'
+                ? require('../assets/rooms/plant.png')
+                : require('../assets/rooms/plant.png')
+            }
+            style={styles.plant2}
+            resizeMode="contain"
+          />
+        </>
+      )}
       
-      {/* Customizable Plants */}
-      <ImageBackground
-        source={
-          userData.roomCustomization?.plantType === 'succulent-plant' 
-            ? require('../assets/rooms/plant.png') // Using default plant for now
-            : userData.roomCustomization?.plantType === 'swiss-cheese-plant'
-            ? require('../assets/rooms/plant.png') // Using default plant for now
-            : require('../assets/rooms/plant.png')
-        }
-        style={styles.plant1}
-        resizeMode="contain"
-      />
-      <ImageBackground
-        source={
-          userData.roomCustomization?.plantType === 'succulent-plant' 
-            ? require('../assets/rooms/plant.png') // Using default plant for now
-            : userData.roomCustomization?.plantType === 'swiss-cheese-plant'
-            ? require('../assets/rooms/plant.png') // Using default plant for now
-            : require('../assets/rooms/plant.png')
-        }
-        style={styles.plant2}
-        resizeMode="contain"
-      />
-
+      {/* Theme center asset - separate from hamster container */}
+      {themeType && (
+        <ImageBackground
+          source={(() => {
+            const themeMap: { [key: string]: any } = {
+              'library': require('../assets/shop/rare/theme/library.png'),
+              'night': require('../assets/shop/rare/theme/night.png'),
+              'castle': require('../assets/shop/epic/themes/castle.png'),
+              'space': require('../assets/shop/epic/themes/space.png'),
+              'cherry-blossom': require('../assets/shop/epic/themes/cherry-blossom.png'),
+              'galaxy': require('../assets/shop/legendary/themes/galaxy.png'),
+              'japanese-zen': require('../assets/shop/legendary/themes/japanese-zen.png'),
+              'ocean': require('../assets/shop/legendary/themes/ocean.png'),
+            };
+            return themeMap[themeType];
+          })()}
+          style={styles.themeCenterAsset}
+          resizeMode="contain"
+        />
+      )}
+      
       {/* Status Section */}
-      <View style={styles.statusSection}>
-        <Text style={styles.statusLabel}>🐹 Status:</Text>
-        <Text style={styles.statusText}>
+      <View style={[
+        styles.statusSection,
+        themeType && themeColors.isDark && {
+          backgroundColor: 'rgba(59, 130, 246, 0.6)', // More opaque for dark themes
+          borderColor: 'rgba(59, 130, 246, 0.8)',
+        }
+      ]}>
+        <Text style={[
+          styles.statusLabel,
+          themeType && themeColors.isDark && { color: '#FFFFFF' }
+        ]}>🐹 Status:</Text>
+        <Text style={[
+          styles.statusText,
+          themeType && themeColors.isDark && { color: '#FFFFFF' }
+        ]}>
           {userData.buddyName || 'Hammy'} is in flow. Don't interrupt!
         </Text>
         
         {/* Timer Bar - Countdown from 100% to 0% */}
         <View style={styles.timerBarContainer}>
-          <View style={styles.timerBarBackground}>
+          <View style={[
+            styles.timerBarBackground,
+            themeType && themeColors.isDark && {
+              backgroundColor: 'rgba(75, 85, 99, 0.5)',
+            }
+          ]}>
             <View 
               style={[
                 styles.timerBar, 
@@ -743,16 +848,22 @@ function StudySessionContent() {
               ]} 
             />
           </View>
-          <Text style={styles.timerText}>
+          <Text style={[
+            styles.timerText,
+            themeType && themeColors.isDark && { color: '#FFFFFF' }
+          ]}>
             {session ? formatTime(Math.max((session.config?.duration ? session.config.duration * 60 : 25 * 60) - session.duration, 0)) : '0:00'} remaining
           </Text>
         </View>
         
-        <Text style={styles.statusSubtext}>
+        <Text style={[
+          styles.statusSubtext,
+          themeType && themeColors.isDark && { color: 'rgba(255, 255, 255, 0.8)' }
+        ]}>
           (Drains if you leave the app)
         </Text>
       </View>
-
+      
       {/* Hamster Character */}
       <View style={styles.hamsterContainer}>
         <ImageBackground
@@ -771,6 +882,13 @@ function StudySessionContent() {
           resizeMode="contain"
         />
       </View>
+      
+      {/* Trophy Shelf - Always show on top */}
+      <ImageBackground
+        source={require('../assets/study-session/studyroom-shelf.png')}
+        style={styles.studyShelf}
+        resizeMode="cover"
+      />
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -805,27 +923,28 @@ function StudySessionContent() {
         </TouchableOpacity>
       </View>
 
-      {/* Bottom Orange Theme Section */}
-      <ImageBackground
-        source={require('../assets/backgrounds/orange-theme.png')}
-        style={styles.orangeTheme}
-        resizeMode="cover"
-      >
-        {/* Dynamic Speech Bubble */}
-        <View style={styles.speechBubble}>
-          <Text 
-            key={speechKey} 
-            style={styles.speechText}
-            adjustsFontSizeToFit={true}
-            numberOfLines={3}
-            minimumFontScale={0.6}
-          >
-            {getSpeechBubbleMessage()}
-          </Text>
-        </View>
+      {/* Bottom Theme Section */}
+      {!themeType ? (
+        <ImageBackground
+          source={require('../assets/backgrounds/orange-theme.png')}
+          style={styles.orangeTheme}
+          resizeMode="cover"
+        >
+          {/* Dynamic Speech Bubble */}
+          <View style={styles.speechBubble}>
+            <Text 
+              key={speechKey} 
+              style={styles.speechText}
+              adjustsFontSizeToFit={true}
+              numberOfLines={3}
+              minimumFontScale={0.6}
+            >
+              {getSpeechBubbleMessage()}
+            </Text>
+          </View>
 
-        {/* Habit Buttons - 2 horizontal buttons */}
-        <View style={styles.habitButtons}>
+          {/* Habit Buttons - 2 horizontal buttons */}
+          <View style={styles.habitButtons}>
           {/* Coffee Button */}
           <TouchableOpacity 
             style={[
@@ -935,6 +1054,171 @@ function StudySessionContent() {
           {userData.buddyName || 'Hammy'} feels your support! ⭐️
         </Text>
       </ImageBackground>
+      ) : (
+        <View style={[styles.orangeTheme, { backgroundColor: themeColors.background }]}>
+          {/* Dynamic Speech Bubble */}
+          <View style={[
+            styles.speechBubble,
+            { 
+              backgroundColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
+              borderColor: themeColors.isDark ? 'rgba(255, 255, 255, 0.3)' : '#000000',
+            }
+          ]}>
+            <Text 
+              key={speechKey} 
+              style={[
+                styles.speechText,
+                { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+              ]}
+              adjustsFontSizeToFit={true}
+              numberOfLines={3}
+              minimumFontScale={0.6}
+            >
+              {getSpeechBubbleMessage()}
+            </Text>
+          </View>
+
+          {/* Habit Buttons - 2 horizontal buttons */}
+          <View style={styles.habitButtons}>
+            {/* Coffee Button */}
+            <TouchableOpacity 
+              style={[
+                styles.habitButton,
+                themeType && {
+                  backgroundColor: themeColors.isDark ? 'rgba(255, 231, 151, 0.3)' : 'rgba(255, 231, 151, 0.9)',
+                  borderColor: themeColors.isDark ? 'rgba(255, 231, 151, 0.5)' : '#000000',
+                },
+                userData.coffeeTapsToday >= 3 && !session?.coffeePremiumUsedThisSession && styles.premiumButton,
+                userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession && styles.disabledButton
+              ]}
+              onPress={() => {
+                if (!session) return;
+                
+                if (userData.coffeeTapsToday < 3) {
+                  if (tapCoffeeInSession(false)) {
+                    playAnimation('drinking');
+                    soundManager.playSound(SOUNDS.COFFEE_SLURP, 1.0, 0.8);
+                  }
+                } else if (!session.coffeePremiumUsedThisSession) {
+                  if (tapCoffeeInSession(true)) {
+                    playAnimation('drinking');
+                    soundManager.playSound(SOUNDS.COFFEE_SLURP, 1.0, 0.8);
+                  }
+                }
+              }}
+              disabled={userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession}
+            >
+              <View style={styles.buttonLeft}>
+                <ImageBackground
+                  source={require('../assets/study-session/coffee-cup.png')}
+                  style={styles.buttonIcon}
+                  resizeMode="contain"
+                />
+                <Text style={[
+                  styles.habitButtonLabel,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+                ]}>Coffee</Text>
+              </View>
+              
+              <View style={styles.buttonRight}>
+                {userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession ? (
+                  <Text style={styles.habitUsed}>USED</Text>
+                ) : userData.coffeeTapsToday >= 3 ? (
+                  <View style={styles.buttonStats}>
+                    <Text style={styles.premiumLabel}>PREMIUM</Text>
+                    <Text style={[
+                      styles.habitReward,
+                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+                    ]}>+15 5m</Text>
+                    <Text style={styles.habitCost}>-15🪙</Text>
+                  </View>
+                ) : (
+                  <View style={styles.buttonStats}>
+                    <Text style={[
+                      styles.habitReward,
+                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+                    ]}>+6 3m</Text>
+                    <Text style={styles.habitCost}>-3🪙</Text>
+                    <Text style={styles.habitCount}>({userData.coffeeTapsToday}/3)</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+            
+            {/* Apple Button */}
+            <TouchableOpacity 
+              style={[
+                styles.habitButton,
+                themeType && {
+                  backgroundColor: themeColors.isDark ? 'rgba(255, 231, 151, 0.3)' : 'rgba(255, 231, 151, 0.9)',
+                  borderColor: themeColors.isDark ? 'rgba(255, 231, 151, 0.5)' : '#000000',
+                },
+                userData.appleTapsToday >= 5 && !session?.applePremiumUsedThisSession && styles.premiumButton,
+                userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession && styles.disabledButton
+              ]}
+              onPress={() => {
+                if (!session) return;
+                
+                if (userData.appleTapsToday < 5) {
+                  if (tapAppleInSession(false)) {
+                    playAnimation('eating');
+                    soundManager.playSound(SOUNDS.EATING_APPLE, 1.0, 0.8);
+                  }
+                } else if (!session.applePremiumUsedThisSession) {
+                  if (tapAppleInSession(true)) {
+                    playAnimation('eating');
+                    soundManager.playSound(SOUNDS.EATING_APPLE, 1.0, 0.8);
+                  }
+                }
+              }}
+              disabled={userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession}
+            >
+              <View style={styles.buttonLeft}>
+                <ImageBackground
+                  source={require('../assets/study-session/apple-pie.png')}
+                  style={styles.buttonIcon}
+                  resizeMode="contain"
+                />
+                <Text style={[
+                  styles.habitButtonLabel,
+                  themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+                ]}>Apple</Text>
+              </View>
+              
+              <View style={styles.buttonRight}>
+                {userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession ? (
+                  <Text style={styles.habitUsed}>USED</Text>
+                ) : userData.appleTapsToday >= 5 ? (
+                  <View style={styles.buttonStats}>
+                    <Text style={styles.premiumLabel}>PREMIUM</Text>
+                    <Text style={[
+                      styles.habitReward,
+                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+                    ]}>+10</Text>
+                    <Text style={styles.habitCost}>-10🪙</Text>
+                  </View>
+                ) : (
+                  <View style={styles.buttonStats}>
+                    <Text style={[
+                      styles.habitReward,
+                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+                    ]}>+3 🍎</Text>
+                    <Text style={styles.habitCost}>-2🪙</Text>
+                    <Text style={styles.habitCount}>({userData.appleTapsToday}/5)</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[
+            styles.bottomText,
+            { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
+          ]}>
+            {userData.buddyName || 'Hammy'} feels your support! ⭐️
+          </Text>
+        </View>
+      )}
       
       {/* Interactive Tooltip for first-time users */}
       <InteractiveTooltip
@@ -1131,27 +1415,63 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
 
-  // Q-Coins
-  qCoinsContainer: {
+  // Currency Container - Holds both Q-Bies and Gems
+  currencyContainer: {
     position: 'absolute',
     right: 16,
     top: 3,
+    flexDirection: 'row',
+    gap: 12,
+    zIndex: 30, // Above everything
+  },
+  
+  // Q-Coins
+  qCoinsContainer: {
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#FF9800',
+    minWidth: 50,
   },
   
   qCoinIcon: {
-    width: (SCREEN_WIDTH * 47) / 393,
-    height: (SCREEN_HEIGHT * 47) / 852,
+    width: 24,
+    height: 24,
+    marginBottom: 2,
   },
   
   qCoinsText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 21) / 393,
-    lineHeight: (SCREEN_HEIGHT * 27) / 852,
-    color: '#000000',
-    opacity: 0.7,
-    marginTop: 5,
+    fontSize: 13,
+    color: '#333',
+  },
+  
+  // Gems Display
+  gemsContainer: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(126, 87, 194, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#7E57C2',
+    minWidth: 50,
+  },
+  
+  gemIcon: {
+    fontSize: 20,
+    marginBottom: 2,
+  },
+  
+  currencyText: {
+    fontFamily: 'Chakra Petch',
+    fontWeight: '700',
+    fontSize: 13,
+    color: '#333',
   },
 
   // Study Room Decorations
@@ -1161,6 +1481,7 @@ const styles = StyleSheet.create({
     height: (SCREEN_HEIGHT * 93) / 852,
     left: 240,
     top: 75,
+    zIndex: 10, // Above theme asset and Quillby
   },
   
   photoFrame1: {
@@ -1207,6 +1528,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#000000',
     padding: 10,
+    zIndex: 3, // Above theme asset (zIndex: 2) but below Quillby (zIndex: 4)
   },
   
   statusLabel: {
@@ -1274,11 +1596,21 @@ const styles = StyleSheet.create({
     height: (SCREEN_HEIGHT * 234) / 852,
     left: (SCREEN_WIDTH * 40) / 393, // Centered horizontally
     top: (SCREEN_HEIGHT * 200) / 852, // Positioned in middle area
+    zIndex: 4, // Above status section (zIndex: 3)
   },
   
   focusHamster: {
     width: '100%',
     height: '100%',
+  },
+  
+  themeCenterAsset: {
+    position: 'absolute',
+    width: SCREEN_WIDTH,
+    height: (SCREEN_HEIGHT * 490) / 852, // Same as RoomLayers themeBackground
+    left: 0,
+    top: 0,
+    zIndex: 2, // Above background but below status section (zIndex: 3)
   },
 
   // Action Buttons

@@ -7,6 +7,7 @@ import ChangeNameModal from '../components/modals/ChangeNameModal';
 import ManageHabitsModal from '../components/modals/ManageHabitsModal';
 import EditGoalsModal from '../components/modals/EditGoalsModal';
 import EditProfileModal from '../components/modals/EditProfileModal';
+import ThemedScreen from '../components/themed/ThemedScreen';
 import { playTabSound, playUISubmitSound } from '../../lib/soundManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -172,15 +173,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require('../../assets/backgrounds/theme.png')}
-      style={styles.background}
-      resizeMode="cover"
-      defaultSource={require('../../assets/backgrounds/theme.png')}
-    >
-      {/* Warm overlay */}
-      <View style={styles.warmOverlay} />
-      
+    <ThemedScreen showBackground={false}>
       <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.scrollContent}
@@ -415,7 +408,7 @@ export default function SettingsScreen() {
         }}
         enabledHabits={enabledHabits}
       />
-    </ImageBackground>
+    </ThemedScreen>
   );
 }
 

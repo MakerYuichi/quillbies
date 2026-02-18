@@ -10,6 +10,7 @@ interface ExerciseButtonProps {
   exerciseElapsedTime?: string;
   onStartExercise: () => void;
   onFinishExercise: () => void;
+  textColor?: string;
 }
 
 export default function ExerciseButton({ 
@@ -17,7 +18,8 @@ export default function ExerciseButton({
   exerciseDisplay,
   exerciseElapsedTime = '00:00',
   onStartExercise, 
-  onFinishExercise 
+  onFinishExercise,
+  textColor
 }: ExerciseButtonProps) {
   const color = isExercising ? '#FB8C00' : '#43A047';
   const emoji = isExercising ? '✅' : '🏃';
@@ -39,7 +41,7 @@ export default function ExerciseButton({
       </View>
       
       {/* Label */}
-      <Text style={styles.label}>
+      <Text style={[styles.label, textColor && { color: textColor }]}>
         {isExercising ? exerciseElapsedTime : exerciseDisplay}
       </Text>
     </TouchableOpacity>

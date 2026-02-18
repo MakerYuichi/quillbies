@@ -10,6 +10,8 @@ export interface ShopSlice {
   purchaseItem: (itemId: string, price: number, useGems?: boolean) => Promise<boolean>;
   getShopItems: () => ShopItem[];
   updateRoomCustomization: (lightType?: string, plantType?: string) => void;
+  equipItem: (itemId: string, category: string) => Promise<boolean>;
+  unequipItem: (category: string) => Promise<boolean>;
 }
 
 export const createShopSlice: StateCreator<
@@ -54,11 +56,26 @@ export const createShopSlice: StateCreator<
     }
     
     if (userData.purchasedItems?.includes(itemId)) {
-      console.log(`[Shop] Already purchased`);
-      return false;
+      console.log(`[Shop] Already purchased locally`);
+      // Still try to save to database in case it's missing there
+      try {
+        const { getDeviceUser } = await import('../../../lib/deviceAuth');
+        const { purchaseShopItem } = await import('../../../lib/userShopItems');
+        const { SHOP_ITEMS } = await import('../../core/shopItems');
+        
+        const user = await getDeviceUser();
+        const item = SHOP_ITEMS.find(i => i.id === itemId);
+        
+        if (user && item) {
+          await purchaseShopItem(user.id, itemId, item.category);
+        }
+      } catch (error) {
+        console.warn('[Shop] Error syncing existing purchase to database:', error);
+      }
+      return true; // Already owned locally
     }
     
-    // Deduct currency
+    // Deduct currency and add to purchased items
     const updatedUserData = useGems ? {
       ...userData,
       gems: Math.max(0, currentGems - itemPrice),
@@ -73,27 +90,154 @@ export const createShopSlice: StateCreator<
       userData: updatedUserData
     });
     
-    console.log(`[Shop] Purchased ${itemId} for ${itemPrice} coins`);
+    console.log(`[Shop] Purchased ${itemId} for ${itemPrice} ${useGems ? 'gems' : 'coins'}`);
+    
+    // Sync to database (user_profiles for currency)
+    syncToDatabase(updatedUserData);
+    
+    // Save to user_shop_items table (async, don't block UI)
+    (async () => {
+      try {
+        const { getDeviceUser } = await import('../../../lib/deviceAuth');
+        const { purchaseShopItem } = await import('../../../lib/userShopItems');
+        const { SHOP_ITEMS } = await import('../../core/shopItems');
+        
+        const user = await getDeviceUser();
+        const item = SHOP_ITEMS.find(i => i.id === itemId);
+        
+        if (user && item) {
+          const result = await purchaseShopItem(user.id, itemId, item.category);
+          if (result) {
+            console.log(`[Shop] ✅ Saved purchase to user_shop_items: ${itemId}`);
+          } else {
+            console.warn(`[Shop] ⚠️ Failed to save purchase to user_shop_items: ${itemId}`);
+          }
+        }
+      } catch (error) {
+        console.error('[Shop] ❌ Error saving purchase to database:', error);
+      }
+    })();
+    
+    return true;
+  },
+
+  equipItem: async (itemId: string, category: string) => {
+    const { userData } = get();
+    
+    console.log(`[ShopSlice] equipItem called:`, { itemId, category });
+    console.log(`[ShopSlice] Current roomCustomization:`, userData.roomCustomization);
+    
+    // Check if user owns the item
+    if (!userData.purchasedItems?.includes(itemId)) {
+      console.log(`[ShopSlice] ❌ Cannot equip - item not owned: ${itemId}`);
+      return false;
+    }
+    
+    // Update room customization based on category
+    const currentCustomization = userData.roomCustomization || {};
+    let newCustomization = { ...currentCustomization };
+    
+    switch (category) {
+      case 'light':
+        newCustomization.lightType = itemId;
+        break;
+      case 'plant':
+        newCustomization.plantType = itemId;
+        console.log(`[ShopSlice] Setting plantType to:`, itemId);
+        break;
+      case 'furniture':
+        newCustomization.furnitureType = itemId;
+        break;
+      case 'theme':
+        newCustomization.themeType = itemId;
+        break;
+      default:
+        console.log(`[ShopSlice] ❌ Unknown category: ${category}`);
+        return false;
+    }
+    
+    const updatedUserData = {
+      ...userData,
+      roomCustomization: newCustomization
+    };
+    
+    console.log(`[ShopSlice] New roomCustomization:`, newCustomization);
+    
+    set({
+      userData: updatedUserData
+    });
+    
+    console.log(`[ShopSlice] ✅ Equipped ${itemId} in category ${category}`);
     
     // Sync to database
     syncToDatabase(updatedUserData);
     
-    // Also save to purchased_items table (optional - don't fail if shop_items table doesn't have the item)
+    // Update user_shop_items table
     try {
       const { getDeviceUser } = await import('../../../lib/deviceAuth');
-      const { purchaseItem: savePurchase } = await import('../../../lib/shop');
+      const { equipShopItem } = await import('../../../lib/userShopItems');
       const user = await getDeviceUser();
+      
       if (user) {
-        const result = await savePurchase(user.id, itemId);
-        if (result) {
-          console.log(`[Shop] Saved purchase to database: ${itemId}`);
-        } else {
-          console.log(`[Shop] Could not save purchase to database (item may not exist in shop_items table): ${itemId}`);
-        }
+        await equipShopItem(user.id, itemId, category);
       }
     } catch (error) {
-      console.warn('[Shop] Error saving purchase to database (continuing with local state):', error);
-      // Don't fail the purchase - local state is already updated
+      console.warn('[Shop] Error updating equipped status in database:', error);
+    }
+    
+    return true;
+  },
+
+  unequipItem: async (category: string) => {
+    const { userData } = get();
+    
+    // Update room customization based on category
+    const currentCustomization = userData.roomCustomization || {};
+    let newCustomization = { ...currentCustomization };
+    
+    switch (category) {
+      case 'light':
+        delete newCustomization.lightType;
+        break;
+      case 'plant':
+        delete newCustomization.plantType;
+        break;
+      case 'furniture':
+        delete newCustomization.furnitureType;
+        break;
+      case 'theme':
+        delete newCustomization.themeType;
+        break;
+      default:
+        console.log(`[Shop] Unknown category: ${category}`);
+        return false;
+    }
+    
+    const updatedUserData = {
+      ...userData,
+      roomCustomization: Object.keys(newCustomization).length > 0 ? newCustomization : undefined
+    };
+    
+    set({
+      userData: updatedUserData
+    });
+    
+    console.log(`[Shop] Unequipped item in category ${category}`);
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
+    
+    // Update user_shop_items table
+    try {
+      const { getDeviceUser } = await import('../../../lib/deviceAuth');
+      const { unequipShopItem } = await import('../../../lib/userShopItems');
+      const user = await getDeviceUser();
+      
+      if (user) {
+        await unequipShopItem(user.id, category);
+      }
+    } catch (error) {
+      console.warn('[Shop] Error updating unequipped status in database:', error);
     }
     
     return true;

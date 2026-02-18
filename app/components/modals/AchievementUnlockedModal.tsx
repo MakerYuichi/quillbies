@@ -12,6 +12,13 @@ interface AchievementUnlockedModalProps {
   onClose: () => void;
 }
 
+// Shop item reward info
+interface ShopItemReward {
+  itemId: string;
+  itemName: string;
+  alreadyOwned: boolean;
+}
+
 // Map achievement IDs to asset paths
 const ACHIEVEMENT_ASSETS: { [key: string]: any } = {
   // Daily Challenges
@@ -156,6 +163,10 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
+  
+  // Get shop item reward from store
+  const { userData } = require('../../state/store-modular').useQuillbyStore();
+  const shopItemReward = achievement ? userData.achievements?.[achievement.id]?.shopItemReward : null;
   
   // Confetti animations
   const confetti1 = useRef(new Animated.Value(-100)).current;
@@ -592,6 +603,23 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
             </View>
           </View>
           
+          {/* Shop Item Reward */}
+          {shopItemReward && (
+            <View style={[styles.shopItemContainer, { backgroundColor: shopItemReward.alreadyOwned ? 'rgba(255, 152, 0, 0.15)' : 'rgba(76, 175, 80, 0.15)' }]}>
+              <Text style={styles.shopItemTitle}>
+                {shopItemReward.alreadyOwned ? '🎁 Bonus Item (Already Owned)' : '🎁 New Item Unlocked!'}
+              </Text>
+              <Text style={[styles.shopItemName, { color: shopItemReward.alreadyOwned ? '#FF9800' : '#4CAF50' }]}>
+                {shopItemReward.itemName}
+              </Text>
+              {shopItemReward.alreadyOwned && (
+                <Text style={styles.shopItemSubtext}>
+                  Oops! You already have this. Better luck next time! 😅
+                </Text>
+              )}
+            </View>
+          )}
+          
           {/* Close Button */}
           <TouchableOpacity 
             style={[styles.closeButton, { backgroundColor: color1 }]} 
@@ -747,6 +775,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255, 255, 255, 0.85)',
     letterSpacing: 0.8,
+  },
+  shopItemContainer: {
+    width: '90%',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+  },
+  shopItemTitle: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  shopItemName: {
+    fontFamily: 'ChakraPetch_700Bold',
+    fontSize: 18,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  shopItemSubtext: {
+    fontFamily: 'ChakraPetch_400Regular',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    marginTop: 4,
   },
   closeButton: {
     paddingVertical: 14,

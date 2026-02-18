@@ -191,11 +191,66 @@ export const useQuillbyStore = create<QuillbyStore>()(
               sleepGoalHours: dbData.userProfile.sleep_goal_hours ?? userData.sleepGoalHours,
               weightGoal: dbData.userProfile.weight_goal ?? userData.weightGoal,
               mealPortionSize: dbData.userProfile.meal_portion_size ?? userData.mealPortionSize,
-              purchasedItems: dbData.purchasedItems?.map((item: any) => item.item_id) ?? userData.purchasedItems,
-              roomCustomization: {
-                lightType: dbData.userProfile.light_type ?? userData.roomCustomization?.lightType,
-                plantType: dbData.userProfile.plant_type ?? userData.roomCustomization?.plantType,
-              },
+              purchasedItems: (() => {
+                // Merge database purchases with local purchases (in case of sync lag)
+                const dbPurchases = dbData.purchasedItems?.map((item: any) => item.item_id) || [];
+                const localPurchases = userData.purchasedItems || [];
+                
+                // Combine and deduplicate
+                const allPurchases = [...new Set([...dbPurchases, ...localPurchases])];
+                
+                console.log('[Load] Purchased items:', {
+                  fromDB: dbPurchases.length,
+                  fromLocal: localPurchases.length,
+                  merged: allPurchases.length
+                });
+                
+                return allPurchases;
+              })(),
+              roomCustomization: (() => {
+                // Build roomCustomization from equipped items in user_shop_items
+                const customization: any = {};
+                
+                if (dbData.purchasedItems && Array.isArray(dbData.purchasedItems)) {
+                  dbData.purchasedItems.forEach((item: any) => {
+                    if (item.is_equipped) {
+                      switch (item.category) {
+                        case 'light':
+                          customization.lightType = item.item_id;
+                          break;
+                        case 'plant':
+                          customization.plantType = item.item_id;
+                          break;
+                        case 'furniture':
+                          customization.furnitureType = item.item_id;
+                          break;
+                        case 'theme':
+                          customization.themeType = item.item_id;
+                          break;
+                      }
+                    }
+                  });
+                }
+                
+                // Fallback to user_profiles if no equipped items found
+                if (Object.keys(customization).length === 0) {
+                  if (dbData.userProfile.light_type) customization.lightType = dbData.userProfile.light_type;
+                  if (dbData.userProfile.plant_type) customization.plantType = dbData.userProfile.plant_type;
+                }
+                
+                // Final fallback to local state if database is empty
+                const finalCustomization = Object.keys(customization).length > 0 
+                  ? customization 
+                  : userData.roomCustomization;
+                
+                console.log('[Load] Room customization:', {
+                  fromEquipped: Object.keys(customization).length,
+                  fromLocal: userData.roomCustomization ? Object.keys(userData.roomCustomization).length : 0,
+                  final: finalCustomization ? Object.keys(finalCustomization).length : 0
+                });
+                
+                return finalCustomization;
+              })(),
               // DAILY DATA - Keep local (don't overwrite from database on startup)
               // These are session-based and will be reset at midnight by resetDay()
               // Local state is source of truth because DB sync has lag
@@ -368,10 +423,13 @@ export const useQuillbyStore = create<QuillbyStore>()(
         const [set, get] = args;
         const { checkStudyCheckpoints, addMissedCheckpoint, userData } = get();
         
-        console.log('[checkAndProcessCheckpoints] Starting checkpoint processing...');
+        console.log('[checkAndProcessCheckpoints] ========== STARTING ==========');
+        console.log('[checkAndProcessCheckpoints] Current mess points:', userData.messPoints);
+        console.log('[checkAndProcessCheckpoints] Last processed checkpoint:', userData.lastProcessedCheckpoint);
+        
         const checkResult = checkStudyCheckpoints();
         
-        console.log('[checkAndProcessCheckpoints] Check result:', checkResult);
+        console.log('[checkAndProcessCheckpoints] Check result:', JSON.stringify(checkResult, null, 2));
         
         // Check all required fields exist (use !== undefined to allow 0 values)
         if (checkResult.isBehind && 
@@ -379,23 +437,28 @@ export const useQuillbyStore = create<QuillbyStore>()(
             checkResult.expected !== undefined && 
             checkResult.actual !== undefined && 
             checkResult.checkpoint) {
+          
+          console.log('[checkAndProcessCheckpoints] ✅ All conditions met, checking for duplicates...');
+          
           // Check if we've already processed this checkpoint today
           const today = new Date().toDateString();
           const checkpointKey = `${checkResult.checkpoint}-${today}`;
           const lastProcessedCheckpoint = userData.lastProcessedCheckpoint || '';
           
-          console.log('[checkAndProcessCheckpoints] Checking duplicate:', {
+          console.log('[checkAndProcessCheckpoints] Duplicate check:', {
             checkpointKey,
             lastProcessedCheckpoint,
-            isDuplicate: lastProcessedCheckpoint === checkpointKey
+            isDuplicate: lastProcessedCheckpoint === checkpointKey,
+            today
           });
           
           if (lastProcessedCheckpoint === checkpointKey) {
-            console.log('[checkAndProcessCheckpoints] Already processed this checkpoint today, skipping');
+            console.log('[checkAndProcessCheckpoints] ⚠️ Already processed this checkpoint today, skipping');
+            console.log('[checkAndProcessCheckpoints] ========== SKIPPED (DUPLICATE) ==========');
             return { shouldNotify: false };
           }
           
-          console.log('[checkAndProcessCheckpoints] ✅ Calling addMissedCheckpoint with missing hours:', checkResult.missing);
+          console.log('[checkAndProcessCheckpoints] 🎯 NEW CHECKPOINT MISS! Calling addMissedCheckpoint with missing hours:', checkResult.missing);
           addMissedCheckpoint(checkResult.missing);
           
           // Mark this checkpoint as processed
@@ -405,6 +468,8 @@ export const useQuillbyStore = create<QuillbyStore>()(
           };
           set({ userData: updatedUserData });
           syncToDatabase(updatedUserData);
+          
+          console.log('[checkAndProcessCheckpoints] ========== COMPLETED ==========');
           
           return {
             shouldNotify: true,
@@ -418,7 +483,14 @@ export const useQuillbyStore = create<QuillbyStore>()(
           };
         }
         
-        console.log('[checkAndProcessCheckpoints] Not behind or missing required fields, no action taken');
+        console.log('[checkAndProcessCheckpoints] ❌ Conditions not met:', {
+          isBehind: checkResult.isBehind,
+          hasMissing: checkResult.missing !== undefined,
+          hasExpected: checkResult.expected !== undefined,
+          hasActual: checkResult.actual !== undefined,
+          hasCheckpoint: !!checkResult.checkpoint
+        });
+        console.log('[checkAndProcessCheckpoints] ========== NO ACTION ==========');
         return { shouldNotify: false };
       },
 

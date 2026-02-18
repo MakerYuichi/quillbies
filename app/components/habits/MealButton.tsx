@@ -10,9 +10,10 @@ interface MealButtonProps {
   portionDescription: string;
   onPress: () => void;
   disabled?: boolean;
+  textColor?: string;
 }
 
-export default function MealButton({ mealsLogged, mealGoal = 3, portionDescription, onPress, disabled }: MealButtonProps) {
+export default function MealButton({ mealsLogged, mealGoal = 3, portionDescription, onPress, disabled, textColor }: MealButtonProps) {
   // Get color based on meal count
   const getColor = () => {
     if (mealsLogged < mealGoal) return '#FB8C00'; // Orange
@@ -54,7 +55,7 @@ export default function MealButton({ mealsLogged, mealGoal = 3, portionDescripti
       </View>
       
       {/* Label */}
-      <Text style={styles.label}>{mealsLogged}/{mealGoal}</Text>
+      <Text style={[styles.label, textColor && { color: textColor }]}>{mealsLogged}/{mealGoal}</Text>
     </TouchableOpacity>
   );
 }

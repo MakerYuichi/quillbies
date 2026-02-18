@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { UserData, AchievementProgress } from '../../core/types';
 import { ACHIEVEMENTS } from '../../core/achievements';
+import { syncToDatabase } from '../utils/syncUtils';
 
 export interface AchievementsSlice {
   // Check and unlock achievements
@@ -340,6 +341,30 @@ export const createAchievementsSlice: StateCreator<
       
       console.log('[Achievements] 🎉 Unlocking achievement:', achievement.name);
       
+      // Get random shop item based on achievement rarity
+      const getRandomShopItem = (rarity: string, purchasedItems: string[] = []) => {
+        const { SHOP_ITEMS } = require('../../core/shopItems');
+        
+        // Filter items by rarity
+        const itemsByRarity = SHOP_ITEMS.filter((item: any) => item.rarity === rarity);
+        
+        if (itemsByRarity.length === 0) return null;
+        
+        // Pick a random item
+        const randomItem = itemsByRarity[Math.floor(Math.random() * itemsByRarity.length)];
+        
+        // Check if already owned
+        const alreadyOwned = purchasedItems.includes(randomItem.id);
+        
+        return {
+          item: randomItem,
+          alreadyOwned
+        };
+      };
+      
+      // Get shop item reward
+      const shopItemReward = getRandomShopItem(achievement.rarity, state.userData.purchasedItems || []);
+      
       // Determine achievement type
       let achievementType: 'daily' | 'weekly' | 'monthly' | 'secret' = 'secret';
       if (achievementId.startsWith('daily-')) achievementType = 'daily';
@@ -385,16 +410,28 @@ export const createAchievementsSlice: StateCreator<
             progress: achievement.target || 1,
             unlocked: true,
             unlockedAt: new Date().toISOString(),
+            shopItemReward: shopItemReward ? {
+              itemId: shopItemReward.item.id,
+              itemName: shopItemReward.item.name,
+              alreadyOwned: shopItemReward.alreadyOwned
+            } : undefined
           }
         },
         // Add Gems reward (xpReward now represents Gems)
         gems: (state.userData.gems || 0) + achievement.xpReward,
         // Add Q-Bies reward (coinReward now represents Q-Bies)
         qCoins: (state.userData.qCoins || 0) + achievement.coinReward,
+        // Add shop item to purchased items if not already owned
+        purchasedItems: shopItemReward && !shopItemReward.alreadyOwned
+          ? [...(state.userData.purchasedItems || []), shopItemReward.item.id]
+          : state.userData.purchasedItems || []
       };
       
       console.log(`[Achievements] 🏆 Unlocked: ${achievement.name}`);
       console.log(`[Achievements] Rewards: +${achievement.xpReward} Gems, +${achievement.coinReward} Q-Bies`);
+      if (shopItemReward) {
+        console.log(`[Achievements] Shop Item: ${shopItemReward.item.name} (${shopItemReward.alreadyOwned ? 'Already Owned' : 'NEW!'})`);
+      }
       console.log('[Achievements] New totals:', {
         gems: newUserData.gems,
         qBies: newUserData.qCoins,
@@ -404,7 +441,10 @@ export const createAchievementsSlice: StateCreator<
       return { userData: newUserData };
     });
     
-    console.log('[Achievements] ✅ State updated, modal should appear');
+    // Sync the updated userData (with gems and qCoins) to database
+    const updatedState = get();
+    syncToDatabase(updatedState.userData);
+    console.log('[Achievements] ✅ State updated and synced to database, modal should appear');
   },
   
   getAchievementProgress: (achievementId: string) => {

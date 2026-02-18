@@ -20,13 +20,14 @@ interface ShopItemCardProps {
   onPress: () => void;
   onPreview?: () => void;
   isTheme?: boolean;
+  themeColors?: any;
+  hasTheme?: boolean;
 }
 
 // Asset map for all shop items
 const ASSET_MAP: { [key: string]: any } = {
   // Lights
   'assets/rooms/fairy-lights.png': require('../../../assets/rooms/fairy-lights.png'),
-  'assets/rooms/lamp.png': require('../../../assets/rooms/lamp.png'),
   'assets/shop/fairy-lights/colored.png': require('../../../assets/shop/fairy-lights/colored.png'),
   
   // Plants - Common
@@ -56,6 +57,7 @@ const ASSET_MAP: { [key: string]: any } = {
   
   // Furniture - Common
   'assets/shop/common/furniture/chair.png': require('../../../assets/shop/common/furniture/chair.png'),
+  'assets/shop/common/furniture/lamp.png': require('../../../assets/shop/common/furniture/lamp.png'),
   'assets/shop/common/furniture/small-bookshelf.png': require('../../../assets/shop/common/furniture/small-bookshelf.png'),
   
   // Furniture - Rare
@@ -84,7 +86,7 @@ const ASSET_MAP: { [key: string]: any } = {
   'assets/shop/legendary/themes/ocean.png': require('../../../assets/shop/legendary/themes/ocean.png'),
 };
 
-export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, isTheme = false }: ShopItemCardProps) {
+export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, isTheme = false, themeColors, hasTheme = false }: ShopItemCardProps) {
   const [color1] = getRarityColor(item.rarity);
   
   const getRarityStars = () => {
@@ -98,7 +100,10 @@ export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, i
   };
   
   const imageSource = ASSET_MAP[item.assetPath];
-  const cardWidth = isTheme ? (SCREEN_WIDTH - 48) / 2 : (SCREEN_WIDTH - 48) / 3;
+  // Calculate card width accounting for padding (20) and gaps (8 * 2 = 16 for 3 columns)
+  const cardWidth = isTheme 
+    ? (SCREEN_WIDTH - 20 - 10) / 2  // 2 columns: padding + 1 gap
+    : (SCREEN_WIDTH - 20 - 16) / 3; // 3 columns: padding + 2 gaps
   const cardHeight = isTheme ? 140 : 120; // Themes taller, others smaller
   
   // Determine price layout
@@ -188,8 +193,8 @@ export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, i
           </View>
         )}
         
-        {/* Owned indicator */}
-        {isPurchased && !isEquipped && (
+        {/* Owned indicator - Always show when purchased */}
+        {isPurchased && (
           <View style={styles.ownedOverlay}>
             <Text style={styles.ownedText}>Owned</Text>
           </View>
