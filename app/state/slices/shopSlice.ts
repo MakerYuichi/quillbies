@@ -3,10 +3,11 @@ import { StateCreator } from 'zustand';
 import { ShopItem } from '../../core/types';
 import { UserSlice } from './userSlice';
 import { syncToDatabase } from '../utils/syncUtils';
+import { SHOP_ITEMS } from '../../core/shopItems';
 
 export interface ShopSlice {
   // Shop actions
-  purchaseItem: (itemId: string, price: number) => Promise<boolean>;
+  purchaseItem: (itemId: string, price: number, useGems?: boolean) => Promise<boolean>;
   getShopItems: () => ShopItem[];
   updateRoomCustomization: (lightType?: string, plantType?: string) => void;
 }
@@ -18,48 +19,38 @@ export const createShopSlice: StateCreator<
   ShopSlice
 > = (set, get) => ({
   getShopItems: () => {
-    return [
-      // Lights
-      {
-        id: 'colored-fairy-lights',
-        name: 'Colored Fairy Lights',
-        description: 'Magical colorful twinkling lights to brighten your room',
-        price: 50,
-        category: 'light' as const,
-        assetPath: 'colored-fairy-lights',
-        icon: '✨'
-      },
-      // Plants
-      {
-        id: 'succulent-plant',
-        name: 'Succulent Plant',
-        description: 'A cute succulent to freshen up your space',
-        price: 30,
-        category: 'plant' as const,
-        assetPath: 'succulent-plant',
-        icon: '🌵'
-      },
-      {
-        id: 'swiss-cheese-plant',
-        name: 'Swiss Cheese Plant',
-        description: 'Beautiful monstera plant with unique leaves',
-        price: 40,
-        category: 'plant' as const,
-        assetPath: 'swiss-cheese-plant',
-        icon: '🌿'
-      }
-    ];
+    // Return all items from the catalog, converting to the expected format
+    return SHOP_ITEMS.map(item => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      price: item.price, // Coin price
+      gemPrice: item.gemPrice, // Optional gem price
+      category: item.category as 'light' | 'plant' | 'furniture' | 'theme',
+      rarity: item.rarity,
+      assetPath: item.assetPath,
+      icon: item.icon
+    }));
   },
 
-  purchaseItem: async (itemId: string, price: number) => {
+  purchaseItem: async (itemId: string, price: number, useGems: boolean = false) => {
     const { userData } = get();
     
     const currentCoins = Number(userData.qCoins) || 0;
+    const currentGems = Number(userData.gems) || 0;
     const itemPrice = Number(price) || 0;
     
-    if (currentCoins < itemPrice) {
-      console.log(`[Shop] Insufficient coins`);
-      return false;
+    // Check if user has enough currency
+    if (useGems) {
+      if (currentGems < itemPrice) {
+        console.log(`[Shop] Insufficient gems`);
+        return false;
+      }
+    } else {
+      if (currentCoins < itemPrice) {
+        console.log(`[Shop] Insufficient coins`);
+        return false;
+      }
     }
     
     if (userData.purchasedItems?.includes(itemId)) {
@@ -67,11 +58,14 @@ export const createShopSlice: StateCreator<
       return false;
     }
     
-    const newCoins = Math.max(0, currentCoins - itemPrice);
-    
-    const updatedUserData = {
+    // Deduct currency
+    const updatedUserData = useGems ? {
       ...userData,
-      qCoins: newCoins,
+      gems: Math.max(0, currentGems - itemPrice),
+      purchasedItems: [...(userData.purchasedItems || []), itemId]
+    } : {
+      ...userData,
+      qCoins: Math.max(0, currentCoins - itemPrice),
       purchasedItems: [...(userData.purchasedItems || []), itemId]
     };
     

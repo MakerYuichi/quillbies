@@ -5,9 +5,8 @@ import { supabase } from './supabase';
 import { getDeviceUser } from './deviceAuth';
 import { updateUserProfile } from './userProfile';
 import { updateDailyData } from './dailyData';
-import { syncUserToProgress } from './dailyProgress';
 
-// Sync all user data to all relevant tables - Now with RLS disabled on profiles
+// Sync all user data to all relevant tables
 export const syncAllUserData = async (userData: any) => {
   try {
     const user = await getDeviceUser();
@@ -18,13 +17,13 @@ export const syncAllUserData = async (userData: any) => {
 
     console.log('[SyncAll] Starting comprehensive sync...');
 
-    // CRITICAL: Ensure user profiles exist in all tables FIRST
+    // CRITICAL: Ensure user profile exists in user_profiles table FIRST
     try {
       await ensureAllUserProfiles(user.id, userData);
-      console.log('[SyncAll] ✅ User profiles ensured in all tables');
+      console.log('[SyncAll] ✅ User profile ensured');
     } catch (profileSetupError) {
-      console.error('[SyncAll] ❌ Failed to ensure user profiles:', profileSetupError);
-      return false; // Can't continue without profiles
+      console.error('[SyncAll] ❌ Failed to ensure user profile:', profileSetupError);
+      return false; // Can't continue without profile
     }
 
     // 1. Sync to user_profiles table (should work now)
@@ -58,56 +57,30 @@ export const syncAllUserData = async (userData: any) => {
       console.error('[SyncAll] ❌ user_profiles sync failed:', profileError);
     }
 
-    // 2. Sync to daily_data table
+    // 2. Sync to daily_data table (consolidated from daily_progress)
+    // NOTE: mess_points is NOT synced here - user_profiles is the single source of truth
     try {
+      // Ensure water_glasses is a valid number between 0 and 8
+      const waterGlasses = Math.max(0, Math.min(8, userData.waterGlasses || 0));
+      
       await updateDailyData(user.id, {
         study_minutes_today: userData.studyMinutesToday || 0,
         missed_checkpoints: userData.missedCheckpoints || 0,
         ate_breakfast: userData.ateBreakfast || false,
-        water_glasses: userData.waterGlasses || 0,
+        water_glasses: waterGlasses,
         meals_logged: userData.mealsLogged || 0,
         exercise_minutes: userData.exerciseMinutes || 0,
         apple_taps_today: userData.appleTapsToday || 0,
         coffee_taps_today: userData.coffeeTapsToday || 0,
+        // Consolidated fields from daily_progress (excluding mess_points)
+        energy: userData.energy || 100,
+        q_coins: userData.qCoins || 0,
+        current_streak: userData.currentStreak || 0,
+        last_check_in_date: userData.lastCheckInDate || new Date().toISOString().split('T')[0],
       });
-      console.log('[SyncAll] ✅ daily_data synced successfully');
+      console.log('[SyncAll] ✅ daily_data synced successfully (mess_points excluded - using user_profiles as source of truth)');
     } catch (dailyDataError) {
       console.error('[SyncAll] ❌ daily_data sync failed:', dailyDataError);
-    }
-
-    // 3. Sync to daily_progress table
-    try {
-      await syncUserToProgress(user.id, userData);
-      console.log('[SyncAll] ✅ daily_progress synced successfully');
-    } catch (dailyProgressError) {
-      console.error('[SyncAll] ❌ daily_progress sync failed:', dailyProgressError);
-    }
-
-    // 4. Sync to profiles table
-    try {
-      const { error: profilesError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          email: userData.email,
-          buddy_name: userData.buddyName || 'Quillby',
-          selected_character: userData.selectedCharacter || 'casual',
-          user_name: userData.userName,
-          student_level: userData.studentLevel,
-          country: userData.country,
-          timezone: userData.timezone || 'UTC',
-          data_synced: true,
-          last_sync_at: new Date(),
-          updated_at: new Date(),
-        });
-
-      if (profilesError) {
-        console.error('[SyncAll] ❌ profiles table sync error:', profilesError);
-      } else {
-        console.log('[SyncAll] ✅ profiles synced successfully');
-      }
-    } catch (profilesErr) {
-      console.error('[SyncAll] ❌ profiles table exception:', profilesErr);
     }
 
     console.log('[SyncAll] Comprehensive sync completed');
@@ -134,14 +107,8 @@ export const loadAllUserData = async () => {
       // User profile (primary)
       supabase.from('user_profiles').select('*').eq('id', user.id).single(),
       
-      // Profiles table (for foreign key compatibility)
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      
-      // Daily data
+      // Daily data (consolidated - includes fields from old daily_progress)
       supabase.from('daily_data').select('*').eq('user_id', user.id).eq('date_tracked', new Date().toISOString().split('T')[0]).single(),
-      
-      // Daily progress (should work now)
-      supabase.from('daily_progress').select('*').eq('user_id', user.id).eq('date', new Date().toISOString().split('T')[0]).single(),
       
       // Deadlines
       supabase.from('deadlines').select('*').eq('user_id', user.id).order('due_date', { ascending: true }),
@@ -157,14 +124,12 @@ export const loadAllUserData = async () => {
     ]);
 
     // Extract successful results
-    const [userProfileResult, profilesResult, dailyDataResult, dailyProgressResult, deadlinesResult, purchasedItemsResult, sleepSessionsResult, focusSessionsResult] = results;
+    const [userProfileResult, dailyDataResult, deadlinesResult, purchasedItemsResult, sleepSessionsResult, focusSessionsResult] = results;
 
     // Log results
     console.log('[LoadAll] Results:');
     console.log('- user_profiles:', userProfileResult.status === 'fulfilled' ? '✅' : '❌');
-    console.log('- profiles:', profilesResult.status === 'fulfilled' ? '✅' : '❌');
     console.log('- daily_data:', dailyDataResult.status === 'fulfilled' ? '✅' : '❌');
-    console.log('- daily_progress:', dailyProgressResult.status === 'fulfilled' ? '✅' : '❌');
     console.log('- deadlines:', deadlinesResult.status === 'fulfilled' ? '✅' : '❌');
     console.log('- purchased_items:', purchasedItemsResult.status === 'fulfilled' ? '✅' : '❌');
     console.log('- sleep_sessions:', sleepSessionsResult.status === 'fulfilled' ? '✅' : '❌');
@@ -172,9 +137,7 @@ export const loadAllUserData = async () => {
 
     return {
       userProfile: userProfileResult.status === 'fulfilled' ? userProfileResult.value.data : null,
-      profiles: profilesResult.status === 'fulfilled' ? profilesResult.value.data : null,
       dailyData: dailyDataResult.status === 'fulfilled' ? dailyDataResult.value.data : null,
-      dailyProgress: dailyProgressResult.status === 'fulfilled' ? dailyProgressResult.value.data : null,
       deadlines: deadlinesResult.status === 'fulfilled' ? (deadlinesResult.value.data || []) : [],
       purchasedItems: purchasedItemsResult.status === 'fulfilled' ? (purchasedItemsResult.value.data || []) : [],
       sleepSessions: sleepSessionsResult.status === 'fulfilled' ? (sleepSessionsResult.value.data || []) : [],
@@ -200,9 +163,9 @@ export const periodicSync = async (userData: any) => {
 // Ensure user profiles exist in all necessary tables before any operations
 const ensureAllUserProfiles = async (userId: string, userData: any) => {
   try {
-    console.log('[EnsureProfiles] Ensuring user profiles exist in all tables...');
+    console.log('[EnsureProfiles] Ensuring user_profiles entry exists...');
 
-    // 1. Ensure user_profiles entry exists
+    // Ensure user_profiles entry exists
     const { data: userProfile, error: userProfileError } = await supabase
       .from('user_profiles')
       .select('id')
@@ -218,7 +181,7 @@ const ensureAllUserProfiles = async (userId: string, userData: any) => {
           {
             id: userId,
             email: userData.email || null,
-            buddy_name: userData.buddyName || 'Hammy',
+            buddy_name: userData.buddyName || 'Quillby',
             selected_character: userData.selectedCharacter || 'casual',
             user_name: userData.userName,
             student_level: userData.studentLevel || 'university',
@@ -256,51 +219,9 @@ const ensureAllUserProfiles = async (userId: string, userData: any) => {
       console.log('[EnsureProfiles] ✅ user_profiles already exists');
     }
 
-    // 2. Ensure profiles entry exists (for foreign key constraints)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .single();
-
-    if (profileError && profileError.code === 'PGRST116') {
-      console.log('[EnsureProfiles] Creating profiles entry...');
-      
-      const { error: createProfileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: userId,
-            email: userData.email || null,
-            buddy_name: userData.buddyName || 'Quillby',
-            selected_character: userData.selectedCharacter || 'casual',
-            user_name: userData.userName,
-            student_level: userData.studentLevel || 'university',
-            country: userData.country,
-            timezone: userData.timezone || 'UTC',
-            data_synced: true,
-            last_sync_at: new Date(),
-            created_at: new Date(),
-            updated_at: new Date(),
-          }
-        ]);
-
-      if (createProfileError) {
-        console.error('[EnsureProfiles] Failed to create profiles:', createProfileError);
-        throw createProfileError;
-      }
-      
-      console.log('[EnsureProfiles] ✅ profiles created');
-    } else if (profileError) {
-      console.error('[EnsureProfiles] Error checking profiles:', profileError);
-      throw profileError;
-    } else {
-      console.log('[EnsureProfiles] ✅ profiles already exists');
-    }
-
-    console.log('[EnsureProfiles] All user profiles ensured successfully');
+    console.log('[EnsureProfiles] User profile ensured successfully');
   } catch (err) {
-    console.error('[EnsureProfiles] Exception ensuring profiles:', err);
+    console.error('[EnsureProfiles] Exception ensuring user profile:', err);
     throw err;
   }
 };

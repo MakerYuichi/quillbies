@@ -97,7 +97,10 @@ export const useTimeBasedHabitFeedback = (buddyName: string) => {
               const expectedHours = studyGoal * expectedProgress;
               if (studyHours < expectedHours && expectedProgress > 0) {
                 const behind = expectedHours - studyHours;
-                concerns.push(`${timeContext} and we're ${behind.toFixed(1)}h behind on studying... 📚😟\nI feel sad when we fall behind our study goals!`);
+                const h = Math.floor(behind);
+                const m = Math.round((behind - h) * 60);
+                const behindText = h > 0 ? `${h}h ${m}min` : `${m}min`;
+                concerns.push(`${timeContext} and we're ${behindText} behind on studying... 📚😟\nI feel sad when we fall behind our study goals!`);
               }
               break;
               
@@ -171,7 +174,10 @@ export const useTimeBasedHabitFeedback = (buddyName: string) => {
                 
                 if (todaysSleepHours < expectedSleep) {
                   const behind = expectedSleep - todaysSleepHours;
-                  concerns.push(`Didn't get enough sleep last night... ${behind.toFixed(1)}h short and feeling tired 😴💤\nI feel groggy when we don't get enough rest!`);
+                  const h = Math.floor(behind);
+                  const m = Math.round((behind - h) * 60);
+                  const behindText = h > 0 ? `${h}h ${m}min` : `${m}min`;
+                  concerns.push(`Didn't get enough sleep last night... ${behindText} short and feeling tired 😴💤\nI feel groggy when we don't get enough rest!`);
                 }
               }
               break;

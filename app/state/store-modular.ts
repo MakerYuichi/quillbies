@@ -154,6 +154,11 @@ export const useQuillbyStore = create<QuillbyStore>()(
             console.log('[Load] Merging database data with local state...');
             console.log('[Load] DB study_goal_hours:', dbData.userProfile.study_goal_hours);
             console.log('[Load] Local study_goal_hours:', userData.studyGoalHours);
+            console.log('[Load] 🔍 MESS POINTS DEBUG:');
+            console.log('[Load]   - Local cache (SOURCE OF TRUTH):', userData.messPoints);
+            console.log('[Load]   - Database (user_profiles):', dbData.userProfile.mess_points);
+            console.log('[Load]   - Database (daily_data):', dbData.dailyData?.mess_points);
+            console.log('[Load]   - Will use LOCAL value (DB has sync lag)');
             
             // Merge database data with local data, prioritizing database for key fields
             const mergedUserData = {
@@ -165,10 +170,20 @@ export const useQuillbyStore = create<QuillbyStore>()(
               studentLevel: dbData.userProfile.student_level ?? userData.studentLevel,
               country: dbData.userProfile.country ?? userData.country,
               timezone: dbData.userProfile.timezone ?? userData.timezone,
-              qCoins: dbData.userProfile.q_coins ?? userData.qCoins,
-              gems: dbData.userProfile.gems ?? userData.gems ?? 0,
-              messPoints: dbData.userProfile.mess_points ?? userData.messPoints,
-              currentStreak: dbData.userProfile.current_streak ?? userData.currentStreak,
+              
+              // CRITICAL: These fields MUST come from database (source of truth)
+              // Use explicit check for null/undefined to handle 0 values correctly
+              qCoins: dbData.userProfile.q_coins !== null && dbData.userProfile.q_coins !== undefined 
+                ? dbData.userProfile.q_coins 
+                : userData.qCoins,
+              gems: dbData.userProfile.gems !== null && dbData.userProfile.gems !== undefined
+                ? dbData.userProfile.gems
+                : (userData.gems ?? 0),
+              currentStreak: dbData.userProfile.current_streak !== null && dbData.userProfile.current_streak !== undefined
+                ? dbData.userProfile.current_streak
+                : userData.currentStreak,
+              
+              // Goals and settings
               enabledHabits: dbData.userProfile.enabled_habits ?? userData.enabledHabits,
               studyGoalHours: dbData.userProfile.study_goal_hours ?? userData.studyGoalHours,
               exerciseGoalMinutes: dbData.userProfile.exercise_goal_minutes ?? userData.exerciseGoalMinutes,
@@ -183,8 +198,10 @@ export const useQuillbyStore = create<QuillbyStore>()(
               },
               // DAILY DATA - Keep local (don't overwrite from database on startup)
               // These are session-based and will be reset at midnight by resetDay()
+              // Local state is source of truth because DB sync has lag
               studyMinutesToday: userData.studyMinutesToday,
               missedCheckpoints: userData.missedCheckpoints,
+              messPoints: userData.messPoints, // Keep local - DB sync has lag, local is truth
               ateBreakfast: userData.ateBreakfast,
               waterGlasses: userData.waterGlasses,
               mealsLogged: userData.mealsLogged,
@@ -204,6 +221,8 @@ export const useQuillbyStore = create<QuillbyStore>()(
             // Check if it's a new day - if so, reset daily data
             const today = new Date().toDateString();
             const lastCheckIn = mergedUserData.lastCheckInDate;
+            
+            console.log('[Load] 🔍 MESS POINTS - After merge:', mergedUserData.messPoints);
             
             if (lastCheckIn !== today) {
               console.log('[Load] New day detected during load, resetting daily data');
@@ -246,6 +265,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
             console.log('[Load] Merged study_goal_hours:', mergedUserData.studyGoalHours);
             console.log('[Load] Merged exercise_goal_minutes:', mergedUserData.exerciseGoalMinutes);
             console.log('[Load] Merged enabled_habits:', mergedUserData.enabledHabits);
+            console.log('[Load] 🔍 MESS POINTS - Final merged value (from LOCAL cache):', mergedUserData.messPoints);
 
             set({ 
               userData: mergedUserData,
@@ -257,6 +277,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
             const updatedState = get();
             console.log('[Load] Verification - study_goal_hours in state:', updatedState.userData.studyGoalHours);
             console.log('[Load] Verification - exercise_goal_minutes in state:', updatedState.userData.exerciseGoalMinutes);
+            console.log('[Load] 🔍 MESS POINTS - Verification in state:', updatedState.userData.messPoints);
             
             // Start periodic sync after successful load
             setInterval(() => {

@@ -439,6 +439,16 @@ function HomeScreenContent() {
     
     return null;
   };
+  
+  // Format hours to "Xh Ymin" format
+  const formatHours = (hours: number): string => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    if (h === 0 && m === 0) return '0min';
+    if (h === 0) return `${m}min`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}min`;
+  };
 
   const renderTodaysDeadline = () => {
     const deadline = getTodaysDeadline();
@@ -462,7 +472,7 @@ function HomeScreenContent() {
           {formatDate(deadline.dueDate)}
         </Text>
         <Text style={styles.todaysDeadlineProgress}>
-          {deadline.workCompleted.toFixed(1)}/{deadline.estimatedHours}h {progressDisplay}
+          {formatHours(deadline.workCompleted)}/{formatHours(deadline.estimatedHours)} {progressDisplay}
         </Text>
         <Text style={styles.todaysDeadlineGoal}>
           Today's goal: 2h [Focus on This →]
@@ -909,8 +919,14 @@ function HomeScreenContent() {
         const missingMinutes = Math.round((result.missing - missingHours) * 60);
         const missingText = `${missingHours}h ${missingMinutes}min`;
         
+        // Format expected and actual hours
+        const expectedH = Math.floor(result.expected);
+        const expectedM = Math.round((result.expected - expectedH) * 60);
+        const actualH = Math.floor(result.actual);
+        const actualM = Math.round((result.actual - actualH) * 60);
+        
         const message = `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
-                       `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
+                       `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`;
         console.log('[Checkpoint]', message);
         setCheckpointMessage(message);
         setCheckpointMessageTimestamp(Date.now());
@@ -934,9 +950,15 @@ function HomeScreenContent() {
             const missingMinutes = Math.round((result.missing - missingHours) * 60);
             const missingText = `${missingHours}h ${missingMinutes}min`;
             
+            // Format expected and actual hours
+            const expectedH = Math.floor(result.expected);
+            const expectedM = Math.round((result.expected - expectedH) * 60);
+            const actualH = Math.floor(result.actual);
+            const actualM = Math.round((result.actual - actualH) * 60);
+            
             // Update hamster message with checkpoint notification
             const message = `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
-                           `Expected: ${result.expected.toFixed(1)}h by ${result.checkpoint}, You: ${result.actual.toFixed(1)}h`;
+                           `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`;
             
             console.log('[Checkpoint]', message);
             setCheckpointMessage(message);
@@ -1015,7 +1037,14 @@ function HomeScreenContent() {
       </View>
       
       <View style={[styles.environmentContainer, isExercising && styles.hidden]}>
-        <RoomLayers pointerEvents="none" messPoints={userData.messPoints} isSleeping={isSleeping} sleepAnimation={sleepAnimation} qCoins={userData.qCoins} />
+        <RoomLayers 
+          pointerEvents="none" 
+          messPoints={userData.messPoints} 
+          isSleeping={isSleeping} 
+          sleepAnimation={sleepAnimation} 
+          qCoins={userData.qCoins}
+          gems={userData.gems || 0}
+        />
         {/* Sleep Timer Overlay - Show when sleeping */}
         {isSleeping && (
           <View style={styles.sleepTimerContainer}>
@@ -1072,7 +1101,12 @@ function HomeScreenContent() {
             </Text>
           </View>
           <Text style={styles.timeAccelerationTime}>
-            {((timeAccelerationProgress / 100) * 24).toFixed(1)} hours simulated
+            {(() => {
+              const totalHours = (timeAccelerationProgress / 100) * 24;
+              const h = Math.floor(totalHours);
+              const m = Math.round((totalHours - h) * 60);
+              return `${h}h ${m}min simulated`;
+            })()}
           </Text>
           <TouchableOpacity
             style={styles.stopAccelerationButton}
@@ -1313,149 +1347,6 @@ function HomeScreenContent() {
         
         {/* SPACER - Allow more scrolling space */}
         <View style={styles.contentSpacer} />
-        
-        {/* TEST BUTTONS - Achievement Testing */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ fontFamily: 'Chakra Petch', fontSize: 16, color: '#333', textAlign: 'center', fontWeight: 'bold', marginBottom: 10 }}>
-            🏆 Test Achievements
-          </Text>
-          
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#FFD54F',
-              padding: 15,
-              borderRadius: 10,
-              marginHorizontal: 20,
-              marginBottom: 10,
-              borderWidth: 2,
-              borderColor: '#FFC107',
-            }}
-            onPress={() => {
-              console.log('[TEST] 🎯 Button pressed: First Steps');
-              const store = useQuillbyStore.getState();
-              
-              // Reset achievement first
-              console.log('[TEST] Resetting first-focus...');
-              const userData = { ...store.userData };
-              if (!userData.achievements) userData.achievements = {};
-              userData.achievements['first-focus'] = { progress: 0, unlocked: false };
-              useQuillbyStore.setState({ userData });
-              
-              // Then unlock it (with small delay to ensure state update)
-              setTimeout(() => {
-                console.log('[TEST] Unlocking first-focus...');
-                const currentStore = useQuillbyStore.getState();
-                currentStore.unlockAchievement('first-focus');
-                console.log('[TEST] ✅ First Steps unlocked!');
-              }, 100);
-            }}
-          >
-            <Text style={{ fontFamily: 'Chakra Petch', fontSize: 14, color: '#8B4513', textAlign: 'center', fontWeight: 'bold' }}>
-              🎯 Test: First Steps (Common)
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#B2DFDB',
-              padding: 15,
-              borderRadius: 10,
-              marginHorizontal: 20,
-              marginBottom: 10,
-              borderWidth: 2,
-              borderColor: '#00897B',
-            }}
-            onPress={() => {
-              console.log('[TEST] 🔥 Button pressed: Week Warrior');
-              const store = useQuillbyStore.getState();
-              
-              // Reset achievement first
-              console.log('[TEST] Resetting week-warrior...');
-              const userData = { ...store.userData };
-              if (!userData.achievements) userData.achievements = {};
-              userData.achievements['week-warrior'] = { progress: 0, unlocked: false };
-              useQuillbyStore.setState({ userData });
-              
-              // Then unlock it
-              setTimeout(() => {
-                console.log('[TEST] Unlocking week-warrior...');
-                const currentStore = useQuillbyStore.getState();
-                currentStore.unlockAchievement('week-warrior');
-                console.log('[TEST] ✅ Week Warrior unlocked!');
-              }, 100);
-            }}
-          >
-            <Text style={{ fontFamily: 'Chakra Petch', fontSize: 14, color: '#004D40', textAlign: 'center', fontWeight: 'bold' }}>
-              🔥 Test: Week Warrior (Rare)
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#CE93D8',
-              padding: 15,
-              borderRadius: 10,
-              marginHorizontal: 20,
-              marginBottom: 10,
-              borderWidth: 2,
-              borderColor: '#9C27B0',
-            }}
-            onPress={() => {
-              console.log('[TEST] 🏃 Button pressed: Marathon Runner');
-              const store = useQuillbyStore.getState();
-              
-              // Reset achievement first
-              console.log('[TEST] Resetting marathon-runner...');
-              const userData = { ...store.userData };
-              if (!userData.achievements) userData.achievements = {};
-              userData.achievements['marathon-runner'] = { progress: 0, unlocked: false };
-              useQuillbyStore.setState({ userData });
-              
-              // Then unlock it
-              setTimeout(() => {
-                console.log('[TEST] Unlocking marathon-runner...');
-                const currentStore = useQuillbyStore.getState();
-                currentStore.unlockAchievement('marathon-runner');
-                console.log('[TEST] ✅ Marathon Runner unlocked!');
-              }, 100);
-            }}
-          >
-            <Text style={{ fontFamily: 'Chakra Petch', fontSize: 14, color: '#4A148C', textAlign: 'center', fontWeight: 'bold' }}>
-              🏃 Test: Marathon Runner (Legendary)
-            </Text>
-          </TouchableOpacity>
-          
-          {/* Reset All Button */}
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#FF5252',
-              padding: 12,
-              borderRadius: 10,
-              marginHorizontal: 20,
-              marginTop: 10,
-              borderWidth: 2,
-              borderColor: '#D32F2F',
-            }}
-            onPress={() => {
-              console.log('[TEST] 🔄 Resetting all test achievements...');
-              const store = useQuillbyStore.getState();
-              const userData = { ...store.userData };
-              
-              // Reset all test achievements
-              if (!userData.achievements) userData.achievements = {};
-              userData.achievements['first-focus'] = { progress: 0, unlocked: false };
-              userData.achievements['week-warrior'] = { progress: 0, unlocked: false };
-              userData.achievements['marathon-runner'] = { progress: 0, unlocked: false };
-              
-              useQuillbyStore.setState({ userData });
-              console.log('[TEST] ✅ All test achievements reset');
-            }}
-          >
-            <Text style={{ fontFamily: 'Chakra Petch', fontSize: 12, color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>
-              🔄 Reset All Test Achievements
-            </Text>
-          </TouchableOpacity>
-        </View>
         
       </ScrollView>
 

@@ -394,6 +394,54 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
               </View>
             </View>
             
+            {/* Achievements Section */}
+            {isToday && userData.achievements && Object.keys(userData.achievements).length > 0 && (
+              <View style={styles.achievementsCard}>
+                <View style={styles.achievementsHeader}>
+                  <Text style={styles.achievementsIcon}>🏆</Text>
+                  <Text style={styles.achievementsTitle}>Today's Achievements</Text>
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.achievementsScroll}
+                >
+                  {Object.entries(userData.achievements)
+                    .filter(([_, achievement]) => {
+                      if (!achievement.unlocked || !achievement.unlockedAt) return false;
+                      const unlockedDate = new Date(achievement.unlockedAt).toDateString();
+                      const today = new Date().toDateString();
+                      return unlockedDate === today;
+                    })
+                    .map(([achievementId, _]) => {
+                      const achievement = require('../../core/achievements').ACHIEVEMENTS[achievementId];
+                      if (!achievement) return null;
+                      
+                      return (
+                        <View key={achievementId} style={styles.achievementBadge}>
+                          <Text style={styles.achievementBadgeIcon}>{achievement.icon}</Text>
+                          <Text style={styles.achievementBadgeName}>{achievement.name}</Text>
+                          <View style={styles.achievementRewards}>
+                            <Text style={styles.achievementReward}>💎 {achievement.xpReward}</Text>
+                            <Text style={styles.achievementReward}>🪙 {achievement.coinReward}</Text>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  {Object.entries(userData.achievements).filter(([_, achievement]) => {
+                    if (!achievement.unlocked || !achievement.unlockedAt) return false;
+                    const unlockedDate = new Date(achievement.unlockedAt).toDateString();
+                    const today = new Date().toDateString();
+                    return unlockedDate === today;
+                  }).length === 0 && (
+                    <View style={styles.noAchievementsToday}>
+                      <Text style={styles.noAchievementsTodayText}>✨ No achievements unlocked today yet</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            )}
+            
             {/* Notes */}
             <View style={styles.notesCard}>
               <View style={styles.notesHeader}>
@@ -1098,5 +1146,82 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 40,
+  },
+  achievementsCard: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFB300',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  achievementsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  achievementsIcon: {
+    fontSize: 20,
+  },
+  achievementsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  achievementsScroll: {
+    gap: 12,
+  },
+  achievementBadge: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 12,
+    width: 140,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFD54F',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  achievementBadgeIcon: {
+    fontSize: 32,
+    marginBottom: 6,
+  },
+  achievementBadgeName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  achievementRewards: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  achievementReward: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#666',
+  },
+  noAchievementsToday: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 12,
+    padding: 16,
+    width: 200,
+    alignItems: 'center',
+  },
+  noAchievementsTodayText: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });

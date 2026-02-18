@@ -164,6 +164,13 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
   resetDay: () => {
     const { userData } = get();
     const today = new Date().toDateString();
+    const now = new Date();
+    
+    // Check if it's a new week (Monday)
+    const isNewWeek = now.getDay() === 1; // 0 = Sunday, 1 = Monday
+    
+    // Check if it's a new month (1st day)
+    const isNewMonth = now.getDate() === 1;
     
     // END-OF-DAY EVALUATION - Check for bad day consequences
     const studyGoal = userData.studyGoalHours || 3;
@@ -270,6 +277,27 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     
     set({ userData: updatedUserData });
     syncToDatabase(updatedUserData);
+    
+    // Reset achievements based on period
+    const state = get() as any;
+    
+    // Always reset daily achievements
+    if (state.resetDailyAchievements) {
+      console.log('[Daily] Resetting daily achievements...');
+      state.resetDailyAchievements();
+    }
+    
+    // Reset weekly achievements on Monday
+    if (isNewWeek && state.resetWeeklyAchievements) {
+      console.log('[Daily] 📅 New week detected! Resetting weekly achievements...');
+      state.resetWeeklyAchievements();
+    }
+    
+    // Reset monthly achievements on 1st of month
+    if (isNewMonth && state.resetMonthlyAchievements) {
+      console.log('[Daily] 👑 New month detected! Resetting monthly achievements...');
+      state.resetMonthlyAchievements();
+    }
     
     if (isTerribleDay) {
       console.log('[Daily] 😔 Daily reset complete - Terrible day consequences applied');

@@ -25,6 +25,16 @@ export default function FocusScreen() {
   } = useQuillbyStore();
   
   const buddyName = userData.buddyName || 'Quillby';
+  
+  // Format hours to "Xh Ymin" format
+  const formatHours = (hours: number): string => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    if (h === 0 && m === 0) return '0min';
+    if (h === 0) return `${m}min`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}min`;
+  };
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -205,7 +215,7 @@ export default function FocusScreen() {
           {/* Mission Briefings */}
           {/* RED ALERT - Urgent Missions */}
           {urgentDeadlines.length > 0 && (
-            <View style={styles.missionSection}>
+            <View style={styles.collapsibleBox}>
               <TouchableOpacity 
                 style={styles.alertHeader}
                 onPress={() => {
@@ -223,63 +233,69 @@ export default function FocusScreen() {
                 </View>
               </TouchableOpacity>
               
-              {urgentExpanded && urgentDeadlines.map(deadline => (
-                <TouchableOpacity 
-                  key={deadline.id} 
-                  style={styles.urgentMissionScroll}
-                  onPress={() => handleDeadlinePress(deadline)}
-                  activeOpacity={0.85}
-                >
-                  <View style={styles.scrollPaper}>
-                    <View style={styles.missionHeader}>
-                      <Text style={styles.missionTitle}>
-                        📜 {deadline.title}
-                      </Text>
-                      <Text style={styles.urgencyBadge}>🔥</Text>
-                    </View>
-                    
-                    <Text style={styles.missionDueDate}>
-                      ⏰ {formatDate(deadline.dueDate)}
-                      {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
-                    </Text>
-                    
-                    {/* Visual Progress Bar */}
-                    <View style={styles.progressSection}>
-                      <View style={styles.progressBar}>
-                        <View 
-                          style={[
-                            styles.progressFill, 
-                            { width: `${Math.min((deadline.workCompleted / deadline.estimatedHours) * 100, 100)}%` }
-                          ]} 
-                        />
-                      </View>
-                      <Text style={styles.progressText}>
-                        {deadline.workCompleted.toFixed(1)}h / {deadline.estimatedHours}h
-                      </Text>
-                    </View>
-                    
+              {urgentExpanded && (
+                <View style={styles.deadlinesContainer}>
+                  {urgentDeadlines.map((deadline, index) => (
                     <TouchableOpacity 
-                      style={styles.attackButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleStartSession(deadline.id);
-                      }}
-                      disabled={userData.energy < calculateFocusEnergyCost(userData)}
+                      key={deadline.id} 
+                      style={[
+                        styles.deadlineItem,
+                        index < urgentDeadlines.length - 1 && styles.deadlineItemBorder
+                      ]}
+                      onPress={() => handleDeadlinePress(deadline)}
+                      activeOpacity={0.7}
                     >
-                      <Text style={styles.attackButtonText}>
-                        {userData.energy >= calculateFocusEnergyCost(userData) ? '🎯 Start Session' : '😴 No Energy'}
-                      </Text>
+                      <View style={styles.deadlineContent}>
+                        <View style={styles.missionHeader}>
+                          <Text style={styles.missionTitle}>
+                            📜 {deadline.title}
+                          </Text>
+                          <Text style={styles.urgencyBadge}>🔥</Text>
+                        </View>
+                        
+                        <Text style={styles.missionDueDate}>
+                          ⏰ {formatDate(deadline.dueDate)}
+                          {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
+                        </Text>
+                        
+                        {/* Visual Progress Bar */}
+                        <View style={styles.progressSection}>
+                          <View style={styles.progressBar}>
+                            <View 
+                              style={[
+                                styles.progressFill, 
+                                { width: `${Math.min((deadline.workCompleted / deadline.estimatedHours) * 100, 100)}%` }
+                              ]} 
+                            />
+                          </View>
+                          <Text style={styles.progressText}>
+                            {formatHours(deadline.workCompleted)} / {formatHours(deadline.estimatedHours)}
+                          </Text>
+                        </View>
+                        
+                        <TouchableOpacity 
+                          style={styles.attackButton}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleStartSession(deadline.id);
+                          }}
+                          disabled={userData.energy < calculateFocusEnergyCost(userData)}
+                        >
+                          <Text style={styles.attackButtonText}>
+                            {userData.energy >= calculateFocusEnergyCost(userData) ? '🎯 Start Session' : '😴 No Energy'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
-                  </View>
-                  <View style={styles.urgentScrollCurl} />
-                </TouchableOpacity>
-              ))}
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
           {/* UPCOMING MISSIONS */}
           {upcomingDeadlines.length > 0 && (
-            <View style={styles.missionSection}>
+            <View style={styles.collapsibleBox}>
               <TouchableOpacity 
                 style={styles.upcomingHeader}
                 onPress={() => {
@@ -297,71 +313,76 @@ export default function FocusScreen() {
                 </View>
               </TouchableOpacity>
               
-              {upcomingExpanded && upcomingDeadlines.map(deadline => {
-                // Determine button style based on priority
-                const isHighPriority = deadline.priority === 'high';
-                const isMediumPriority = deadline.priority === 'medium';
-                const isLowPriority = deadline.priority === 'low';
-                
-                return (
-                  <TouchableOpacity 
-                    key={deadline.id} 
-                    style={styles.upcomingMissionScroll}
-                    onPress={() => handleDeadlinePress(deadline)}
-                    activeOpacity={0.85}
-                  >
-                    <View style={styles.scrollPaper}>
-                      <View style={styles.missionHeader}>
-                        <Text style={styles.missionTitle}>
-                          📜 {deadline.title}
-                        </Text>
-                        <Text style={styles.priorityBadge}>
-                          {isHighPriority ? '🔴' : isMediumPriority ? '🟡' : '🟢'}
-                        </Text>
-                      </View>
-                      
-                      <Text style={styles.missionDueDate}>
-                        🗓️ {formatDate(deadline.dueDate)}
-                        {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
-                      </Text>
-                      
-                      {/* Visual Progress Bar */}
-                      <View style={styles.progressSection}>
-                        <View style={styles.progressBar}>
-                          <View 
-                            style={[
-                              styles.progressFill, 
-                              { width: `${Math.min((deadline.workCompleted / deadline.estimatedHours) * 100, 100)}%` }
-                            ]} 
-                          />
-                        </View>
-                        <Text style={styles.progressText}>
-                          {deadline.workCompleted.toFixed(1)}h / {deadline.estimatedHours}h
-                        </Text>
-                      </View>
-                      
+              {upcomingExpanded && (
+                <View style={styles.deadlinesContainer}>
+                  {upcomingDeadlines.map((deadline, index) => {
+                    const isHighPriority = deadline.priority === 'high';
+                    const isMediumPriority = deadline.priority === 'medium';
+                    const isLowPriority = deadline.priority === 'low';
+                    
+                    return (
                       <TouchableOpacity 
+                        key={deadline.id} 
                         style={[
-                          styles.planButton,
-                          isHighPriority && styles.planButtonHigh,
-                          isMediumPriority && styles.planButtonMedium,
-                          isLowPriority && styles.planButtonLow,
+                          styles.deadlineItem,
+                          index < upcomingDeadlines.length - 1 && styles.deadlineItemBorder
                         ]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleStartSession(deadline.id);
-                        }}
-                        disabled={userData.energy < calculateFocusEnergyCost(userData)}
+                        onPress={() => handleDeadlinePress(deadline)}
+                        activeOpacity={0.7}
                       >
-                        <Text style={styles.planButtonText}>
-                          {userData.energy >= calculateFocusEnergyCost(userData) ? '📖 Start Focusing' : '😴 No Energy'}
-                        </Text>
+                        <View style={styles.deadlineContent}>
+                          <View style={styles.missionHeader}>
+                            <Text style={styles.missionTitle}>
+                              📜 {deadline.title}
+                            </Text>
+                            <Text style={styles.priorityBadge}>
+                              {isHighPriority ? '🔴' : isMediumPriority ? '🟡' : '🟢'}
+                            </Text>
+                          </View>
+                          
+                          <Text style={styles.missionDueDate}>
+                            🗓️ {formatDate(deadline.dueDate)}
+                            {deadline.dueTime ? ` at ${deadline.dueTime}` : ''}
+                          </Text>
+                          
+                          {/* Visual Progress Bar */}
+                          <View style={styles.progressSection}>
+                            <View style={styles.progressBar}>
+                              <View 
+                                style={[
+                                  styles.progressFill, 
+                                  { width: `${Math.min((deadline.workCompleted / deadline.estimatedHours) * 100, 100)}%` }
+                                ]} 
+                              />
+                            </View>
+                            <Text style={styles.progressText}>
+                              {formatHours(deadline.workCompleted)} / {formatHours(deadline.estimatedHours)}
+                            </Text>
+                          </View>
+                          
+                          <TouchableOpacity 
+                            style={[
+                              styles.planButton,
+                              isHighPriority && styles.planButtonHigh,
+                              isMediumPriority && styles.planButtonMedium,
+                              isLowPriority && styles.planButtonLow,
+                            ]}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleStartSession(deadline.id);
+                            }}
+                            disabled={userData.energy < calculateFocusEnergyCost(userData)}
+                          >
+                            <Text style={styles.planButtonText}>
+                              {userData.energy >= calculateFocusEnergyCost(userData) ? '📖 Start Focusing' : '😴 No Energy'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       </TouchableOpacity>
-                    </View>
-                    <View style={styles.upcomingScrollCurl} />
-                  </TouchableOpacity>
-                );
-              })}
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
 
@@ -614,10 +635,39 @@ const styles = StyleSheet.create({
   missionSection: {
     marginBottom: SCREEN_HEIGHT * 0.025,
   },
+  collapsibleBox: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    marginBottom: SCREEN_HEIGHT * 0.025,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  deadlinesContainer: {
+    backgroundColor: '#FAFAFA',
+  },
+  deadlineItem: {
+    padding: SCREEN_WIDTH * 0.04,
+  },
+  deadlineItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#BDBDBD', // Darker border
+  },
+  deadlineContent: {
+    // Content styling
+  },
   alertHeader: {
-    backgroundColor: '#FF5252',
+    backgroundColor: '#FFCDD2', // Light red
     padding: SCREEN_WIDTH * 0.03,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
     marginBottom: SCREEN_HEIGHT * 0.015,
     borderWidth: 2,
     borderColor: '#D32F2F',
@@ -629,39 +679,44 @@ const styles = StyleSheet.create({
   },
   expandArrow: {
     fontSize: SCREEN_WIDTH * 0.05,
-    color: '#FFF',
+    color: '#333',
     marginLeft: SCREEN_WIDTH * 0.02,
     fontWeight: '700',
   },
   alertTitle: {
     fontSize: SCREEN_WIDTH * 0.048,
-    color: '#FFF',
+    color: '#C62828', // Dark red for contrast
     fontWeight: '700',
   },
   alertSubtitle: {
-    fontFamily: 'Schoolbell',
+    fontFamily: 'ChakraPetch_500Medium',
     fontSize: SCREEN_WIDTH * 0.032,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#D32F2F', // Medium red
     marginTop: 2,
     fontWeight: '600',
   },
   upcomingHeader: {
-    backgroundColor: '#64B5F6',
+    backgroundColor: '#BBDEFB', // Light blue
     padding: SCREEN_WIDTH * 0.03,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
     marginBottom: SCREEN_HEIGHT * 0.015,
     borderWidth: 2,
     borderColor: '#42A5F5',
   },
   upcomingTitle: {
     fontSize: SCREEN_WIDTH * 0.048,
-    color: '#FFF',
+    color: '#1565C0', // Dark blue for contrast
     fontWeight: '700',
   },
   upcomingSubtitle: {
-    fontFamily: 'Schoolbell',
+    fontFamily: 'ChakraPetch_500Medium',
     fontSize: SCREEN_WIDTH * 0.032,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#1976D2', // Medium blue
     marginTop: 2,
     fontWeight: '600',
   },

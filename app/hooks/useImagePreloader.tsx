@@ -81,9 +81,9 @@ export const useRoomImagePreloader = (messPoints: number = 0): ImagePreloaderHoo
     require('../../assets/overall/qbies.png'),
     
     // Shop decoration images
-    require('../../assets/shop/decoration/fairy-lights/colored.png'),
-    require('../../assets/shop/decoration/plants/succulent-plant.png'),
-    require('../../assets/shop/decoration/plants/swiss-cheese-plant.png'),
+    require('../../assets/shop/fairy-lights/colored.png'),
+    require('../../assets/shop/common/plants/succulent-plant.png'),
+    require('../../assets/shop/epic/plants/swiss-cheese-plant.png'),
   ];
 
   return useImagePreloader(roomImages);

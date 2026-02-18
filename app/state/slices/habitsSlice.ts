@@ -18,13 +18,13 @@ export interface HabitsSlice {
 }
 
 export const createHabitsSlice: StateCreator<
-  HabitsSlice & UserSlice,
+  HabitsSlice & UserSlice & { checkAchievements?: () => void; checkSpecificAchievement?: (id: string) => void },
   [],
   [],
   HabitsSlice
 > = (set, get) => ({
   logWater: () => {
-    const { userData } = get();
+    const { userData, checkSpecificAchievement } = get() as any;
     const hydrationGoal = userData.hydrationGoalGlasses || 8;
     
     // Allow logging beyond goal (no hard limit)
@@ -41,6 +41,14 @@ export const createHabitsSlice: StateCreator<
     });
     
     console.log(`[Water] Logged glass ${newCount} (goal: ${hydrationGoal})`);
+    
+    // Check for daily-water achievement (8 glasses)
+    if (newCount >= 8) {
+      console.log('[Water] 8 glasses logged today - checking achievement');
+      setTimeout(() => {
+        checkSpecificAchievement?.('daily-water');
+      }, 100);
+    }
   },
 
   logBreakfast: () => {
@@ -65,7 +73,7 @@ export const createHabitsSlice: StateCreator<
   },
 
   logMeal: () => {
-    const { userData } = get();
+    const { userData, checkSpecificAchievement } = get() as any;
     
     if (userData.mealsLogged >= 3) {
       console.log('[Meal] Already logged 3 meals today');
@@ -92,6 +100,15 @@ export const createHabitsSlice: StateCreator<
     
     if (shouldMarkBreakfast) {
       console.log('[Meal] Breakfast logged - reminder will stop');
+    }
+    
+    // Check for daily-meals achievement (3 meals logged)
+    if (mealCount >= 3) {
+      console.log('[Meal] 3 meals logged today - checking achievement');
+      // Use setTimeout to ensure state is updated before checking
+      setTimeout(() => {
+        checkSpecificAchievement?.('daily-meals');
+      }, 100);
     }
   },
 
@@ -210,18 +227,35 @@ export const createHabitsSlice: StateCreator<
   },
 
   cleanRoom: (messPointsReduced: number) => {
-    const { userData } = get();
+    const { userData, checkSpecificAchievement } = get() as any;
     const newMessPoints = Math.max(0, userData.messPoints - messPointsReduced);
     
     const energyReward = Math.floor(messPointsReduced * 5);
     const coinReward = Math.floor(messPointsReduced * 3);
+    
+    // Track cleaning count for achievements
+    const cleanCount = (userData.achievements?.['secret-first-clean']?.progress || 0) + 1;
+    const cleanFreakCount = (userData.achievements?.['secret-clean-freak']?.progress || 0) + 1;
     
     const updatedUserData = {
       ...userData,
       messPoints: newMessPoints,
       maxEnergyCap: 100,
       energy: Math.min(userData.energy + energyReward, 100),
-      qCoins: userData.qCoins + coinReward
+      qCoins: userData.qCoins + coinReward,
+      achievements: {
+        ...userData.achievements,
+        'secret-first-clean': {
+          ...userData.achievements?.['secret-first-clean'],
+          progress: cleanCount,
+          unlocked: userData.achievements?.['secret-first-clean']?.unlocked || false
+        },
+        'secret-clean-freak': {
+          ...userData.achievements?.['secret-clean-freak'],
+          progress: cleanFreakCount,
+          unlocked: userData.achievements?.['secret-clean-freak']?.unlocked || false
+        }
+      }
     };
     
     set({ userData: updatedUserData });
@@ -229,5 +263,15 @@ export const createHabitsSlice: StateCreator<
     
     console.log(`[CleanRoom] Reduced mess by ${messPointsReduced} points (${userData.messPoints} → ${newMessPoints})`);
     console.log(`[CleanRoom] Rewards: +${energyReward} energy, +${coinReward} coins`);
+    console.log(`[CleanRoom] Clean count: ${cleanCount}, Clean freak count: ${cleanFreakCount}`);
+    
+    // Check achievements - first clean or clean freak
+    setTimeout(() => {
+      if (cleanCount === 1) {
+        checkSpecificAchievement?.('secret-first-clean');
+      } else if (cleanFreakCount >= 30) {
+        checkSpecificAchievement?.('secret-clean-freak');
+      }
+    }, 100);
   }
 });

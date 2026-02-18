@@ -135,21 +135,72 @@ export default function StatsScreen() {
         <View style={styles.overviewCard}>
           <Text style={styles.cardTitle}>⚡ Current Status</Text>
           <View style={styles.overviewGrid}>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewValue}>{Math.round(userData.energy)}</Text>
+            <View style={[
+              styles.overviewItem,
+              (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewItemSmall
+            ]}>
               <Text style={styles.overviewLabel}>Energy</Text>
+              <Text style={[
+                styles.overviewValue,
+                (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewValueSmall
+              ]}>
+                {Math.round(userData.energy)}
+              </Text>
             </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewValue}>{userData.qCoins}</Text>
-              <Text style={styles.overviewLabel}>Qbies</Text>
+            <View style={[
+              styles.overviewItem,
+              (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewItemSmall
+            ]}>
+              <Text style={styles.overviewLabel}>Q-Bies</Text>
+              <View style={styles.overviewIconRow}>
+                <Image
+                  source={require('../../assets/overall/qbies.png')}
+                  style={[
+                    styles.qbiesIconStats,
+                    (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.qbiesIconSmall
+                  ]}
+                  resizeMode="contain"
+                />
+                <Text style={[
+                  styles.overviewValue,
+                  (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewValueSmall
+                ]}>
+                  {userData.qCoins}
+                </Text>
+              </View>
             </View>
-            <View style={styles.overviewItem}>
-              <Text style={[styles.overviewValue, styles.gemsValue]}>{userData.gems || 0}</Text>
+            <View style={[
+              styles.overviewItem,
+              (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewItemSmall
+            ]}>
               <Text style={styles.overviewLabel}>Gems</Text>
+              <View style={styles.overviewIconRow}>
+                <Text style={[
+                  styles.gemEmojiStats,
+                  (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.gemEmojiSmall
+                ]}>
+                  💎
+                </Text>
+                <Text style={[
+                  styles.overviewValue,
+                  styles.gemsValue,
+                  (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewValueSmall
+                ]}>
+                  {userData.gems || 0}
+                </Text>
+              </View>
             </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewValue}>{userData.messPoints.toFixed(0)}</Text>
-              <Text style={styles.overviewLabel}>Mess Points</Text>
+            <View style={[
+              styles.overviewItem,
+              (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewItemSmall
+            ]}>
+              <Text style={styles.overviewLabel}>Mess</Text>
+              <Text style={[
+                styles.overviewValue,
+                (userData.energy >= 100 || userData.qCoins >= 1000 || (userData.gems || 0) >= 100 || userData.messPoints >= 100) && styles.overviewValueSmall
+              ]}>
+                {userData.messPoints.toFixed(0)}
+              </Text>
             </View>
           </View>
         </View>
@@ -519,11 +570,37 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 8,
   },
+  overviewItemSmall: {
+    padding: 6,
+  },
+  overviewIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  qbiesIconStats: {
+    width: SCREEN_WIDTH * 0.05,
+    height: SCREEN_WIDTH * 0.05,
+  },
+  qbiesIconSmall: {
+    width: SCREEN_WIDTH * 0.04,
+    height: SCREEN_WIDTH * 0.04,
+  },
+  gemEmojiStats: {
+    fontSize: SCREEN_WIDTH * 0.05,
+    marginRight: 2,
+  },
+  gemEmojiSmall: {
+    fontSize: SCREEN_WIDTH * 0.04,
+  },
   overviewValue: {
     fontSize: SCREEN_WIDTH * 0.065,
     fontWeight: '700',
     color: '#1976D2',
-    marginBottom: 4,
+    marginTop: 4,
+  },
+  overviewValueSmall: {
+    fontSize: SCREEN_WIDTH * 0.05,
   },
   overviewLabel: {
     fontSize: SCREEN_WIDTH * 0.032,

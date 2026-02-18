@@ -42,7 +42,7 @@ export const homeStyles = StyleSheet.create({
   // Scrollable content area - inside orange theme background, below floor
   scrollableContent: {
     position: 'absolute',
-    top: (SCREEN_HEIGHT * 580) / 852, // Start below floor.png (floor ends at ~575)
+    top: (SCREEN_HEIGHT * 490) / 852, // Start below floor (reduced by 90px total from 580)
     left: 0,
     right: 0,
     bottom: 30, // Small padding from bottom edge

@@ -119,9 +119,9 @@ export default function ImagePreloader({ children }: { children: React.ReactNode
         <Image source={require('../../assets/exercise/grass.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />
         
         {/* Shop decorations */}
-        <Image source={require('../../assets/shop/decoration/fairy-lights/colored.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />
-        <Image source={require('../../assets/shop/decoration/plants/succulent-plant.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />
-        <Image source={require('../../assets/shop/decoration/plants/swiss-cheese-plant.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />
+        <Image source={require('../../assets/shop/fairy-lights/colored.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />
+        <Image source={require('../../assets/shop/common/plants/succulent-plant.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />
+        <Image source={require('../../assets/shop/epic/plants/swiss-cheese-plant.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />
         
         {/* Mess variants */}
         <Image source={require('../../assets/rooms/mess/walls-messy1.png')} style={styles.image} onLoad={handleImageLoad} onError={handleImageError} />

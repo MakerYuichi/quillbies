@@ -77,7 +77,12 @@ export default function DeadlineDetail({ deadline, onClose, onStartFocus }: Dead
         <View style={styles.breakdownContent}>
           <Text style={styles.breakdownText}>Total work needed: {deadline.estimatedHours} hours</Text>
           <Text style={styles.breakdownText}>Days available: 10</Text>
-          <Text style={styles.breakdownText}>Daily target: {calculateDailyTarget().toFixed(1)}h ({Math.round(calculateDailyTarget() * 60)} mins)</Text>
+          <Text style={styles.breakdownText}>Daily target: {(() => {
+            const dailyTarget = calculateDailyTarget();
+            const h = Math.floor(dailyTarget);
+            const m = Math.round((dailyTarget - h) * 60);
+            return h > 0 ? `${h}h ${m}min` : `${m}min`;
+          })()}</Text>
           
           <Text style={styles.checkpointsTitle}>Suggested checkpoints:</Text>
           <View style={styles.checkpoint}>

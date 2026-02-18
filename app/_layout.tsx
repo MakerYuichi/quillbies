@@ -39,9 +39,9 @@ const preloadImages = async () => {
     require('../assets/exercise/grass.png'),
     require('../assets/hamsters/casual/jumping.gif'),
     // Shop decorations
-    require('../assets/shop/decoration/fairy-lights/colored.png'),
-    require('../assets/shop/decoration/plants/succulent-plant.png'),
-    require('../assets/shop/decoration/plants/swiss-cheese-plant.png'),
+    require('../assets/shop/fairy-lights/colored.png'),
+    require('../assets/shop/common/plants/succulent-plant.png'),
+    require('../assets/shop/epic/plants/swiss-cheese-plant.png'),
   ];
 
   try {

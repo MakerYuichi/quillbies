@@ -181,8 +181,10 @@ export interface ShopItem {
   id: string;
   name: string;
   description: string;
-  price: number;
-  category: 'light' | 'plant' | 'decoration';
+  price: number; // Coin price (0 for gem-only items)
+  gemPrice?: number; // Optional gem price
+  category: 'light' | 'plant' | 'furniture' | 'theme';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
   assetPath: string;
   icon: string;
 }

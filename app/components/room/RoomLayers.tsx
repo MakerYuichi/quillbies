@@ -11,9 +11,11 @@ interface RoomLayersProps {
   isSleeping?: boolean; // Add sleeping state to hide lamp
   sleepAnimation?: string; // Add sleep animation state to hide lamp during wake-up
   qCoins?: number; // Add Q-coins count for display
+  gems?: number; // Add gems count for display
+  hideItems?: boolean; // Hide plants/furniture for shop preview
 }
 
-export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0 }: RoomLayersProps) {
+export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0, gems = 0, hideItems = false }: RoomLayersProps) {
   const { userData } = useQuillbyStore();
   const roomCustomization = userData.roomCustomization;
   
@@ -113,7 +115,7 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
           {/* Colored Fairy Lights - Show when colored fairy lights are equipped */}
           {roomCustomization?.lightType === 'colored-fairy-lights' && (
             <Image 
-              source={require('../../../assets/shop/decoration/fairy-lights/colored.png')}
+              source={require('../../../assets/shop/fairy-lights/colored.png')}
               style={styles.fairyLightsDecor}
               resizeMode="contain"
             />
@@ -122,41 +124,58 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
       )}
       
       {/* LAYER 7: Customizable Plants */}
-      <Image 
-        source={
-          roomCustomization?.plantType === 'succulent-plant' 
-            ? require('../../../assets/shop/decoration/plants/succulent-plant.png')
-            : roomCustomization?.plantType === 'swiss-cheese-plant'
-            ? require('../../../assets/shop/decoration/plants/swiss-cheese-plant.png')
-            : require('../../../assets/rooms/plant.png') // Default plant when undefined or 'plant'
-        }
-        style={styles.plantDecor}
-        resizeMode="contain"
-      />
+      {!hideItems && (
+        <>
+          <Image 
+            source={
+              roomCustomization?.plantType === 'succulent-plant' 
+                ? require('../../../assets/shop/common/plants/succulent-plant.png')
+                : roomCustomization?.plantType === 'swiss-cheese-plant'
+                ? require('../../../assets/shop/epic/plants/swiss-cheese-plant.png')
+                : require('../../../assets/rooms/plant.png') // Default plant when undefined or 'plant'
+            }
+            style={styles.plantDecor}
+            resizeMode="contain"
+          />
 
-      <Image 
-        source={
-          roomCustomization?.plantType === 'succulent-plant' 
-            ? require('../../../assets/shop/decoration/plants/succulent-plant.png')
-            : roomCustomization?.plantType === 'swiss-cheese-plant'
-            ? require('../../../assets/shop/decoration/plants/swiss-cheese-plant.png')
-            : require('../../../assets/rooms/plant.png') // Default plant when undefined or 'plant'
-        }
-        style={styles.plantDecor2}
-        resizeMode="contain"
-      />
+          <Image 
+            source={
+              roomCustomization?.plantType === 'succulent-plant' 
+                ? require('../../../assets/shop/common/plants/succulent-plant.png')
+                : roomCustomization?.plantType === 'swiss-cheese-plant'
+                ? require('../../../assets/shop/epic/plants/swiss-cheese-plant.png')
+                : require('../../../assets/rooms/plant.png') // Default plant when undefined or 'plant'
+            }
+            style={styles.plantDecor2}
+            resizeMode="contain"
+          />
+        </>
+      )}
      
       
-      {/* LAYER 9: Q-Coins Display - Match study session design */}
-      <View style={styles.qCoinsContainer}>
-        <Image 
-          source={require('../../../assets/overall/qbies.png')}
-          style={styles.qbiesIcon}
-          resizeMode="contain"
-        />
-        <Text style={styles.qCoinsText}>
-          {qCoins}
-        </Text>
+      {/* LAYER 9: Currency Display - Q-Bies and Gems */}
+      <View style={styles.currencyContainer}>
+        {/* Q-Bies */}
+        <View style={styles.qCoinsContainer}>
+          <Image 
+            source={require('../../../assets/overall/qbies.png')}
+            style={styles.qbiesIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.currencyText}>
+            {qCoins}
+          </Text>
+        </View>
+        
+        {/* Gems - Only show if gems > 0 or in shop */}
+        {gems >= 0 && (
+          <View style={styles.gemsContainer}>
+            <Text style={styles.gemIcon}>💎</Text>
+            <Text style={styles.currencyText}>
+              {gems}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -173,7 +192,7 @@ const styles = StyleSheet.create({
   floorLayer: {
     position: 'absolute',
     width: (SCREEN_WIDTH * 518) / 393,
-    height: (SCREEN_HEIGHT * 336) / 852,
+    height: (SCREEN_HEIGHT * 246) / 852, // Reduced by 90px total (336 - 90 = 246)
     left: (SCREEN_WIDTH * -90) / 393,
     top: (SCREEN_HEIGHT * 239) / 852,
     backgroundColor: '#D7CCC8',
@@ -236,25 +255,48 @@ const styles = StyleSheet.create({
     left: (SCREEN_WIDTH * -81) / 393, // -81px on iPhone 15 Pro (extends beyond left edge)
     top: (SCREEN_HEIGHT * 75) / 852, // 75px on iPhone 15 Pro
   },
-  // Q-Coins Display - Match study session design
-  qCoinsContainer: {
+  // Currency Container - Holds both Q-Bies and Gems
+  currencyContainer: {
     position: 'absolute',
     right: 16,
     top: 3,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  // Q-Bies Display - Vertical layout (icon on top, value below)
+  qCoinsContainer: {
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#FF9800',
+    minWidth: 50,
   },
   qbiesIcon: {
-    width: (SCREEN_WIDTH * 47) / 393,
-    height: (SCREEN_HEIGHT * 47) / 852,
+    width: 24,
+    height: 24,
+    marginBottom: 2,
   },
-  qCoinsText: {
+  currencyText: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 21) / 393,
-    lineHeight: (SCREEN_HEIGHT * 27) / 852,
-    color: '#000000',
-    opacity: 0.7,
-    marginTop: 5,
-    textAlign: 'center',
+    fontSize: 13,
+    color: '#333',
+  },
+  // Gems Display - Vertical layout (icon on top, value below)
+  gemsContainer: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(126, 87, 194, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#7E57C2',
+    minWidth: 50,
+  },
+  gemIcon: {
+    fontSize: 20,
+    marginBottom: 2,
   },
 });

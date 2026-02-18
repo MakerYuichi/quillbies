@@ -29,7 +29,7 @@ export interface DeadlinesSlice {
 }
 
 export const createDeadlinesSlice: StateCreator<
-  DeadlinesSlice & UserSlice,
+  DeadlinesSlice & UserSlice & { checkAchievements?: () => void; checkSpecificAchievement?: (id: string) => void },
   [],
   [],
   DeadlinesSlice
@@ -37,7 +37,7 @@ export const createDeadlinesSlice: StateCreator<
   deadlines: [],
 
   createDeadline: (formData: DeadlineFormData) => {
-    const { deadlines } = get();
+    const { deadlines, checkSpecificAchievement } = get() as any;
     
     let normalizedDueDate = formData.dueDate;
     if (normalizedDueDate && !normalizedDueDate.includes('T')) {
@@ -67,6 +67,12 @@ export const createDeadlinesSlice: StateCreator<
     set({
       deadlines: [...deadlines, newDeadline]
     });
+    
+    console.log('[Deadline] Created new deadline, checking first deadline achievement...');
+    // Check specifically for first deadline achievement
+    setTimeout(() => {
+      checkSpecificAchievement?.('secret-first-deadline');
+    }, 100);
     
     // Sync deadline to database and update with real ID
     (async () => {

@@ -70,12 +70,18 @@ export function useNotifications() {
             if (!sentCheckpointNotificationsRef.current.has(reminderKey)) {
               const studyHours = (userData.studyMinutesToday || 0) / 60;
               const expectedHours = (userData.studyGoalHours || 0) * (checkpointHour / 24);
+              
+              // Format hours to "Xh Ymin"
+              const studyH = Math.floor(studyHours);
+              const studyM = Math.round((studyHours - studyH) * 60);
+              const expectedH = Math.floor(expectedHours);
+              const expectedM = Math.round((expectedHours - expectedH) * 60);
 
               const notification: NotificationData = {
                 id: `reminder-${checkpoint}-${Date.now()}`,
                 type: 'checkpoint-reminder',
                 title: '⏰ Study Checkpoint Reminder',
-                message: `Study checkpoint in 30 minutes!\nCurrent: ${studyHours.toFixed(1)}h / Expected: ${expectedHours.toFixed(1)}h`,
+                message: `Study checkpoint in 30 minutes!\nCurrent: ${studyH}h ${studyM}min / Expected: ${expectedH}h ${expectedM}min`,
                 timestamp: Date.now()
               };
 
@@ -95,7 +101,20 @@ export function useNotifications() {
                   id: `checkpoint-${checkpoint}-${Date.now()}`,
                   type: 'checkpoint-reached',
                   title: '📚 Checkpoint Reached!',
-                  message: `Studied: ${checkResult.actual.toFixed(1)}h / Expected: ${checkResult.expected.toFixed(1)}h\nMissing: ${checkResult.missing.toFixed(1)}h → +${checkResult.missing.toFixed(1)} mess`,
+                  message: (() => {
+                    const actualH = Math.floor(checkResult.actual);
+                    const actualM = Math.round((checkResult.actual - actualH) * 60);
+                    const expectedH = Math.floor(checkResult.expected);
+                    const expectedM = Math.round((checkResult.expected - expectedH) * 60);
+                    const missingH = Math.floor(checkResult.missing);
+                    const missingM = Math.round((checkResult.missing - missingH) * 60);
+                    
+                    const actualText = actualH > 0 ? `${actualH}h ${actualM}min` : `${actualM}min`;
+                    const expectedText = expectedH > 0 ? `${expectedH}h ${expectedM}min` : `${expectedM}min`;
+                    const missingText = missingH > 0 ? `${missingH}h ${missingM}min` : `${missingM}min`;
+                    
+                    return `Studied: ${actualText} / Expected: ${expectedText}\nMissing: ${missingText} → +${missingText} mess`;
+                  })(),
                   timestamp: Date.now()
                 };
 
@@ -143,11 +162,16 @@ export function useNotifications() {
         ) {
           const key = `${keyBase}-approaching-3`;
           if (!sentDeadlineNotificationsRef.current.has(key)) {
+            // Format hours to "Xh Ymin"
+            const h = Math.floor(remainingHours);
+            const m = Math.round((remainingHours - h) * 60);
+            const timeText = h > 0 ? `${h}h ${m}min` : `${m}min`;
+            
             const notification: NotificationData = {
               id: key,
               type: 'deadline-approaching',
               title: `📝 ${deadline.title} in 3 days!`,
-              message: `You need ${remainingHours.toFixed(1)} more hours to stay on track`,
+              message: `You need ${timeText} more to stay on track`,
               timestamp: Date.now(),
             };
             sentDeadlineNotificationsRef.current.add(key);
@@ -164,11 +188,16 @@ export function useNotifications() {
         ) {
           const key = `${keyBase}-checkpoint-1`;
           if (!sentDeadlineNotificationsRef.current.has(key)) {
+            // Format hours to "Xh Ymin"
+            const h = Math.floor(remainingHours);
+            const m = Math.round((remainingHours - h) * 60);
+            const timeText = h > 0 ? `${h}h ${m}min` : `${m}min`;
+            
             const notification: NotificationData = {
               id: key,
               type: 'deadline-checkpoint',
               title: `⚠️ ${deadline.title} due tomorrow!`,
-              message: `${remainingHours.toFixed(1)}h of work remaining\nTime to focus!`,
+              message: `${timeText} of work remaining\nTime to focus!`,
               timestamp: Date.now(),
             };
             sentDeadlineNotificationsRef.current.add(key);
@@ -181,11 +210,17 @@ export function useNotifications() {
           const key = `${keyBase}-critical-${Math.round(diffDays)}`;
           if (!sentDeadlineNotificationsRef.current.has(key)) {
             const daysLabel = Math.round(diffDays) <= 0 ? 'TODAY' : `${Math.round(diffDays)} DAYS`;
+            
+            // Format hours to "Xh Ymin"
+            const h = Math.floor(remainingHours);
+            const m = Math.round((remainingHours - h) * 60);
+            const timeText = h > 0 ? `${h}h ${m}min` : `${m}min`;
+            
             const notification: NotificationData = {
               id: key,
               type: 'deadline-overdue',
               title: `🚨 CRITICAL: ${deadline.title} ${daysLabel}!`,
-              message: `${remainingHours.toFixed(1)}h remaining\nStart working now!`,
+              message: `${timeText} remaining\nStart working now!`,
               timestamp: Date.now(),
             };
             sentDeadlineNotificationsRef.current.add(key);

@@ -163,12 +163,15 @@ export const updateDailyProgress = async (userId: string, updates: any) => {
 // Sync user profile data to daily progress - with error handling
 export const syncUserToProgress = async (userId: string, userData: any) => {
   try {
+    // Ensure water_glasses is a valid number between 0 and 8
+    const waterGlasses = Math.max(0, Math.min(8, userData.waterGlasses || 0));
+    
     return updateDailyProgress(userId, {
       energy: userData.energy,
       q_coins: userData.qCoins,
       mess_points: userData.messPoints,
       ate_breakfast: userData.ateBreakfast,
-      water_glasses: userData.waterGlasses,
+      water_glasses: waterGlasses,
       meals_logged: userData.mealsLogged,
       exercise_minutes: userData.exerciseMinutes,
       study_minutes_today: userData.studyMinutesToday,

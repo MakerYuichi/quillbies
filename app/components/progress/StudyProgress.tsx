@@ -69,7 +69,12 @@ export default function StudyProgress() {
           />
         </View>
         <Text style={styles.progressText}>
-          {studyHours.toFixed(1)}h / {goalHours}h ({progressPercent.toFixed(0)}%)
+          {(() => {
+            const h = Math.floor(studyHours);
+            const m = Math.round((studyHours - h) * 60);
+            const studyText = h > 0 ? `${h}h ${m}min` : `${m}min`;
+            return `${studyText} / ${goalHours}h (${progressPercent.toFixed(0)}%)`;
+          })()}
         </Text>
       </View>
       

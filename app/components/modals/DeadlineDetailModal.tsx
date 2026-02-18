@@ -37,6 +37,16 @@ export default function DeadlineDetailModal({
 }: DeadlineDetailModalProps) {
   const { updateReminders, userData } = useQuillbyStore();
   
+  // Format hours to "Xh Ymin" format
+  const formatHours = (hours: number): string => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    if (h === 0 && m === 0) return '0min';
+    if (h === 0) return `${m}min`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}min`;
+  };
+  
   // Reminder states - initialize from deadline
   const [reminder1Day, setReminder1Day] = useState(deadline?.reminders?.oneDayBefore ?? true);
   const [reminder3Day, setReminder3Day] = useState(deadline?.reminders?.threeDaysBefore ?? true);
@@ -92,14 +102,19 @@ export default function DeadlineDetailModal({
   };
 
   const getCheckpointDescription = (index: number, work: number) => {
+    // Format work hours to "Xh Ymin"
+    const h = Math.floor(work);
+    const m = Math.round((work - h) * 60);
+    const timeText = h > 0 ? `${h}h ${m}min` : `${m}min`;
+    
     const descriptions = [
-      `${work.toFixed(1)}h (Start the mission)`,
-      `${work.toFixed(1)}h (Build momentum)`, 
-      `${work.toFixed(1)}h (Core battle)`,
-      `${work.toFixed(1)}h (Review & polish)`,
-      `${work.toFixed(1)}h (Final preparations)`
+      `${timeText} (Start the mission)`,
+      `${timeText} (Build momentum)`, 
+      `${timeText} (Core battle)`,
+      `${timeText} (Review & polish)`,
+      `${timeText} (Final preparations)`
     ];
-    return descriptions[index] || `${work.toFixed(1)}h (Continue work)`;
+    return descriptions[index] || `${timeText} (Continue work)`;
   };
 
   // Format date
@@ -268,7 +283,7 @@ export default function DeadlineDetailModal({
               
               <View style={styles.progressCard}>
                 <Text style={styles.progressText}>
-                  {deadline.workCompleted.toFixed(1)}h / {deadline.estimatedHours}h completed
+                  {formatHours(deadline.workCompleted)} / {formatHours(deadline.estimatedHours)} completed
                 </Text>
                 <View style={styles.progressBar}>
                   <View 
@@ -300,12 +315,12 @@ export default function DeadlineDetailModal({
                 <View style={styles.planStats}>
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>Total Work</Text>
-                    <Text style={styles.statValue}>{deadline.estimatedHours}h</Text>
+                    <Text style={styles.statValue}>{formatHours(deadline.estimatedHours)}</Text>
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>Daily Target</Text>
-                    <Text style={styles.statValue}>{dailyTarget.toFixed(1)}h</Text>
+                    <Text style={styles.statValue}>{formatHours(dailyTarget)}</Text>
                   </View>
                 </View>
                 

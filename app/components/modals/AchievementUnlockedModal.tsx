@@ -69,19 +69,79 @@ const ACHIEVEMENT_ASSETS: { [key: string]: any } = {
   'secret-completionist': require('../../../assets/acheivements/secrets/milestones/legendary/secret-completionist.png'),
 };
 
+// Get decorative elements based on rarity
+const getDecorativeElements = (rarity: string): string[] => {
+  switch (rarity) {
+    case 'common':
+      return ['✨', '⭐', '✨', '⭐']; // Simple sparkles
+    case 'rare':
+      return ['🍃', '🍂', '🍃', '🍂']; // Leaves
+    case 'epic':
+      return ['🌸', '🌺', '🌼', '🌻']; // Flowers and blossoms
+    case 'legendary':
+      return ['🌸', '✨', '🌺', '⭐']; // Mix of everything
+    default:
+      return ['✨', '⭐', '✨', '⭐'];
+  }
+};
+
 // Get themed emojis based on achievement
 const getThemedEmojis = (achievementId: string): string[] => {
   switch (achievementId) {
-    case 'marathon-runner':
-      return ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐']; // Sports balls
-    case 'week-warrior':
-      return ['⚔️', '🗡️', '🛡️', '⚔️', '🗡️', '🛡️']; // Swords and shields
-    case 'first-focus':
-      return ['⭐', '✨', '💫', '🌟', '⭐', '✨']; // Stars
-    case 'speed-demon':
-      return ['⚡', '💨', '🔥', '⚡', '💨', '🔥']; // Speed symbols
-    case 'night-owl':
-      return ['🌙', '⭐', '🦉', '🌙', '⭐', '🦉']; // Night symbols
+    // Daily Challenges
+    case 'daily-session': return ['☀️', '☕', '📚', '✨', '💪', '🌅'];
+    case 'daily-water': return ['💧', '💦', '🌊', '💙', '🚰', '💧'];
+    case 'daily-meals': return ['🍎', '🥗', '🍽️', '🥙', '🍱', '🥘'];
+    case 'daily-hours': return ['🎯', '⏱️', '📖', '✍️', '💡', '🎯'];
+    case 'daily-early': return ['🌅', '☀️', '🐦', '🌄', '⏰', '🌞'];
+    
+    // Weekly Challenges
+    case 'weekly-streak': return ['🔥', '⚔️', '🗡️', '🛡️', '⚔️', '🔥'];
+    case 'weekly-sessions': return ['💪', '✅', '📊', '💯', '🎯', '💪'];
+    case 'weekly-hours': return ['🎓', '📚', '🏆', '📖', '✨', '🎓'];
+    case 'weekly-clean': return ['🧼', '✨', '🧹', '🧽', '💫', '🧼'];
+    case 'weekly-hydration': return ['💧', '🦸', '💪', '💙', '🌊', '💧'];
+    
+    // Monthly Challenges
+    case 'monthly-hours': return ['👑', '🏆', '💎', '⭐', '🎖️', '👑'];
+    case 'monthly-streak': return ['🔥', '👑', '📅', '💪', '🏆', '🔥'];
+    case 'monthly-deadlines': return ['🎯', '🏹', '🎪', '💥', '🎯', '🏹'];
+    case 'monthly-perfect': return ['🌟', '✨', '💫', '⭐', '🌠', '🌟'];
+    case 'monthly-sessions': return ['🏃', '🏁', '🎽', '🏅', '🏃', '🏁'];
+    
+    // Beginner Secrets
+    case 'secret-first-session': return ['🎯', '📚', '✨', '🎉', '💡', '🎯'];
+    case 'secret-first-deadline': return ['📋', '✅', '💡', '📝', '✨', '📋'];
+    case 'secret-first-perfect': return ['✨', '💯', '🎭', '🌟', '👏', '✨'];
+    case 'secret-first-clean': return ['🧹', '✨', '💫', '🧼', '🌟', '🧹'];
+    
+    // Consumption Secrets
+    case 'secret-coffee-lover': return ['☕', '💨', '⚡', '🫘', '☕', '💨'];
+    case 'secret-apple-fan': return ['🍎', '🍏', '💚', '🌿', '✨', '🍎'];
+    case 'secret-shopaholic': return ['🛍️', '💳', '🎁', '✨', '🛒', '🛍️'];
+    
+    // Time-Based Secrets
+    case 'secret-night-owl': return ['🦉', '🌙', '⭐', '🌃', '🦉', '🌙'];
+    case 'secret-early-bird': return ['🐦', '🌅', '☀️', '☕', '🌄', '🐦'];
+    case 'secret-midnight': return ['🌙', '⭐', '🌌', '✨', '🕛', '🌙'];
+    case 'secret-all-nighter': return ['😴', '☕', '🌙', '☀️', '💪', '😴'];
+    
+    // Progress Milestones
+    case 'secret-perfectionist': return ['💎', '✨', '🔍', '💯', '⭐', '💎'];
+    case 'secret-speed-demon': return ['⚡', '💨', '🏎️', '💥', '🔥', '⚡'];
+    case 'secret-clean-freak': return ['🧼', '✨', '🧽', '💫', '🧹', '🧼'];
+    case 'secret-deadline-master': return ['🏆', '💥', '🎯', '👊', '🏅', '🏆'];
+    
+    // Epic Milestones
+    case 'secret-century': return ['🌟', '🎉', '🥂', '🎊', '💯', '🌟'];
+    case 'secret-marathon': return ['🏃', '🏁', '🏅', '🎖️', '💪', '🏃'];
+    case 'secret-zen-master': return ['🧘', '🌸', '☮️', '🕉️', '✨', '🧘'];
+    
+    // Legendary Secrets
+    case 'secret-scholar': return ['📚', '🎓', '📖', '✨', '🏛️', '📚'];
+    case 'secret-legend': return ['🎓', '👑', '⚡', '🌟', '🏆', '🎓'];
+    case 'secret-completionist': return ['👑', '🏆', '💎', '🌈', '⭐', '👑'];
+    
     default:
       return ['✨', '⭐', '🎉', '💫', '🌟', '✨']; // Default celebration
   }
@@ -104,6 +164,12 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
   const confetti4 = useRef(new Animated.Value(-100)).current;
   const confetti5 = useRef(new Animated.Value(-100)).current;
   const confetti6 = useRef(new Animated.Value(-100)).current;
+  
+  // Decorative elements animations (flowers, leaves, sparkles)
+  const decor1 = useRef(new Animated.Value(-100)).current;
+  const decor2 = useRef(new Animated.Value(-100)).current;
+  const decor3 = useRef(new Animated.Value(-100)).current;
+  const decor4 = useRef(new Animated.Value(-100)).current;
   
   // Track sound for cleanup
   const soundPlayingRef = useRef(false);
@@ -132,6 +198,23 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
       confetti4.setValue(-100);
       confetti5.setValue(-100);
       confetti6.setValue(-100);
+      decor1.setValue(-100);
+      decor2.setValue(-100);
+      decor3.setValue(-100);
+      decor4.setValue(-100);
+      
+      // Rarity-based animation intensity
+      const rarity = achievement.rarity;
+      const isLegendary = rarity === 'legendary';
+      const isEpic = rarity === 'epic';
+      const isRare = rarity === 'rare';
+      
+      // Adjust animation parameters based on rarity
+      const springFriction = isLegendary ? 2 : isEpic ? 3 : isRare ? 4 : 5;
+      const springTension = isLegendary ? 80 : isEpic ? 70 : isRare ? 60 : 50;
+      const scaleFriction = isLegendary ? 2 : isEpic ? 2.5 : isRare ? 3 : 4;
+      const rotationDuration = 800; // Equal rotation duration for all rarities
+      const rotations = 1; // Equal single rotation for all rarities
       
       // Start epic celebration animation with varied effects
       Animated.parallel([
@@ -141,25 +224,25 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
           duration: 300,
           useNativeDriver: true,
         }),
-        // Slide up content with strong bounce
+        // Slide up content with strong bounce (more dramatic for higher rarity)
         Animated.spring(slideAnim, {
           toValue: 0,
-          friction: 5,
-          tension: 60,
+          friction: springFriction,
+          tension: springTension,
           useNativeDriver: true,
         }),
-        // Scale in trophy with dramatic overshoot
+        // Scale in trophy with dramatic overshoot (more for higher rarity)
         Animated.spring(scaleAnim, {
           toValue: 1,
-          friction: 3,
-          tension: 60,
+          friction: scaleFriction,
+          tension: springTension,
           delay: 150,
           useNativeDriver: true,
         }),
-        // Single rotation with wobble
+        // Rotation with wobble (more rotations for higher rarity)
         Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 800,
+          toValue: rotations,
+          duration: rotationDuration,
           delay: 150,
           useNativeDriver: true,
         }),
@@ -173,43 +256,46 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
             useNativeDriver: true,
           }),
         ]),
-        // Glow effect
+        // Glow effect (stronger for higher rarity)
         Animated.sequence([
           Animated.delay(300),
           Animated.timing(glowAnim, {
-            toValue: 1,
+            toValue: isLegendary ? 1.15 : isEpic ? 1.1 : 1.05,
             duration: 600,
             useNativeDriver: true,
           }),
         ]),
       ]).start(() => {
         // Start pulsing and shaking animations
+        const pulseScale = isLegendary ? 1.2 : isEpic ? 1.18 : isRare ? 1.15 : 1.12;
+        const pulseDuration = isLegendary ? 400 : isEpic ? 450 : 500;
+        
         Animated.parallel([
-          // Pulse animation
+          // Pulse animation (more dramatic for higher rarity)
           Animated.loop(
             Animated.sequence([
               Animated.timing(pulseAnim, {
-                toValue: 1.15,
-                duration: 500,
+                toValue: pulseScale,
+                duration: pulseDuration,
                 useNativeDriver: true,
               }),
               Animated.timing(pulseAnim, {
                 toValue: 1,
-                duration: 500,
+                duration: pulseDuration,
                 useNativeDriver: true,
               }),
             ])
           ),
-          // Subtle shake animation
+          // Subtle shake animation (more for legendary)
           Animated.loop(
             Animated.sequence([
               Animated.timing(shakeAnim, {
-                toValue: 1,
+                toValue: isLegendary ? 1.5 : 1,
                 duration: 100,
                 useNativeDriver: true,
               }),
               Animated.timing(shakeAnim, {
-                toValue: -1,
+                toValue: isLegendary ? -1.5 : -1,
                 duration: 100,
                 useNativeDriver: true,
               }),
@@ -218,21 +304,47 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
                 duration: 100,
                 useNativeDriver: true,
               }),
-              Animated.delay(2000), // Pause between shakes
+              Animated.delay(isLegendary ? 1500 : 2000), // More frequent for legendary
             ])
           ),
         ]).start();
       });
       
-      // Confetti rain with faster, more dramatic fall
+      // Confetti rain with rarity-based speed
+      const confettiDuration = isLegendary ? 1500 : isEpic ? 1800 : isRare ? 2000 : 2200;
+      const confettiStagger = isLegendary ? 80 : isEpic ? 90 : 100;
+      
       const confettiAnimations = [confetti1, confetti2, confetti3, confetti4, confetti5, confetti6];
       confettiAnimations.forEach((anim, index) => {
         Animated.loop(
           Animated.sequence([
-            Animated.delay(index * 100), // Faster stagger
+            Animated.delay(index * confettiStagger),
             Animated.timing(anim, {
               toValue: SCREEN_HEIGHT + 100,
-              duration: 2000, // Faster fall
+              duration: confettiDuration,
+              useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+              toValue: -100,
+              duration: 0,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      });
+      
+      // Decorative elements rain (slower and different pattern)
+      const decorDuration = isLegendary ? 2000 : isEpic ? 2300 : isRare ? 2500 : 2800;
+      const decorStagger = isLegendary ? 120 : isEpic ? 140 : 160;
+      
+      const decorAnimations = [decor1, decor2, decor3, decor4];
+      decorAnimations.forEach((anim, index) => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.delay(index * decorStagger + 200), // Start slightly after confetti
+            Animated.timing(anim, {
+              toValue: SCREEN_HEIGHT + 100,
+              duration: decorDuration,
               useNativeDriver: true,
             }),
             Animated.timing(anim, {
@@ -272,11 +384,72 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
     }
   };
   
-  const [color1, color2] = getRarityColors(achievement.rarity);
+  // Get themed background colors based on achievement
+  const getThemedColors = (achievementId: string): [string, string] => {
+    switch (achievementId) {
+      // Daily Challenges - Morning/Fresh colors
+      case 'daily-session': return ['#FFB74D', '#FF9800']; // Orange sunrise
+      case 'daily-water': return ['#4FC3F7', '#0288D1']; // Blue water
+      case 'daily-meals': return ['#81C784', '#388E3C']; // Green healthy
+      case 'daily-hours': return ['#7986CB', '#3949AB']; // Blue focus
+      case 'daily-early': return ['#FFD54F', '#FFA000']; // Golden sunrise
+      
+      // Weekly Challenges - Vibrant/Achievement colors
+      case 'weekly-streak': return ['#FF5722', '#D84315']; // Red fire
+      case 'weekly-sessions': return ['#AB47BC', '#7B1FA2']; // Purple power
+      case 'weekly-hours': return ['#5C6BC0', '#283593']; // Deep blue
+      case 'weekly-clean': return ['#4DD0E1', '#0097A7']; // Cyan clean
+      case 'weekly-hydration': return ['#29B6F6', '#0277BD']; // Bright blue
+      
+      // Monthly Challenges - Royal/Premium colors
+      case 'monthly-hours': return ['#FFD700', '#FFA000']; // Gold crown
+      case 'monthly-streak': return ['#FF6F00', '#E65100']; // Orange flame
+      case 'monthly-deadlines': return ['#F44336', '#C62828']; // Red target
+      case 'monthly-perfect': return ['#FDD835', '#F57F17']; // Yellow star
+      case 'monthly-sessions': return ['#66BB6A', '#2E7D32']; // Green runner
+      
+      // Beginner Secrets - Soft/Encouraging colors
+      case 'secret-first-session': return ['#7986CB', '#3949AB']; // Blue start
+      case 'secret-first-deadline': return ['#64B5F6', '#1976D2']; // Light blue
+      case 'secret-first-perfect': return ['#FFD54F', '#FFA000']; // Golden sparkle
+      case 'secret-first-clean': return ['#4DD0E1', '#0097A7']; // Cyan clean
+      
+      // Consumption Secrets - Item-themed colors
+      case 'secret-coffee-lover': return ['#8D6E63', '#4E342E']; // Brown coffee
+      case 'secret-apple-fan': return ['#66BB6A', '#2E7D32']; // Green apple
+      case 'secret-shopaholic': return ['#EC407A', '#C2185B']; // Pink shopping
+      
+      // Time-Based Secrets - Time-of-day colors
+      case 'secret-night-owl': return ['#5C6BC0', '#283593']; // Night blue
+      case 'secret-early-bird': return ['#FFB74D', '#F57C00']; // Dawn orange
+      case 'secret-midnight': return ['#7E57C2', '#4527A0']; // Midnight purple
+      case 'secret-all-nighter': return ['#5E35B1', '#311B92']; // Deep purple
+      
+      // Progress Milestones - Achievement colors
+      case 'secret-perfectionist': return ['#BA68C8', '#7B1FA2']; // Purple diamond
+      case 'secret-speed-demon': return ['#FFEB3B', '#F57F17']; // Yellow lightning
+      case 'secret-clean-freak': return ['#4FC3F7', '#0277BD']; // Bright blue
+      case 'secret-deadline-master': return ['#FF7043', '#D84315']; // Orange trophy
+      
+      // Epic Milestones - Epic colors
+      case 'secret-century': return ['#FFD700', '#FF8F00']; // Gold celebration
+      case 'secret-marathon': return ['#66BB6A', '#2E7D32']; // Green runner
+      case 'secret-zen-master': return ['#9575CD', '#5E35B1']; // Purple zen
+      
+      // Legendary Secrets - Legendary colors
+      case 'secret-scholar': return ['#5C6BC0', '#283593']; // Deep blue scholar
+      case 'secret-legend': return ['#FFB300', '#E65100']; // Golden legend
+      case 'secret-completionist': return ['#E91E63', '#880E4F']; // Rainbow/Pink ultimate
+      
+      default: return getRarityColors(achievement?.rarity || 'common');
+    }
+  };
+  
+  const [color1, color2] = getThemedColors(achievement.id);
   
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'], // Single rotation
+    outputRange: ['0deg', '360deg'],
   });
   
   const shake = shakeAnim.interpolate({
@@ -299,6 +472,20 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
   
   // Get themed emojis
   const themedEmojis = getThemedEmojis(achievement.id);
+  
+  // Rarity-based styling
+  const rarity = achievement.rarity;
+  const isLegendary = rarity === 'legendary';
+  const isEpic = rarity === 'epic';
+  const isRare = rarity === 'rare';
+  
+  // Confetti size based on rarity
+  const confettiSize = isLegendary ? 48 : isEpic ? 42 : isRare ? 38 : 36;
+  
+  // Image border glow based on rarity
+  const imageBorderWidth = isLegendary ? 6 : isEpic ? 5 : isRare ? 4 : 3;
+  const imageShadowRadius = isLegendary ? 20 : isEpic ? 15 : isRare ? 12 : 10;
+  const imageShadowOpacity = isLegendary ? 0.6 : isEpic ? 0.5 : isRare ? 0.4 : 0.3;
   
   return (
     <Modal
@@ -335,7 +522,7 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
                 }
               ]}
             >
-              <Text style={styles.confettiEmoji}>{themedEmojis[index]}</Text>
+              <Text style={[styles.confettiEmoji, { fontSize: confettiSize }]}>{themedEmojis[index]}</Text>
             </Animated.View>
           ))}
           
@@ -347,6 +534,11 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
             style={[
               styles.imageContainer,
               {
+                borderWidth: imageBorderWidth,
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                shadowRadius: imageShadowRadius,
+                shadowOpacity: imageShadowOpacity,
+                shadowColor: color1,
                 transform: [
                   { scale: Animated.multiply(Animated.multiply(scaleAnim, pulseAnim), glow) },
                   { rotate },
@@ -460,6 +652,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
   achievementImage: {
     width: '100%',
@@ -494,6 +690,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFF',
     letterSpacing: 2.5,
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   description: {
     fontFamily: 'ChakraPetch_400Regular',

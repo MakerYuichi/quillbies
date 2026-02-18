@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store-modular';
 import { isOnboardingCompleted } from '../lib/deviceOnboarding';
@@ -9,10 +9,11 @@ export default function HomeScreen() {
   const [deviceOnboardingCompleted, setDeviceOnboardingCompleted] = useState<boolean | null>(null);
   
   const { 
-    updateEnergy
+    updateEnergy,
+    userData
   } = useQuillbyStore();
   
-  // Remove unused variables since we're not rendering the full interface
+  const selectedCharacter = userData.selectedCharacter || 'casual';
   
   // Check device-level onboarding completion
   useEffect(() => {
@@ -53,12 +54,43 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
   
-  // Show loading while checking onboarding status OR if onboarding is not completed
-  // This prevents the prototype content from showing before redirecting to onboarding
+  const getCharacterImage = () => {
+    switch (selectedCharacter) {
+      case 'energetic':
+        return require('../assets/onboarding/hamster-energetic.png');
+      case 'scholar':
+        return require('../assets/onboarding/hamster-scholar.png');
+      case 'casual':
+      default:
+        return require('../assets/hamsters/casual/idle-sit-happy.png');
+    }
+  };
+  
+  // Show loading while checking onboarding status
   if (deviceOnboardingCompleted === null || deviceOnboardingCompleted === false) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Setting up your account...</Text>
+      <View style={styles.container}>
+        <View style={styles.content}>
+          {/* Character image */}
+          <View style={styles.characterContainer}>
+            <Image 
+              source={getCharacterImage()}
+              style={styles.characterImage}
+              resizeMode="contain"
+            />
+          </View>
+          
+          {/* Loading indicator */}
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FF9800" />
+            <Text style={styles.loadingText}>
+              {deviceOnboardingCompleted === false ? 'Starting your journey...' : 'Loading...'}
+            </Text>
+            <Text style={styles.loadingSubtext}>
+              Preparing your study companion
+            </Text>
+          </View>
+        </View>
       </View>
     );
   }
@@ -66,22 +98,53 @@ export default function HomeScreen() {
   // This code should never be reached since we redirect to welcome-back for completed onboarding
   // But keeping it as a fallback
   return (
-    <View style={styles.loadingContainer}>
-      <Text style={styles.loadingText}>Redirecting...</Text>
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <ActivityIndicator size="large" color="#FF9800" />
+        <Text style={styles.loadingText}>Redirecting...</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+  },
+  characterContainer: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 100,
+    borderWidth: 4,
+    borderColor: '#FF9800',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  characterImage: {
+    width: 160,
+    height: 160,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    marginTop: 20,
   },
   loadingText: {
     fontSize: 18,
-    color: '#666',
     fontWeight: '600',
+    color: '#333',
+    marginTop: 16,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
   },
 });

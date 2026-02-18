@@ -107,7 +107,7 @@ export const createSessionSlice: StateCreator<
   },
 
   endFocusSession: () => {
-    const { userData, session, selectedDeadlineId } = get();
+    const { userData, session, selectedDeadlineId, checkSpecificAchievement } = get() as any;
     
     if (!session) return;
     
@@ -119,16 +119,29 @@ export const createSessionSlice: StateCreator<
     const qCoinsEarned = Math.floor(session.focusScore / 10);
     const energyGained = Math.min(15, Math.floor(session.focusScore / 20));
     
+    // Track completed session
+    const completedSession = {
+      id: `session-${Date.now()}`,
+      duration: sessionMinutes,
+      focusScore: session.focusScore,
+      distractions: session.distractionCount || 0,
+      timestamp: new Date().toISOString()
+    };
+    
+    const completedSessions = [...(userData.completedFocusSessions || []), completedSession];
+    
     // Update user data with session results
     const updatedUserData = {
       ...userData,
       qCoins: userData.qCoins + qCoinsEarned,
       energy: Math.min(userData.energy + energyGained, 100),
       studyMinutesToday: (userData.studyMinutesToday || 0) + sessionMinutes,
-      totalStudyMinutes: (userData.totalStudyMinutes || 0) + sessionMinutes
+      totalStudyMinutes: (userData.totalStudyMinutes || 0) + sessionMinutes,
+      completedFocusSessions: completedSessions
     };
     
     console.log(`[Session] Ended - Duration: ${sessionMinutes}min, Focus: ${session.focusScore}, Coins: +${qCoinsEarned}, Energy: +${energyGained}`);
+    console.log(`[Session] Total completed sessions: ${completedSessions.length}`);
     
     // Update deadline progress if one was selected
     if (selectedDeadlineId && sessionHours > 0) {
@@ -148,6 +161,19 @@ export const createSessionSlice: StateCreator<
     
     // Sync to database
     syncToDatabase(updatedUserData);
+    
+    // Check for achievements after completing session
+    console.log('[Session] Checking achievements after session completion...');
+    setTimeout(() => {
+      // Check first session
+      if (completedSessions.length === 1) {
+        checkSpecificAchievement?.('secret-first-session');
+      }
+      // Check daily session
+      else {
+        checkSpecificAchievement?.('daily-session');
+      }
+    }, 500);
   },
 
   updateFocusDuringSession: () => {
