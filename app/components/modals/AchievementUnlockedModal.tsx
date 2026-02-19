@@ -572,6 +572,17 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
           {/* Achievement Name */}
           <Text style={styles.achievementName}>{achievement.name}</Text>
           
+          {/* Achievement Type Badge */}
+          <View style={styles.typeBadge}>
+            <Text style={styles.typeText}>
+              {achievement.id.startsWith('daily-') ? '📅 DAILY CHALLENGE' :
+               achievement.id.startsWith('weekly-') ? '📊 WEEKLY CHALLENGE' :
+               achievement.id.startsWith('monthly-') ? '🏆 MONTHLY CHALLENGE' :
+               achievement.id.startsWith('secret-') ? '🔒 SECRET QUEST' :
+               '🎯 SPECIAL'}
+            </Text>
+          </View>
+          
           {/* Rarity Badge */}
           <View style={[styles.rarityBadge, { backgroundColor: color1 }]}>
             <Text style={styles.rarityText}>✦ {achievement.rarity.toUpperCase()} ✦</Text>
@@ -712,6 +723,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 6,
     elevation: 6,
+  },
+  typeBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  typeText: {
+    fontFamily: 'ChakraPetch_600SemiBold',
+    fontSize: 12,
+    color: '#FFF',
+    letterSpacing: 1.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   rarityText: {
     fontFamily: 'ChakraPetch_700Bold',

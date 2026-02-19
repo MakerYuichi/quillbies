@@ -10,6 +10,7 @@ export interface ShopItem {
   assetPath: string;
   description: string;
   icon: string;
+  requiresPremium?: boolean; // Premium-only items
 }
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -433,7 +434,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
 
   // ============================================
-  // THEMES - LEGENDARY (Gems Only)
+  // THEMES - LEGENDARY (Gems Only, Premium Required)
   // ============================================
   {
     id: 'galaxy',
@@ -444,7 +445,8 @@ export const SHOP_ITEMS: ShopItem[] = [
     gemPrice: 150,
     assetPath: 'assets/shop/legendary/themes/galaxy.png',
     description: 'Stunning galaxy vista',
-    icon: '🌌'
+    icon: '🌌',
+    requiresPremium: true
   },
   {
     id: 'japanese-zen',
@@ -455,7 +457,8 @@ export const SHOP_ITEMS: ShopItem[] = [
     gemPrice: 150,
     assetPath: 'assets/shop/legendary/themes/japanese-zen.png',
     description: 'Tranquil zen garden',
-    icon: '🏯'
+    icon: '🏯',
+    requiresPremium: true
   },
   {
     id: 'ocean',
@@ -466,7 +469,8 @@ export const SHOP_ITEMS: ShopItem[] = [
     gemPrice: 150,
     assetPath: 'assets/shop/legendary/themes/ocean.png',
     description: 'Underwater paradise',
-    icon: '🌊'
+    icon: '🌊',
+    requiresPremium: true
   },
 ];
 

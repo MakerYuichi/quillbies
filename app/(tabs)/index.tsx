@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { View, Dimensions, ImageBackground, TouchableOpacity, Text, ScrollView, Animated } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { CleaningPlan, CleaningStage } from '../core/types';
 import { useRouter } from 'expo-router';
 
@@ -1082,15 +1083,50 @@ function HomeScreenContent() {
       resizeMode="cover"
       defaultSource={require('../../assets/backgrounds/theme.png')}
     >
+      {/* Status Bar */}
+      <StatusBar 
+        style={themeType && themeColors?.isDark ? "light" : "dark"} 
+        translucent={false}
+      />
+      
+      {/* Status Bar Background - Only visible during exercise */}
+      {isExercising && (
+        <View style={styles.statusBarBackground} />
+      )}
+      
       {/* FIXED BACKGROUND LAYERS - Keep both mounted, just hide/show for instant switching */}
       <View style={[styles.environmentContainer, !isExercising && styles.hidden]}>
         <ExerciseEnvironment pointerEvents="none" />
+        
+        {/* Exercise Header Background Bar - Like home tab */}
+        {themeType && (
+          // Themed: Use theme background color (opaque, not semi-transparent)
+          <View style={[
+            styles.exerciseHeaderBackground,
+            { backgroundColor: themeColors.background }
+          ]} />
+        )}
+        
         {/* Exercise Timer Overlay */}
-        <View style={styles.exerciseTimerContainer}>
-          <Text style={styles.exerciseTimerLabel}>
+        <View style={[
+          styles.exerciseTimerContainer,
+          themeType && {
+            backgroundColor: themeColors.isDark ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.95)',
+            borderColor: themeColors.isDark ? 'rgba(76, 175, 80, 0.5)' : '#FFF',
+          }
+        ]}>
+          <Text style={[
+            styles.exerciseTimerLabel,
+            themeType && themeColors.isDark && { color: '#FFFFFF' }
+          ]}>
             {randomExerciseMessage || "Let's exercise together! 💪"}
           </Text>
-          <Text style={styles.exerciseTimerValue}>{exerciseElapsedTime}</Text>
+          <Text style={[
+            styles.exerciseTimerValue,
+            themeType && themeColors.isDark && { color: '#FFFFFF' }
+          ]}>
+            {exerciseElapsedTime}
+          </Text>
         </View>
       </View>
       
@@ -1124,6 +1160,27 @@ function HomeScreenContent() {
           pointerEvents="none"
         />
       </View>
+      
+      {/* Theme decorations for center area (10-60%) - Fixed position */}
+      {themeType && require('../utils/themeColors').getThemeDecorations(themeType)
+        .filter((d: any) => d.top >= 10 && d.top < 60) // Center area decorations
+        .map((decoration: any, index: number) => (
+          <Text 
+            key={`center-${index}`}
+            style={{
+              position: 'absolute',
+              top: `${decoration.top}%`,
+              left: `${decoration.left}%`,
+              fontSize: decoration.size,
+              opacity: 0.3,
+              zIndex: 1, // Below hamster (zIndex: 10) but above environment
+            }}
+            pointerEvents="none"
+          >
+            {decoration.emoji}
+          </Text>
+        ))
+      }
 
       {/* Time Acceleration Timer Overlay */}
       {timeAccelerationActive && (

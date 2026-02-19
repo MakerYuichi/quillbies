@@ -129,6 +129,12 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="styles"
+        options={{
+          href: null, // Hide from navigation
+        }}
+      />
     </Tabs>
     
     {/* Achievement Celebration Modal */}

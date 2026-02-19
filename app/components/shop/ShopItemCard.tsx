@@ -14,6 +14,7 @@ interface ShopItemCardProps {
     gemPrice?: number;
     category: string;
     assetPath: string;
+    requiresPremium?: boolean;
   };
   isPurchased: boolean;
   isEquipped: boolean;
@@ -22,6 +23,7 @@ interface ShopItemCardProps {
   isTheme?: boolean;
   themeColors?: any;
   hasTheme?: boolean;
+  isPremium?: boolean;
 }
 
 // Asset map for all shop items
@@ -86,8 +88,10 @@ const ASSET_MAP: { [key: string]: any } = {
   'assets/shop/legendary/themes/ocean.png': require('../../../assets/shop/legendary/themes/ocean.png'),
 };
 
-export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, isTheme = false, themeColors, hasTheme = false }: ShopItemCardProps) {
+export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, isTheme = false, themeColors, hasTheme = false, isPremium = false }: ShopItemCardProps) {
   const [color1] = getRarityColor(item.rarity);
+  
+  const isLocked = item.requiresPremium && !isPremium;
   
   const getRarityStars = () => {
     switch (item.rarity) {
@@ -132,17 +136,28 @@ export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, i
         {imageSource ? (
           <Image 
             source={imageSource} 
-            style={isTheme ? styles.itemImageFull : styles.itemImageContained} 
+            style={[
+              isTheme ? styles.itemImageFull : styles.itemImageContained,
+              isLocked && styles.lockedImage
+            ]} 
             resizeMode="contain" 
           />
         ) : (
           <View style={styles.iconContainerFull}>
-            <Text style={[styles.itemIcon, isTheme && styles.itemIconLarge]}>{item.icon}</Text>
+            <Text style={[styles.itemIcon, isTheme && styles.itemIconLarge, isLocked && styles.lockedIcon]}>{item.icon}</Text>
+          </View>
+        )}
+        
+        {/* Premium Lock Overlay */}
+        {isLocked && (
+          <View style={styles.premiumLockOverlay}>
+            <Text style={styles.lockIcon}>🔒</Text>
+            <Text style={styles.premiumText}>PREMIUM</Text>
           </View>
         )}
         
         {/* Pricing at bottom */}
-        {!isPurchased && (
+        {!isPurchased && !isLocked && (
           <View style={styles.pricingOverlay}>
             {/* Only Coins - Bottom Center */}
             {hasOnlyCoins && (
@@ -352,5 +367,34 @@ const styles = StyleSheet.create({
     fontSize: 9, 
     fontFamily: 'ChakraPetch_700Bold', 
     color: '#FFF' 
+  },
+  
+  // Premium Lock Overlay
+  premiumLockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 15,
+  },
+  lockIcon: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  premiumText: {
+    fontSize: 11,
+    fontFamily: 'ChakraPetch_700Bold',
+    color: '#FFD700',
+    letterSpacing: 1,
+  },
+  lockedImage: {
+    opacity: 0.3,
+  },
+  lockedIcon: {
+    opacity: 0.3,
   },
 });

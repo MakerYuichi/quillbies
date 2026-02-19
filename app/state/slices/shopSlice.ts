@@ -31,12 +31,22 @@ export const createShopSlice: StateCreator<
       category: item.category as 'light' | 'plant' | 'furniture' | 'theme',
       rarity: item.rarity,
       assetPath: item.assetPath,
-      icon: item.icon
+      icon: item.icon,
+      requiresPremium: item.requiresPremium // Include premium requirement
     }));
   },
 
   purchaseItem: async (itemId: string, price: number, useGems: boolean = false) => {
     const { userData } = get();
+    
+    // Check if item requires premium
+    const { SHOP_ITEMS } = await import('../../core/shopItems');
+    const item = SHOP_ITEMS.find(i => i.id === itemId);
+    
+    if (item?.requiresPremium && !userData.isPremium) {
+      console.log(`[Shop] Item requires premium subscription`);
+      return false;
+    }
     
     const currentCoins = Number(userData.qCoins) || 0;
     const currentGems = Number(userData.gems) || 0;
@@ -130,6 +140,15 @@ export const createShopSlice: StateCreator<
     // Check if user owns the item
     if (!userData.purchasedItems?.includes(itemId)) {
       console.log(`[ShopSlice] ❌ Cannot equip - item not owned: ${itemId}`);
+      return false;
+    }
+    
+    // Check if item requires premium
+    const { SHOP_ITEMS } = await import('../../core/shopItems');
+    const item = SHOP_ITEMS.find(i => i.id === itemId);
+    
+    if (item?.requiresPremium && !userData.isPremium) {
+      console.log(`[ShopSlice] ❌ Cannot equip - item requires premium subscription`);
       return false;
     }
     

@@ -112,6 +112,13 @@ export default function ShopScreen() {
     console.log(`[Shop] Is item purchased?`, userData.purchasedItems?.includes(item.id));
     console.log(`[Shop] Current roomCustomization:`, userData.roomCustomization);
     
+    // Check if item requires premium and user is not premium
+    if (item.requiresPremium && !userData.isPremium) {
+      console.log(`[Shop] Item requires premium - showing Premium Upgrade modal`);
+      setShowPremiumModal(true);
+      return;
+    }
+    
     // If already purchased, check if equipped
     if (userData.purchasedItems?.includes(item.id)) {
       const isEquipped = getIsEquipped(item);
@@ -355,6 +362,7 @@ export default function ShopScreen() {
                         isTheme={cat === 'theme'}
                         themeColors={themeColors}
                         hasTheme={!!themeType}
+                        isPremium={userData.isPremium === true}
                       />
                     ))}
                   </View>
@@ -392,6 +400,7 @@ export default function ShopScreen() {
                   isTheme={selectedCategory === 'theme'}
                   themeColors={themeColors}
                   hasTheme={!!themeType}
+                  isPremium={userData.isPremium === true}
                 />
               );
             })}

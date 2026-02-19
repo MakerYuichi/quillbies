@@ -182,6 +182,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
               currentStreak: dbData.userProfile.current_streak !== null && dbData.userProfile.current_streak !== undefined
                 ? dbData.userProfile.current_streak
                 : userData.currentStreak,
+              isPremium: dbData.userProfile.is_premium ?? userData.isPremium ?? false,
               
               // Goals and settings
               enabledHabits: dbData.userProfile.enabled_habits ?? userData.enabledHabits,

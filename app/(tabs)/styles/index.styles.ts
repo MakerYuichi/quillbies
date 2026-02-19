@@ -7,6 +7,15 @@ export const homeStyles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
+  // Status bar background for exercise session
+  statusBarBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 44, // Standard iOS status bar height
+    zIndex: 100, // Above everything
+  },
   // Environment container - keeps both environments mounted
   environmentContainer: {
     position: 'absolute',
@@ -34,7 +43,7 @@ export const homeStyles = StyleSheet.create({
   // Speech bubble container - now below asset area
   speechBubbleContainer: {
     position: 'absolute',
-    top: (SCREEN_HEIGHT * 380) / 852, // Below asset area (after 490px)
+    top: (SCREEN_HEIGHT * 385) / 852, // Below asset area (after 490px)
     left: (SCREEN_WIDTH * 17) / 393,  // Align with original speech bubble positioning
     width: (SCREEN_WIDTH * 355) / 393, // Match speech bubble width
     zIndex: 25, // Above scrollable content (20)
@@ -299,6 +308,16 @@ export const homeStyles = StyleSheet.create({
     fontFamily: 'ChakraPetch_600SemiBold',
     fontSize: (SCREEN_WIDTH * 12) / 393,
     color: '#1976D2',
+  },
+  
+  // Exercise Header Background Bar
+  exerciseHeaderBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: (SCREEN_HEIGHT * 75) / 852, // Cover the top area including status bar
+    zIndex: 14,
   },
   
   // Exercise Timer Overlay

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, AppState, AppStateStatus, Dimensions, Modal, Image } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store-modular';
 import InteractiveTooltip from './components/ui/InteractiveTooltip';
@@ -12,14 +13,17 @@ import { getThemeColors } from './utils/themeColors';
 // Conditional import for keep awake to prevent crashes
 let activateKeepAwakeAsync: any = null;
 let deactivateKeepAwake: any = null;
+let keepAwakeAvailable = false;
 
 try {
   const keepAwakeModule = require('expo-keep-awake');
   activateKeepAwakeAsync = keepAwakeModule.activateKeepAwakeAsync;
   deactivateKeepAwake = keepAwakeModule.deactivateKeepAwake;
+  keepAwakeAvailable = true;
   console.log('[KeepAwake] Module loaded successfully');
 } catch (error) {
   console.warn('[KeepAwake] Module failed to load, continuing without keep awake:', error);
+  keepAwakeAvailable = false;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -58,9 +62,15 @@ function StudySessionContent() {
     console.log('[StudySession] Stopping main app background music...');
     soundManager.stopBackgroundMusic();
     
+    // Skip keep awake if module is not available
+    if (!keepAwakeAvailable) {
+      console.log('[KeepAwake] Module not available, skipping keep awake functionality');
+      return;
+    }
+    
     const activateKeepAwake = async () => {
       if (!activateKeepAwakeAsync) {
-        console.log('[KeepAwake] Module not available, skipping activation');
+        console.log('[KeepAwake] Function not available, skipping activation');
         return;
       }
       
@@ -69,12 +79,7 @@ function StudySessionContent() {
         console.log('[KeepAwake] Activated for study session');
       } catch (error: any) {
         // Silently ignore keep awake errors - they don't affect functionality
-        const errorMessage = error?.message || '';
-        if (errorMessage.includes('keep awake') || errorMessage.includes('KeepAwake')) {
-          console.log('[KeepAwake] Module not available (native rebuild required), continuing without keep awake');
-        } else {
-          console.warn('[KeepAwake] Failed to activate:', error);
-        }
+        console.log('[KeepAwake] Failed to activate (this is normal if native modules need rebuild):', error?.message || error);
       }
     };
     
@@ -88,13 +93,14 @@ function StudySessionContent() {
         console.log('[KeepAwake] Deactivated');
       } catch (error) {
         // Silently ignore deactivation errors
+        console.log('[KeepAwake] Failed to deactivate (non-critical)');
       }
     };
     
     // Activate keep awake when component mounts (with promise catch)
     activateKeepAwake().catch((error) => {
       // Final catch to prevent unhandled promise rejection
-      console.log('[KeepAwake] Activation promise caught, continuing without keep awake');
+      console.log('[KeepAwake] Activation promise caught (non-critical):', error?.message || error);
     });
     
     // Deactivate when component unmounts
@@ -314,12 +320,12 @@ function StudySessionContent() {
     }
     
     // Deactivate keep awake before ending session (with error handling)
-    if (deactivateKeepAwake) {
+    if (keepAwakeAvailable && deactivateKeepAwake) {
       try {
         deactivateKeepAwake('study-session');
         console.log('[KeepAwake] Deactivated on session end');
       } catch (error) {
-        console.warn('[KeepAwake] Failed to deactivate on session end:', error);
+        console.log('[KeepAwake] Failed to deactivate on session end (non-critical):', error);
       }
     }
     
@@ -640,6 +646,18 @@ function StudySessionContent() {
 
   return (
     <View style={styles.container}>
+      {/* Status Bar */}
+      <StatusBar 
+        style={themeType && themeColors.isDark ? "light" : "dark"} 
+        translucent={false}
+      />
+      
+      {/* Status Bar Background */}
+      <View style={[
+        styles.statusBarBackground,
+        { backgroundColor: themeColors.statusBar || 'rgba(0,0,0,0.5)' }
+      ]} />
+      
       {/* Background - themed or default */}
       {!themeType ? (
         <>
@@ -1360,6 +1378,16 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
     backgroundColor: '#FFFFFF',
+  },
+  
+  // Status Bar Background
+  statusBarBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 44, // Standard iOS status bar height
+    zIndex: 1000, // Above everything
   },
   
   // Background Elements

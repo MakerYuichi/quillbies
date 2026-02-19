@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#63582A',
     paddingHorizontal: 10,
-    zIndex: 10,
+    zIndex: 2,
   },
   // RESPONSIVE: Egg container centered
   eggContainer: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT * 0.29,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: 1,
   },
   eggImage: {
     width: '100%',

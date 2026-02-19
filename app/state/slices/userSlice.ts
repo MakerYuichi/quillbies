@@ -31,11 +31,12 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
   userData: {
     energy: 100,
     maxEnergyCap: 100,
-    qCoins: 100,
-    gems: 0, // Start with 0 gems
+    qCoins: 200,
+    gems: 25, // Start with 25 gems
     messPoints: 0,
     lastActiveTimestamp: Date.now(),
     onboardingCompleted: false,
+    isPremium: false, // Premium status for legendary items
     sleepSessions: [],
     ateBreakfast: false,
     waterGlasses: 0,
@@ -78,11 +79,12 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     const newUserData = {
       energy: userData?.energy ?? 100,
       maxEnergyCap: userData?.maxEnergyCap ?? 100,
-      qCoins: userData?.qCoins ?? 100,
-      gems: userData?.gems ?? 0,
+      qCoins: userData?.qCoins ?? 200,
+      gems: userData?.gems ?? 25,
       messPoints: userData?.messPoints ?? 0,
       lastActiveTimestamp: now,
       onboardingCompleted: userData?.onboardingCompleted ?? false,
+      isPremium: userData?.isPremium ?? false,
       sleepSessions: userData?.sleepSessions ?? [],
       ateBreakfast: userData?.ateBreakfast ?? false,
       waterGlasses: userData?.waterGlasses ?? 0,
@@ -100,7 +102,20 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
       appleTapsToday: userData?.appleTapsToday ?? 0,
       coffeeTapsToday: userData?.coffeeTapsToday ?? 0,
       lastConsumableReset: userData?.lastConsumableReset ?? today,
-      purchasedItems: userData?.purchasedItems ?? [],
+      purchasedItems: userData?.purchasedItems ?? (() => {
+      // For new users, add equipped items to purchasedItems
+      const equippedItems: string[] = [];
+      const roomCustomization = userData?.roomCustomization;
+      
+      if (roomCustomization) {
+        if (roomCustomization.lightType) equippedItems.push(roomCustomization.lightType);
+        if (roomCustomization.plantType) equippedItems.push(roomCustomization.plantType);
+        if (roomCustomization.furnitureType) equippedItems.push(roomCustomization.furnitureType);
+        if (roomCustomization.themeType) equippedItems.push(roomCustomization.themeType);
+      }
+      
+      return equippedItems;
+    })(),
       signupDate: userData?.signupDate ?? today,
       // Preserve any other existing fields
       ...userData

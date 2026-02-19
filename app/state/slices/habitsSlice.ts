@@ -31,14 +31,17 @@ export const createHabitsSlice: StateCreator<
     const newCount = userData.waterGlasses + 1;
     const energyGain = 5;
     
-    set({
-      userData: {
-        ...userData,
-        waterGlasses: newCount,
-        energy: Math.min(userData.energy + energyGain, 100),
-        qCoins: userData.qCoins + 5
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      waterGlasses: newCount,
+      energy: Math.min(userData.energy + energyGain, 100),
+      qCoins: userData.qCoins + 5
+    };
+    
+    set({ userData: updatedUserData });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
     
     console.log(`[Water] Logged glass ${newCount} (goal: ${hydrationGoal})`);
     
@@ -61,15 +64,20 @@ export const createHabitsSlice: StateCreator<
     
     const energyGain = 10;
     
-    set({
-      userData: {
-        ...userData,
-        ateBreakfast: true,
-        energy: Math.min(userData.energy + energyGain, 100),
-        qCoins: userData.qCoins + 10,
-        maxEnergyCap: 100
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      ateBreakfast: true,
+      energy: Math.min(userData.energy + energyGain, 100),
+      qCoins: userData.qCoins + 10,
+      maxEnergyCap: 100
+    };
+    
+    set({ userData: updatedUserData });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
+    
+    console.log('[Breakfast] Logged breakfast');
   },
 
   logMeal: () => {
@@ -88,19 +96,24 @@ export const createHabitsSlice: StateCreator<
     const isBreakfastTime = currentHour >= 6 && currentHour <= 11;
     const shouldMarkBreakfast = isBreakfastTime && !userData.ateBreakfast;
     
-    set({
-      userData: {
-        ...userData,
-        mealsLogged: mealCount,
-        ateBreakfast: shouldMarkBreakfast ? true : userData.ateBreakfast,
-        energy: Math.min(userData.energy + energyGain, 100),
-        qCoins: userData.qCoins + 10
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      mealsLogged: mealCount,
+      ateBreakfast: shouldMarkBreakfast ? true : userData.ateBreakfast,
+      energy: Math.min(userData.energy + energyGain, 100),
+      qCoins: userData.qCoins + 10
+    };
+    
+    set({ userData: updatedUserData });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
     
     if (shouldMarkBreakfast) {
       console.log('[Meal] Breakfast logged - reminder will stop');
     }
+    
+    console.log(`[Meal] Logged meal ${mealCount}/3`);
     
     // Check for daily-meals achievement (3 meals logged)
     if (mealCount >= 3) {
@@ -121,15 +134,20 @@ export const createHabitsSlice: StateCreator<
     const accumulatedMinutes = isNewDay ? minutes : userData.exerciseMinutes + minutes;
     const energyGain = 15;
     
-    set({
-      userData: {
-        ...userData,
-        exerciseMinutes: accumulatedMinutes,
-        energy: Math.min(userData.energy + energyGain, 100),
-        qCoins: userData.qCoins + Math.min(minutes, 30),
-        lastExerciseReset: today
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      exerciseMinutes: accumulatedMinutes,
+      energy: Math.min(userData.energy + energyGain, 100),
+      qCoins: userData.qCoins + Math.min(minutes, 30),
+      lastExerciseReset: today
+    };
+    
+    set({ userData: updatedUserData });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
+    
+    console.log(`[Exercise] Logged ${minutes} minutes (total today: ${accumulatedMinutes})`);
   },
 
   startSleep: () => {
@@ -191,15 +209,20 @@ export const createHabitsSlice: StateCreator<
     else if (todaysSleep >= 7) sleepCoins = 20;
     else if (todaysSleep >= 6) sleepCoins = 10;
     
-    set({
-      userData: {
-        ...userData,
-        sleepSessions: updatedSessions,
-        maxEnergyCap: 100,
-        qCoins: userData.qCoins + sleepCoins,
-        activeSleepSession: undefined
-      }
-    });
+    const updatedUserData = {
+      ...userData,
+      sleepSessions: updatedSessions,
+      maxEnergyCap: 100,
+      qCoins: userData.qCoins + sleepCoins,
+      activeSleepSession: undefined
+    };
+    
+    set({ userData: updatedUserData });
+    
+    // Sync to database
+    syncToDatabase(updatedUserData);
+    
+    console.log(`[Sleep] Ended session ${sessionId}, duration: ${duration.toFixed(2)}h, coins: ${sleepCoins}`);
   },
 
   getTodaysSleepHours: () => {

@@ -1,83 +1,105 @@
-# Mess Points Calculation Fix
+# Mess Points Fix
 
 ## Problem
-Mess points were showing as 0 even though the user had only studied 20 minutes out of a 3-hour (180 minutes) goal.
+Mess points were not being removed after completing focus sessions in the new modular store.
 
 ## Root Cause
-The app had two ways to add mess points:
-1. ✅ Missing checkpoints during focus sessions (WORKING)
-2. ❌ Daily calculation for unmet study goals (MISSING)
+The `sessionSlice.ts` `endFocusSession()` function was missing the mess points removal logic that existed in the old store.
 
-## Solution Implemented
-Added daily mess points calculation in `app/state/slices/userSlice.ts` in the `resetDay()` function.
+## Analysis
 
-### Calculation Logic
+### Old Store (store.ts) - Working ✅
 ```typescript
-// Calculate study deficit
-const studyDeficit = Math.max(0, studyGoal - studyHours);
-
-// Add 2 mess points per hour of unmet study goal
-const messPointsToAdd = studyDeficit * 2;
-const newMessPoints = userData.messPoints + messPointsToAdd;
+endFocusSession: () => {
+  // Calculate rewards based on focus score and distractions
+  const rewards = calculateSessionRewards(session.focusScore, session.distractionCount);
+  const newMessPoints = removeMessAfterSession(userData.messPoints, rewards.messPointsRemoved);
+  
+  // Update user data
+  updatedUserData = {
+    ...userData,
+    qCoins: userData.qCoins + rewards.qCoinsEarned,
+    messPoints: newMessPoints,  // ✅ Mess points updated
+    energy: Math.min(userData.energy + rewards.energyGained, 100)
+  };
+}
 ```
 
-### Example
-- Study goal: 3 hours (180 minutes)
-- Studied: 20 minutes (0.33 hours)
-- Deficit: 2.67 hours
-- Mess points added: 2.67 × 2 = **5.3 mess points**
-
-## Data Flow
-1. User studies during the day → `studyMinutesToday` tracked
-2. At midnight (or app restart next day) → `resetDay()` is called
-3. Calculate study deficit → Add mess points
-4. Sync to Supabase → `mess_points` field in `user_profiles` table
-5. Stats screen displays → Shows current mess points from database
-
-## Database Fields
-- `user_profiles.mess_points` - Total accumulated mess points
-- `daily_data.missed_checkpoints` - Checkpoints missed during focus sessions
-- `daily_data.study_minutes_today` - Minutes studied today
-
-## Testing Steps
-1. Check current mess points in stats screen
-2. Study less than your daily goal
-3. Wait for day to reset (midnight or restart app next day)
-4. Check mess points again - should have increased
-5. Check console logs for: `[Daily] 🧹 Adding X mess points for unmet study goal`
-
-## Verification Queries
-To check if data is being saved to Supabase:
-
-```sql
--- Check user's current mess points
-SELECT id, buddy_name, mess_points, q_coins, current_streak 
-FROM user_profiles 
-WHERE id = 'YOUR_USER_ID';
-
--- Check today's study progress
-SELECT * FROM daily_data 
-WHERE user_id = 'YOUR_USER_ID' 
-AND date_tracked = CURRENT_DATE;
-
--- Check missed checkpoints
-SELECT missed_checkpoints, study_minutes_today 
-FROM daily_data 
-WHERE user_id = 'YOUR_USER_ID' 
-ORDER BY date_tracked DESC 
-LIMIT 7;
+### New Store (sessionSlice.ts) - Broken ❌
+```typescript
+endFocusSession: () => {
+  // Calculate rewards
+  const qCoinsEarned = Math.floor(session.focusScore / 10);
+  const energyGained = Math.min(15, Math.floor(session.focusScore / 20));
+  
+  // Update user data
+  const updatedUserData = {
+    ...userData,
+    qCoins: userData.qCoins + qCoinsEarned,
+    energy: Math.min(userData.energy + energyGained, 100),
+    // ❌ messPoints NOT updated - missing!
+    studyMinutesToday: (userData.studyMinutesToday || 0) + sessionMinutes,
+    totalStudyMinutes: (userData.totalStudyMinutes || 0) + sessionMinutes,
+    completedFocusSessions: completedSessions
+  };
+}
 ```
 
-## Stats Screen Updates
-The stats screen now correctly displays:
-- ✅ Mess Points (instead of "Room Status")
-- ✅ Colorful activity cards with correct hamster assets
-- ✅ Flip functionality to see detailed stats
-- ✅ Premium weekly trends graph
-- ✅ Calendar with month navigation based on signup date
+## Solution
+Added mess points removal logic to `sessionSlice.ts`:
 
-## Next Steps
-1. Test the daily reset to verify mess points accumulate
-2. Verify Supabase sync is working (check console logs)
-3. Test checkpoint system during focus sessions
-4. Verify mess points display updates in stats screen
+```typescript
+endFocusSession: () => {
+  // ... existing code ...
+  
+  // Remove mess points (always -2 per session)
+  const MESS_REMOVAL_PER_SESSION = 2;
+  const newMessPoints = Math.max(0, userData.messPoints - MESS_REMOVAL_PER_SESSION);
+  
+  console.log(`[Session] Mess points: ${userData.messPoints.toFixed(1)} → ${newMessPoints.toFixed(1)} (-${MESS_REMOVAL_PER_SESSION})`);
+  
+  // Update user data with session results
+  const updatedUserData = {
+    ...userData,
+    qCoins: userData.qCoins + qCoinsEarned,
+    energy: Math.min(userData.energy + energyGained, 100),
+    messPoints: newMessPoints,  // ✅ Now included!
+    studyMinutesToday: (userData.studyMinutesToday || 0) + sessionMinutes,
+    totalStudyMinutes: (userData.totalStudyMinutes || 0) + sessionMinutes,
+    completedFocusSessions: completedSessions
+  };
+}
+```
+
+## Mess Points System Overview
+
+### When Mess Points Are Added
+1. **Missed Study Checkpoints** (`store-modular.ts` - `addMissedCheckpoint`)
+   - Adds mess points based on hours behind schedule
+   - Minimum 0.5 mess points per missed checkpoint
+
+2. **End of Day Evaluation** (`userSlice.ts` - `resetDay`)
+   - Adds 2 mess points per hour of unmet study goal
+
+3. **Skipped Meals** (`habitsSlice.ts` - `skipMeal`)
+   - Adds mess points for skipping meals
+
+### When Mess Points Are Removed
+1. **Completing Focus Sessions** (`sessionSlice.ts` - `endFocusSession`)
+   - Removes 2 mess points per completed session
+   - Cannot go below 0
+
+2. **Cleaning Room** (via shop/cleaning system)
+   - Removes mess points through cleaning actions
+
+## Testing
+- [x] Mess points are removed after completing a focus session
+- [x] Mess points cannot go below 0
+- [x] Console logs show mess point changes
+- [x] Changes sync to database
+
+## Files Modified
+- `quillby-app/app/state/slices/sessionSlice.ts`
+
+## Status: ✅ Fixed
+Mess points are now properly removed after completing focus sessions.

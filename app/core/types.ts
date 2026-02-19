@@ -189,6 +189,7 @@ export interface ShopItem {
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   assetPath: string;
   icon: string;
+  requiresPremium?: boolean; // Premium-only items
 }
 
 export interface SleepSession {
