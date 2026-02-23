@@ -1,0 +1,161 @@
+Privacy Policy of Quillby
+This Privacy Policy describes how Quillby ("we", "our", "us"), developed by MakerYuichii, collects, uses, stores, and protects your personal data when you use our mobile application.
+Contact email: support@quillby.app
+This policy is governed by Indian law including the Digital Personal Data Protection Act 2023 (DPDPA), the Information Technology Act 2000, and the Consumer Protection Act 2019.
+
+What you should know at a glance
+
+We do not collect your email address or require you to create an account
+Your app data is stored securely on Supabase cloud infrastructure
+We do not sell, rent, or share your personal data with advertisers
+You can request deletion of your data at any time by contacting us
+
+
+1. Who We Are
+Quillby is a gamified productivity mobile application designed to help users build better study habits. The application is developed and maintained by MakerYuichii, an independent developer based in India.
+Contact: support@quillby.app
+
+2. Information We Collect
+2.1 Information You Provide Directly
+
+Display name — optional, used to personalize your in-app experience
+Study data — subjects, deadlines, focus session durations you enter manually
+Habit data — water intake, meals, exercise, sleep, and cleaning logs you record voluntarily
+In-app preferences — room themes, pet customizations, notification settings
+
+2.2 Information Collected Automatically
+
+Device identifier — a unique identifier assigned to your device, used to authenticate your session without requiring an account or password
+Device model and operating system version — collected for compatibility and bug resolution purposes
+App usage data — which features you use, session duration, and frequency of use
+Focus session analytics — session length, completion rates, and distraction events detected via AppState monitoring
+Notification interaction data — whether you open or dismiss reminders you have configured
+Crash logs and performance data — collected automatically to identify and resolve technical issues
+
+2.3 Location Data
+
+Location is accessed once during initial app setup only, solely to detect your country and timezone for accurate study reminder scheduling
+Your precise location is never stored on our servers
+Location is never tracked continuously or used for any other purpose
+You may deny location permission; timezone can be set manually within the app
+
+2.4 Information We Do Not Collect
+
+We do not collect your email address
+We do not collect passwords or authentication credentials
+We do not collect payment information directly — all purchases are handled by Google Play
+We do not access your contacts, camera, microphone, or photo library
+We do not collect data from children under 13 years of age
+We do not use advertising identifiers or tracking SDKs
+
+
+3. How We Use Your Information
+We use the information we collect for the following purposes:
+Providing the service — to operate the app, save your progress, and deliver the features you use including habit tracking, focus sessions, virtual pet mechanics, and the in-app shop.
+Personalisation — to remember your preferences, themes, and settings across sessions on your device.
+Push notifications — to send you habit reminders and study session alerts that you have explicitly enabled within the app.
+App improvement — to analyse usage patterns, fix bugs, and improve performance based on crash logs and analytics data.
+Legal compliance — to comply with applicable Indian laws and regulations, including the DPDPA 2023.
+We do not use your data for advertising, profiling, or any purpose beyond what is described above.
+
+4. Legal Basis for Processing
+Under the Digital Personal Data Protection Act 2023, we process your personal data on the following bases:
+
+Consent — for location access, push notifications, and analytics data collection
+Legitimate interest — for crash logs and performance data necessary to maintain a functional application
+Legal obligation — where processing is required under applicable Indian law
+
+
+5. Data Storage and Security
+All user data is stored on Supabase cloud infrastructure, which provides enterprise-grade security standards.
+
+Data is encrypted in transit using TLS/SSL protocols
+Data is encrypted at rest using AES-256 encryption
+Access to user data is restricted to authorised personnel only
+We conduct regular reviews of our security practices
+In the event of a data breach affecting your personal data, we will notify you within 72 hours of becoming aware of the breach, as required under applicable law
+
+
+6. Data Sharing and Third Parties
+We do not sell, rent, or trade your personal data to any third party. We share data only in the following limited circumstances:
+6.1 Service Providers
+Supabase — our cloud database and backend infrastructure provider. Supabase processes app data and device identifiers on our behalf under a data processing agreement. Supabase's privacy policy is available at supabase.com/privacy.
+Expo (Notifications) — used to deliver push notifications to your device. Your device push token is shared with Expo solely for this purpose.
+Google Play — handles all in-app purchases and billing independently. We do not receive or store your payment details.
+6.2 Legal Requirements
+We may disclose your personal data if required to do so by Indian law, court order, or a competent government authority. We will notify you of such requests where legally permitted to do so.
+6.3 Business Transfer
+In the event that Quillby is acquired, merged, or its assets transferred to another entity, your data may be transferred as part of that transaction. We will notify you via an in-app notice at least 30 days before such a transfer takes effect, and your rights under this policy will continue to be respected.
+
+7. Data Retention
+Data TypeRetention PeriodApp data (habits, study sessions, progress)Until you request deletionDevice identifierUntil you request deletionUsage analytics12 months on a rolling basisCrash logs and performance data90 daysData after deletion requestPermanently deleted within 30 days
+
+8. Your Rights Under DPDPA 2023
+As a user in India, you have the following rights regarding your personal data:
+Right to Access — You may request a copy of all personal data we hold about you.
+Right to Correction — You may request correction of any inaccurate or incomplete personal data we hold.
+Right to Erasure — You may request permanent deletion of all your personal data. Your request will be fulfilled within 30 days.
+Right to Data Portability — You may request your data in a structured, machine-readable format such as JSON or CSV.
+Right to Withdraw Consent — You may withdraw consent for data collection at any time. Withdrawal does not affect the lawfulness of processing prior to withdrawal.
+Right to Grievance Redressal — You may file a complaint if you believe your data rights have been violated.
+Right to Nominate — Under DPDPA 2023, you may nominate another individual to exercise your data rights on your behalf in the event of your death or incapacity.
+To exercise any of these rights, please contact us at support@quillby.app with the subject line "Data Rights Request". We will acknowledge your request within 7 days and resolve it within 30 days.
+
+9. Children's Privacy
+Quillby is intended for users aged 13 years and older.
+
+Users aged 13 to 18 must have verifiable parental or guardian consent before using the application
+We do not knowingly collect personal data from children under 13
+If we become aware that personal data has been collected from a child under 13 without parental consent, we will delete that data immediately
+Parents or guardians who believe their child has provided personal data without consent may contact us at support@quillby.app to request deletion
+
+
+10. Push Notifications
+
+Push notifications are sent only for features you explicitly enable within the app, such as habit reminders and focus session alerts
+You may disable notifications at any time from your device settings or within the app's notification preferences
+We do not send marketing or promotional push notifications without your explicit opt-in
+
+
+11. In-App Purchases and Premium Features
+
+The core Quillby app is free to download and use
+Optional premium features may be offered through Google Play Billing
+All payment processing is handled entirely by Google — we do not receive, store, or process your payment details
+Refund requests for premium purchases are subject to a 7-day refund window from the date of purchase
+Refunds are processed within 10 business days of an approved request
+To request a refund, contact support@quillby.app
+
+
+12. Cookies and Tracking Technologies
+
+The Quillby mobile application does not use cookies
+We do not use cross-app tracking, advertising identifiers, or fingerprinting technologies
+We do not integrate any advertising SDKs including but not limited to Google Ads, Facebook Audience Network, or similar platforms
+
+
+13. Changes to This Privacy Policy
+We may update this Privacy Policy from time to time to reflect changes in our practices, technology, or applicable law.
+When we make changes, we will update the "Last Updated" date at the top of this policy. For significant changes that materially affect your rights, we will provide notice via an in-app notification at least 14 days before the changes take effect.
+Your continued use of Quillby after the effective date of any changes constitutes your acceptance of the updated policy. If you do not agree with the changes, you may request deletion of your account before the effective date.
+
+14. Grievance Redressal
+In accordance with the Information Technology Act 2000 and the Digital Personal Data Protection Act 2023, we have established the following grievance redressal process:
+Grievance Officer: MakerYuichii
+Contact Email: support@quillby.app
+Acknowledgement: Within 7 days of receiving your complaint
+Resolution: Within 30 days of acknowledgement
+If you are not satisfied with our resolution, you may contact the National Consumer Helpline at 1800-11-4000 or approach the appropriate authority under the DPDPA 2023.
+
+15. Governing Law and Jurisdiction
+This Privacy Policy is governed by and construed in accordance with the laws of India, without regard to conflict of law principles.
+Any disputes arising out of or in connection with this Privacy Policy shall be subject to the exclusive jurisdiction of the courts of Delhi, India. We encourage disputes to be resolved first through good-faith negotiation, and if unresolved, through arbitration under the Arbitration and Conciliation Act 1996 before initiating formal legal proceedings.
+
+16. Contact Information
+For any privacy-related questions, requests, or concerns, please contact us:
+Developer: MakerYuichii
+Email: support@quillby.app
+App: Quillby v1.0.0
+Effective Date: February 24, 2026
+
+Made with 🐹 by MakerYuichii

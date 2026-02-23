@@ -47,19 +47,19 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
       
       const messyRedecorMap: { [key: string]: { [key: number]: any } } = {
         'gaming-redecor': {
-          1: require('../../../assets/rooms/mess/redecor/gaming/gaming-mess1.png'),
-          2: require('../../../assets/rooms/mess/redecor/gaming/gaming-mess2.png'),
-          3: require('../../../assets/rooms/mess/redecor/gaming/gaming-mess3.png'),
+          1: require('../../../assets/rooms/mess/redecor/gaming/gaming-messy1.png'),
+          2: require('../../../assets/rooms/mess/redecor/gaming/gaming-messy2.png'),
+          3: require('../../../assets/rooms/mess/redecor/gaming/gaming-messy3.png'),
         },
         'library-redecor': {
-          1: require('../../../assets/rooms/mess/redecor/library/library-mess1.png'),
-          2: require('../../../assets/rooms/mess/redecor/library/library-mess2.png'),
-          3: require('../../../assets/rooms/mess/redecor/library/library-mess3.png'),
+          1: require('../../../assets/rooms/mess/redecor/library/library-messy1.png'),
+          2: require('../../../assets/rooms/mess/redecor/library/library-messy2.png'),
+          3: require('../../../assets/rooms/mess/redecor/library/library-messy3.png'),
         },
         'home-redecor': {
-          1: require('../../../assets/rooms/mess/redecor/home/home-mess1.png'),
-          2: require('../../../assets/rooms/mess/redecor/home/home-mess2.png'),
-          3: require('../../../assets/rooms/mess/redecor/home/home-mess3.png'),
+          1: require('../../../assets/rooms/mess/redecor/home/home-messy1.png'),
+          2: require('../../../assets/rooms/mess/redecor/home/home-messy2.png'),
+          3: require('../../../assets/rooms/mess/redecor/home/home-messy3.png'),
         },
       };
       
