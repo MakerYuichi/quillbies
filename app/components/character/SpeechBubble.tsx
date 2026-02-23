@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   speechText: {
-    fontFamily: 'Schoolbell',
+    fontFamily: 'Comic Sans MS',
     lineHeight: (SCREEN_HEIGHT * 26) / 852,
     color: '#000000',
     textAlign: 'center',

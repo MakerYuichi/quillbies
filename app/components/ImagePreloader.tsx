@@ -1,5 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { View, Image, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { useQuillbyStore } from '../state/store-modular';
+import { getThemeColors } from '../utils/themeColors';
 
 // Create a context to share loading state across the app
 export const ImageLoadingContext = createContext({ imagesLoaded: false });
@@ -11,6 +13,10 @@ export default function ImagePreloader({ children }: { children: React.ReactNode
   const [loadedCount, setLoadedCount] = useState(0);
   const [loadStartTime] = useState(Date.now());
   const totalImages = 37;
+  
+  const { userData } = useQuillbyStore();
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = getThemeColors(themeType);
 
   useEffect(() => {
     // More aggressive adaptive timeout
@@ -73,9 +79,20 @@ export default function ImagePreloader({ children }: { children: React.ReactNode
       
       {/* Loading overlay - covers entire screen until images are ready */}
       {!allLoaded && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#FF9800" />
-          <Text style={styles.loadingText}>Loading assets...</Text>
+        <View style={[
+          styles.loadingOverlay,
+          { backgroundColor: themeType ? themeColors.background : '#FFFFFF' }
+        ]}>
+          <ActivityIndicator 
+            size="large" 
+            color={themeType ? themeColors.buttonPrimary : '#FF9800'} 
+          />
+          <Text style={[
+            styles.loadingText,
+            { color: themeType ? themeColors.textPrimary : '#333' }
+          ]}>
+            Loading assets...
+          </Text>
         </View>
       )}
 

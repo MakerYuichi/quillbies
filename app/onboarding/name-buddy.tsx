@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  BackHandler,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -50,6 +51,16 @@ export default function NameBuddyScreen() {
     ChakraPetch_700Bold,
     ChakraPetch_600SemiBold,
   });
+
+  // Handle back button - allow going back to previous onboarding screen
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Allow default back behavior (go to previous onboarding screen)
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, []);
 
   // Show loading while fonts load - AFTER all hooks
   if (!fontsLoaded) {
@@ -188,8 +199,9 @@ export default function NameBuddyScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.wrapper}>
@@ -433,7 +445,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     minHeight: SCREEN_HEIGHT * 0.35,
-    maxHeight: SCREEN_HEIGHT * 0.45,
     width: SCREEN_WIDTH,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,

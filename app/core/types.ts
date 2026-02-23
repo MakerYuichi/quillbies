@@ -32,6 +32,7 @@ export interface CheckpointNotification {
 }
 
 export interface UserData {
+  [x: string]: any;
   energy: number;
   maxEnergyCap: number;
   qCoins: number;

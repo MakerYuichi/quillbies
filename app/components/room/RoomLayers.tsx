@@ -35,17 +35,47 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
   // Check if a redecor furniture is equipped (these replace the entire room)
   const hasRedecorFurniture = roomCustomization?.furnitureType?.includes('redecor');
   
-  // Helper function to get redecor furniture asset
+  // Helper function to get redecor furniture asset (with mess support)
   const getRedecorAsset = () => {
     if (!hasRedecorFurniture) return null;
     
+    const furnitureType = roomCustomization?.furnitureType || '';
+    
+    // If mess points are high, show messy version of redecor
+    if (messPoints > 5) {
+      const messLevel = messPoints <= 10 ? 1 : messPoints <= 20 ? 2 : 3;
+      
+      const messyRedecorMap: { [key: string]: { [key: number]: any } } = {
+        'gaming-redecor': {
+          1: require('../../../assets/rooms/mess/redecor/gaming/gaming-mess1.png'),
+          2: require('../../../assets/rooms/mess/redecor/gaming/gaming-mess2.png'),
+          3: require('../../../assets/rooms/mess/redecor/gaming/gaming-mess3.png'),
+        },
+        'library-redecor': {
+          1: require('../../../assets/rooms/mess/redecor/library/library-mess1.png'),
+          2: require('../../../assets/rooms/mess/redecor/library/library-mess2.png'),
+          3: require('../../../assets/rooms/mess/redecor/library/library-mess3.png'),
+        },
+        'home-redecor': {
+          1: require('../../../assets/rooms/mess/redecor/home/home-mess1.png'),
+          2: require('../../../assets/rooms/mess/redecor/home/home-mess2.png'),
+          3: require('../../../assets/rooms/mess/redecor/home/home-mess3.png'),
+        },
+      };
+      
+      if (messyRedecorMap[furnitureType] && messyRedecorMap[furnitureType][messLevel]) {
+        return messyRedecorMap[furnitureType][messLevel];
+      }
+    }
+    
+    // Clean version of redecor
     const redecorMap: { [key: string]: any } = {
       'gaming-redecor': require('../../../assets/shop/epic/furniture/gaming-redecor.png'),
       'library-redecor': require('../../../assets/shop/epic/furniture/library-redecor.png'),
       'home-redecor': require('../../../assets/shop/epic/furniture/home-redecor.png'),
     };
     
-    return redecorMap[roomCustomization?.furnitureType || ''];
+    return redecorMap[furnitureType];
   };
   
   // Helper function to get plant asset based on plantType ID
@@ -150,10 +180,63 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
     return dimensions[furnitureId] || { width: 120, height: 120, top: 230, left: 136.5 };
   };
   
-  // Get theme background if equipped
+  // Get theme background if equipped (with mess support)
   const getThemeBackground = () => {
     if (!hasTheme) return null;
     
+    // If mess points are high, show messy version of theme
+    if (messPoints > 5) {
+      const messLevel = messPoints <= 10 ? 1 : messPoints <= 20 ? 2 : 3;
+      
+      const messyThemeMap: { [key: string]: { [key: number]: any } } = {
+        'library': {
+          1: require('../../../assets/rooms/mess/themes/library/library-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/library/library-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/library/library-messy3.png'),
+        },
+        'night': {
+          1: require('../../../assets/rooms/mess/themes/night/night-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/night/night-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/night/night-messy3.png'),
+        },
+        'castle': {
+          1: require('../../../assets/rooms/mess/themes/castle/castle-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/castle/castle-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/castle/castle-messy3.png'),
+        },
+        'space': {
+          1: require('../../../assets/rooms/mess/themes/space/space-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/space/space-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/space/space-messy3.png'),
+        },
+        'cherry-blossom': {
+          1: require('../../../assets/rooms/mess/themes/cherry-blossom/blossom-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/cherry-blossom/blossom-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/cherry-blossom/blossom-messy3.png'),
+        },
+        'galaxy': {
+          1: require('../../../assets/rooms/mess/themes/galaxy/galaxy-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/galaxy/galaxy-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/galaxy/galaxy-messy3.png'),
+        },
+        'japanese-zen': {
+          1: require('../../../assets/rooms/mess/themes/japanese-zen/zen-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/japanese-zen/zen-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/japanese-zen/zen-messy3.png'),
+        },
+        'ocean': {
+          1: require('../../../assets/rooms/mess/themes/ocean/ocean-messy1.png'),
+          2: require('../../../assets/rooms/mess/themes/ocean/ocean-messy2.png'),
+          3: require('../../../assets/rooms/mess/themes/ocean/ocean-messy3.png'),
+        },
+      };
+      
+      if (messyThemeMap[hasTheme] && messyThemeMap[hasTheme][messLevel]) {
+        return messyThemeMap[hasTheme][messLevel];
+      }
+    }
+    
+    // Clean version of theme
     const themeMap: { [key: string]: any } = {
       'library': require('../../../assets/shop/rare/theme/library.png'),
       'night': require('../../../assets/shop/rare/theme/night.png'),
@@ -244,6 +327,24 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
         </Text>
       ))}
       
+      {/* Blue decorative background - Show when NO theme (regardless of redecor) */}
+      {!hasTheme && (
+        <Image 
+          source={require('../../../assets/backgrounds/bluebg.png')}
+          style={styles.blueBgDecor}
+          resizeMode="cover"
+        />
+      )}
+      
+      {/* Wall Background - Show when NO theme (regardless of redecor) */}
+      {!hasTheme && (
+        <Image 
+          source={getRoomWall()}
+          style={styles.wallLayer}
+          resizeMode="cover"
+        />
+      )}
+      
       {/* If redecor furniture is equipped, show it as full room replacement */}
       {hasRedecorFurniture && getRedecorAsset() ? (
         <Image 
@@ -260,15 +361,6 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
         />
       ) : (
         <>
-          {/* LAYER 1: Wall Background - Always show when no theme equipped */}
-          {!hasTheme && (
-            <Image 
-              source={getRoomWall()}
-              style={styles.wallLayer}
-              resizeMode="cover"
-            />
-          )}
-          
           {/* LAYER 2: Floor - Changes based on mess points */}
           <View style={styles.floorLayer} />
           
@@ -278,14 +370,7 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
             resizeMode="cover"
           />
           
-          {/* LAYER 3: Blue decorative background */}
-          <Image 
-            source={require('../../../assets/backgrounds/bluebg.png')}
-            style={styles.blueBgDecor}
-            resizeMode="cover"
-          />
-          
-          {/* LAYER 4: Window - Behind lights and photo frames */}
+          {/* LAYER 3: Window - Behind lights and photo frames */}
           <Image 
             source={require('../../../assets/rooms/window.png')}
             style={styles.windowDecor}
@@ -454,7 +539,7 @@ const styles = StyleSheet.create({
   },
   decoration: {
     position: 'absolute',
-    zIndex: 6, // Above status bar overlay but below currency
+    zIndex: 2, // Below theme background but above status bar
     opacity: 0.6,
   },
   themeBackground: {
@@ -463,7 +548,7 @@ const styles = StyleSheet.create({
     height: (SCREEN_HEIGHT * 490) / 852, // End where scrollable content starts
     top: 0, // Start from top
     left: 0,
-    zIndex: 2,
+    zIndex: 10, // Above decorations so theme image is in front
   },
   wallLayer: {
     position: 'absolute',
@@ -491,10 +576,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: (SCREEN_WIDTH * 401) / 393,
     height: (SCREEN_HEIGHT * 260) / 852,
-    left: -8,
-    top: (SCREEN_HEIGHT * -190) / 852,
+    left: (SCREEN_WIDTH * -8) / 393,
+    top: (SCREEN_HEIGHT * -190) / 852, // Positioned above screen to create sky effect
     borderWidth: 1,
     borderColor: '#000000',
+    zIndex: 1, // Behind walls but above default background
   },
   photoFrame1: {
     position: 'absolute',

@@ -54,13 +54,13 @@ export const homeStyles = StyleSheet.create({
     top: (SCREEN_HEIGHT * 490) / 852, // Start below floor (reduced by 90px total from 580)
     left: 0,
     right: 0,
-    bottom: 30, // Small padding from bottom edge
+    bottom: (SCREEN_HEIGHT * 30) / 852, // Responsive padding from bottom edge
     zIndex: 20, // Above cleaning overlay (15) and other overlays
     backgroundColor: 'transparent', // Transparent by default to show orange background
   },
   scrollContentContainer: {
     paddingHorizontal: (SCREEN_WIDTH * 17) / 393,
-    paddingBottom: 20,
+    paddingBottom: (SCREEN_HEIGHT * 20) / 852, // Responsive padding
     flexGrow: 1,
   },
   contentSpacer: {
@@ -71,7 +71,7 @@ export const homeStyles = StyleSheet.create({
   scrollableEnergyBarContainer: {
     width: (SCREEN_WIDTH * 251) / 280,
     height: (SCREEN_HEIGHT * 25) / 852,
-    marginBottom: 70, // Reduced space before buttons
+    marginBottom: (SCREEN_HEIGHT * 70) / 852, // Responsive space before buttons
     alignSelf: 'center',
   },
   // Buttons row - relative within bottom area
@@ -85,7 +85,7 @@ export const homeStyles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     gap: (SCREEN_WIDTH * 6) / 393,
-    marginBottom: 20, // Space before study section
+    marginBottom: (SCREEN_HEIGHT * 20) / 852, // Responsive space before study section
     alignSelf: 'center',
   },
   dimOverlay: {

@@ -33,8 +33,9 @@ import { useFirstTimeWelcome } from '../hooks/useFirstTimeWelcome';
 import { useDayEvaluationMessages } from '../hooks/useDayEvaluationMessages';
 import { useNotifications } from '../hooks/useNotifications';
 import NotificationBanner from '../components/ui/NotificationBanner';
+import VolumeButton from '../components/ui/VolumeButton';
 import { useImageLoading } from '../components/ImagePreloader';
-import { homeStyles as styles } from './styles/index.styles';
+import { homeStyles as styles } from './_styles/index.styles';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -1088,6 +1089,9 @@ function HomeScreenContent() {
         style={themeType && themeColors?.isDark ? "light" : "dark"} 
         translucent={false}
       />
+      
+      {/* Volume Button - Floating */}
+      <VolumeButton position="top-left" top={50} left={16} />
       
       {/* Status Bar Background - Only visible during exercise */}
       {isExercising && (

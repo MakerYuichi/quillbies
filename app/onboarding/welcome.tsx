@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ActivityIndicator, Alert, BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
@@ -18,6 +18,35 @@ export default function WelcomeScreen() {
     ChakraPetch_600SemiBold,
   });
   
+  // Handle back button - show exit confirmation
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      Alert.alert(
+        'Leave Quillby?',
+        'Are you sure you want to exit the app?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('[Welcome] User canceled exit'),
+          },
+          {
+            text: 'Exit',
+            style: 'destructive',
+            onPress: () => {
+              console.log('[Welcome] User confirmed exit');
+              BackHandler.exitApp();
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+      return true; // Prevent default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, []);
+
   // Preload UI sounds when fonts are loaded
   React.useEffect(() => {
     if (fontsLoaded) {

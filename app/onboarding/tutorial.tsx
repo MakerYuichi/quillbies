@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, ImageBackground, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, ImageBackground, Animated, BackHandler, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_400Regular, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
@@ -69,6 +69,17 @@ const tutorialSteps = [
     ]
   },
   {
+    title: "Mess Points & Room Cleanliness 🧹",
+    description: "Keep your room clean by staying productive!",
+    icon: "🧹",
+    tips: [
+      "Missing study checkpoints adds mess points",
+      "High mess drains your energy daily (-2 per point)",
+      "Clean your room by completing focus sessions",
+      "A clean room = more energy for studying!"
+    ]
+  },
+  {
     title: "Earn & Spend Q-Coins! 💰",
     description: "Customize your space with coins earned from good habits.",
     icon: "qbies",
@@ -121,6 +132,36 @@ export default function TutorialScreen() {
       animateStepTransition();
     }
   }, [currentStep, showWelcome]);
+
+  // Handle back button - prevent going back to previous onboarding screens
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Show exit confirmation dialog
+      Alert.alert(
+        'Leave Quillby?',
+        'Are you sure you want to exit the app?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('[Tutorial] User canceled exit'),
+          },
+          {
+            text: 'Exit',
+            style: 'destructive',
+            onPress: () => {
+              console.log('[Tutorial] User confirmed exit');
+              BackHandler.exitApp();
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+      return true; // Prevent default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, []);
 
   // Initial animation on mount
   useEffect(() => {

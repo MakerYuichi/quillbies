@@ -22,9 +22,8 @@
     },
     "production": {
       "android": {
-        "buildType": "apk",
+        "buildType": "app-bundle",
         "autoIncrement": true,
-        "gradleCommand": ":app:assembleRelease",
         "image": "latest",
         "ndk": "26.1.10909125",
         "env": {

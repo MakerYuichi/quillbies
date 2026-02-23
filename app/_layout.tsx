@@ -1,14 +1,16 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, Text, Image, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator, Text, Image, AppState, AppStateStatus, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { useQuillbyStore } from './state/store-modular';
 import { authenticateDevice, isDeviceAuthenticated } from '../lib/deviceAuth';
 import { requestNotificationPermissions, sendMessNotification } from '../lib/notifications';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ImagePreloader from './components/ImagePreloader';
+import { getThemeColors } from './utils/themeColors';
 
 // Preload critical images at app startup
 const preloadImages = async () => {
@@ -174,6 +176,23 @@ export default function RootLayout() {
     try {
       console.log('[App] Initializing device authentication...');
       
+      // Initialize RevenueCat
+      try {
+        console.log('[App] Initializing RevenueCat...');
+        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+        
+        const apiKey = process.env.REVENUE_CAT_API_KEY;
+        
+        if (!apiKey) {
+          throw new Error('REVENUE_CAT_API_KEY not found in environment variables');
+        }
+        
+        Purchases.configure({ apiKey });
+        console.log('[App] RevenueCat initialized successfully');
+      } catch (rcError) {
+        console.warn('[App] RevenueCat initialization failed:', rcError);
+      }
+      
       // Preload images first for instant display
       await preloadImages();
       
@@ -288,10 +307,25 @@ export default function RootLayout() {
   };
   
   if (!isReady || !fontsLoaded) {
+    const themeType = userData.roomCustomization?.themeType;
+    const themeColors = getThemeColors(themeType);
+    
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
-        <ActivityIndicator size="large" color="#FF9800" />
-        <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: themeType ? themeColors.background : '#FFF' 
+      }}>
+        <ActivityIndicator 
+          size="large" 
+          color={themeType ? themeColors.buttonPrimary : '#FF9800'} 
+        />
+        <Text style={{ 
+          marginTop: 16, 
+          fontSize: 16, 
+          color: themeType ? themeColors.textSecondary : '#666' 
+        }}>
           Loading Quillby...
         </Text>
       </View>
@@ -300,10 +334,13 @@ export default function RootLayout() {
   
   // Show start button after loading
   if (showStartButton) {
+    const themeType = userData.roomCustomization?.themeType;
+    const themeColors = getThemeColors(themeType);
+    
     return (
       <View style={{ 
         flex: 1, 
-        backgroundColor: '#FFF8E1',
+        backgroundColor: themeType ? themeColors.background : '#FFF8E1',
       }}>
         {/* Background */}
         <Image
@@ -312,6 +349,7 @@ export default function RootLayout() {
             position: 'absolute',
             width: '100%',
             height: '100%',
+            opacity: themeType ? 0.3 : 1,
           }}
           resizeMode="cover"
         />
@@ -338,10 +376,10 @@ export default function RootLayout() {
           <Text style={{ 
             fontSize: 42, 
             fontWeight: 'bold', 
-            color: '#FF9800', 
+            color: themeType ? themeColors.buttonPrimary : '#FF9800', 
             marginBottom: 10,
             fontFamily: 'Chakra Petch',
-            textShadowColor: 'rgba(255, 152, 0, 0.3)',
+            textShadowColor: themeType ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 152, 0, 0.3)',
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 4,
           }}>
@@ -351,7 +389,7 @@ export default function RootLayout() {
           {/* Subtitle */}
           <Text style={{ 
             fontSize: 17, 
-            color: '#666', 
+            color: themeType ? themeColors.textSecondary : '#666', 
             marginBottom: 50, 
             textAlign: 'center', 
             paddingHorizontal: 40,
@@ -366,23 +404,23 @@ export default function RootLayout() {
             onPress={handleStartPress}
             activeOpacity={0.8}
             style={{
-              backgroundColor: '#FF9800',
+              backgroundColor: themeType ? themeColors.buttonPrimary : '#FF9800',
               paddingHorizontal: 60,
               paddingVertical: 20,
               borderRadius: 35,
-              shadowColor: '#FF9800',
+              shadowColor: themeType ? themeColors.buttonPrimary : '#FF9800',
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.4,
               shadowRadius: 10,
               elevation: 10,
               borderWidth: 4,
-              borderColor: '#FFA726',
+              borderColor: themeType ? (themeColors.accentBorder || themeColors.buttonPrimary) : '#FFA726',
             }}
           >
             <Text style={{ 
               fontSize: 22, 
               fontWeight: 'bold', 
-              color: '#FFF',
+              color: themeType ? themeColors.buttonText : '#FFF',
               letterSpacing: 1,
               fontFamily: 'Chakra Petch',
             }}>

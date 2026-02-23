@@ -10,6 +10,8 @@ class SoundManager {
   private isInitialized: boolean = false;
   private isActivated: boolean = false; // Track if audio system is activated
   private soundInstances: number = 1; // Use single instance for reliability
+  private backgroundVolume: number = 0.15; // Default 15%
+  private sfxVolume: number = 1.0; // Default 100%
 
   constructor() {
     // Check if Audio is available
@@ -119,6 +121,9 @@ class SoundManager {
       return 0;
     }
 
+    // Apply SFX volume multiplier
+    const finalVolume = volume * this.sfxVolume;
+
     try {
       // Ensure audio is activated before playing
       if (!this.isActivated) {
@@ -172,7 +177,7 @@ class SoundManager {
       
       // Reset position
       await soundToPlay.setPositionAsync(0);
-      await soundToPlay.setVolumeAsync(volume);
+      await soundToPlay.setVolumeAsync(finalVolume);
       await soundToPlay.setRateAsync(rate, true);
       
       // Play
@@ -209,6 +214,9 @@ class SoundManager {
       return;
     }
 
+    // Apply background volume multiplier
+    const finalVolume = volume * this.backgroundVolume;
+
     try {
       // If same music is already playing, don't restart
       if (this.currentBackgroundMusicKey === key && this.backgroundMusic) {
@@ -229,7 +237,7 @@ class SoundManager {
         source,
         {
           shouldPlay: true,
-          volume: volume,
+          volume: finalVolume,
           isLooping: loop,
         }
       );
@@ -335,6 +343,28 @@ class SoundManager {
 
   isLoaded(key: string): boolean {
     return this.sounds.has(key);
+  }
+
+  // Volume control methods
+  setBackgroundVolume(volume: number): void {
+    this.backgroundVolume = Math.max(0, Math.min(1, volume)); // Clamp between 0 and 1
+    if (this.backgroundMusic) {
+      this.setBackgroundMusicVolume(this.backgroundVolume);
+    }
+    console.log(`[Sound] Background volume set to ${this.backgroundVolume}`);
+  }
+
+  setSFXVolume(volume: number): void {
+    this.sfxVolume = Math.max(0, Math.min(1, volume)); // Clamp between 0 and 1
+    console.log(`[Sound] SFX volume set to ${this.sfxVolume}`);
+  }
+
+  getBackgroundVolume(): number {
+    return this.backgroundVolume;
+  }
+
+  getSFXVolume(): number {
+    return this.sfxVolume;
   }
 }
 

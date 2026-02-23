@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from
 import { useQuillbyStore } from '../state/store-modular';
 import RoomLayers from '../components/room/RoomLayers';
 import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
+import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
 import ShopItemCard from '../components/shop/ShopItemCard';
 import PurchaseConfirmModal from '../components/shop/PurchaseConfirmModal';
 import PurchaseSuccessModal from '../components/shop/PurchaseSuccessModal';
@@ -22,6 +23,7 @@ export default function ShopScreen() {
   const [selectedCategory, setSelectedCategory] = useState<'light' | 'plant' | 'furniture' | 'theme' | 'owned'>('owned');
   
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [insufficientCoins, setInsufficientCoins] = useState(false);
   const [requiredCoins, setRequiredCoins] = useState(0);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -114,8 +116,8 @@ export default function ShopScreen() {
     
     // Check if item requires premium and user is not premium
     if (item.requiresPremium && !userData.isPremium) {
-      console.log(`[Shop] Item requires premium - showing Premium Upgrade modal`);
-      setShowPremiumModal(true);
+      console.log(`[Shop] Item requires premium - showing Premium Paywall`);
+      setShowPaywallModal(true);
       return;
     }
     
@@ -432,7 +434,7 @@ export default function ShopScreen() {
         }}
       />
 
-      {/* Premium Upgrade Modal */}
+      {/* Premium Upgrade Modal (for insufficient funds) */}
       <PremiumUpgradeModal
         visible={showPremiumModal}
         onClose={() => {
@@ -445,6 +447,16 @@ export default function ShopScreen() {
           setShowPremiumModal(false);
         }}
         featureName="Shop items"
+      />
+
+      {/* Premium Paywall Modal (for locked premium items) */}
+      <PremiumPaywallModal
+        visible={showPaywallModal}
+        onClose={() => setShowPaywallModal(false)}
+        onPurchaseSuccess={() => {
+          console.log('[Shop] Premium purchased successfully!');
+          setShowPaywallModal(false);
+        }}
       />
     </View>
   );

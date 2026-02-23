@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Switch,
   ActivityIndicator,
   Dimensions,
+  BackHandler,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -76,6 +77,16 @@ export default function HabitSetupScreen() {
     ChakraPetch_400Regular,
     ChakraPetch_600SemiBold,
   });
+
+  // Handle back button - allow going back to previous onboarding screen
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Allow default back behavior (go to previous onboarding screen)
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, []);
 
   // Show loading while fonts load
   if (!fontsLoaded) {

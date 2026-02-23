@@ -3,6 +3,7 @@ import { View, StyleSheet, Image, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from './state/store-modular';
 import { useImageLoading } from './components/ImagePreloader';
+import { getThemeColors } from './utils/themeColors';
 
 export default function WelcomeBackScreen() {
   const router = useRouter();
@@ -10,6 +11,8 @@ export default function WelcomeBackScreen() {
   const { imagesLoaded } = useImageLoading();
   
   const selectedCharacter = userData.selectedCharacter || 'casual';
+  const themeType = userData.roomCustomization?.themeType;
+  const themeColors = getThemeColors(themeType);
   
   // Navigate to home when images are loaded
   useEffect(() => {
@@ -35,10 +38,19 @@ export default function WelcomeBackScreen() {
   };
   
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      { backgroundColor: themeType ? themeColors.background : '#F5F5F5' }
+    ]}>
       <View style={styles.content}>
         {/* Character image */}
-        <View style={styles.characterContainer}>
+        <View style={[
+          styles.characterContainer,
+          { 
+            backgroundColor: themeType ? themeColors.cardBackground : '#FFF3E0',
+            borderColor: themeType ? (themeColors.accentBorder || themeColors.buttonPrimary) : '#FF9800'
+          }
+        ]}>
           <Image 
             source={getCharacterImage()}
             style={styles.characterImage}
@@ -48,11 +60,20 @@ export default function WelcomeBackScreen() {
         
         {/* Loading indicator */}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF9800" />
-          <Text style={styles.loadingText}>
+          <ActivityIndicator 
+            size="large" 
+            color={themeType ? themeColors.buttonPrimary : '#FF9800'} 
+          />
+          <Text style={[
+            styles.loadingText,
+            { color: themeType ? themeColors.textPrimary : '#333' }
+          ]}>
             {imagesLoaded ? 'Ready!' : 'Loading assets...'}
           </Text>
-          <Text style={styles.loadingSubtext}>
+          <Text style={[
+            styles.loadingSubtext,
+            { color: themeType ? themeColors.textSecondary : '#666' }
+          ]}>
             Preparing your study companion
           </Text>
         </View>

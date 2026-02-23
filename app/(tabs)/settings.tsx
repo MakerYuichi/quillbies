@@ -7,6 +7,8 @@ import ChangeNameModal from '../components/modals/ChangeNameModal';
 import ManageHabitsModal from '../components/modals/ManageHabitsModal';
 import EditGoalsModal from '../components/modals/EditGoalsModal';
 import EditProfileModal from '../components/modals/EditProfileModal';
+import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
+import FeedbackModal from '../components/modals/FeedbackModal';
 import ThemedScreen from '../components/themed/ThemedScreen';
 import { playTabSound, playUISubmitSound } from '../../lib/soundManager';
 
@@ -33,6 +35,8 @@ export default function SettingsScreen() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [showHabitsModal, setShowHabitsModal] = useState(false);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   
   // Quillby reaction states
   const [quillbyExpression, setQuillbyExpression] = useState<'happy' | 'curious' | 'excited' | 'sleeping'>('happy');
@@ -68,6 +72,7 @@ export default function SettingsScreen() {
       goals: { expression: 'excited', message: "Time to aim high! 🎯" },
       tutorial: { expression: 'happy', message: "Want to learn together? 📖" },
       reset: { expression: 'curious', message: "Starting fresh? 🔄" },
+      feedback: { expression: 'excited', message: "I'd love to hear from you! 💌" },
     };
     
     const reaction = reactions[section];
@@ -318,6 +323,54 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* ✨ Premium Section */}
+        {!userData.isPremium && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>✨ Go Premium</Text>
+              <Text style={styles.pawPrint}>👑</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.premiumCard}
+              onPress={() => {
+                playTabSound();
+                setShowPaywallModal(true);
+              }}
+              activeOpacity={0.9}
+            >
+              <View style={styles.premiumGradient}>
+                <Text style={styles.premiumIcon}>👑</Text>
+                <Text style={styles.premiumTitle}>Upgrade to Premium</Text>
+                <Text style={styles.premiumSubtitle}>Unlock legendary themes & exclusive items</Text>
+                <View style={styles.premiumBenefits}>
+                  <Text style={styles.premiumBenefit}>🎨 Galaxy, Zen & Ocean themes</Text>
+                  <Text style={styles.premiumBenefit}>🛍️ Exclusive shop items</Text>
+                  <Text style={styles.premiumBenefit}>⏰ Extended focus sessions</Text>
+                </View>
+                <View style={styles.premiumButton}>
+                  <Text style={styles.premiumButtonText}>See Plans →</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {userData.isPremium && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>✨ Premium Status</Text>
+              <Text style={styles.pawPrint}>👑</Text>
+            </View>
+            
+            <View style={styles.premiumActiveCard}>
+              <Text style={styles.premiumActiveIcon}>👑</Text>
+              <Text style={styles.premiumActiveTitle}>Premium Active</Text>
+              <Text style={styles.premiumActiveSubtitle}>Thank you for your support!</Text>
+            </View>
+          </View>
+        )}
+
         {/* ⚙️ Human Stuff */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
@@ -336,6 +389,17 @@ export default function SettingsScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.bookSpine}>📖 Tutorial</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.book, styles.bookGreen]}
+              onPress={() => {
+                reactToTap('feedback');
+                setShowFeedbackModal(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.bookSpine}>📝 Feedback</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -407,6 +471,20 @@ export default function SettingsScreen() {
           sleepHours: userData.sleepGoalHours,
         }}
         enabledHabits={enabledHabits}
+      />
+
+      <PremiumPaywallModal
+        visible={showPaywallModal}
+        onClose={() => setShowPaywallModal(false)}
+        onPurchaseSuccess={() => {
+          console.log('[Settings] Premium purchased successfully!');
+          setShowPaywallModal(false);
+        }}
+      />
+
+      <FeedbackModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
     </ThemedScreen>
   );
@@ -759,6 +837,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#BBDEFB',
     borderColor: '#90CAF9',
   },
+  bookGreen: {
+    backgroundColor: '#C8E6C9',
+    borderColor: '#A5D6A7',
+  },
   bookRed: {
     backgroundColor: '#FFCDD2',
     borderColor: '#EF9A9A',
@@ -787,5 +869,84 @@ const styles = StyleSheet.create({
   // Bottom Spacer
   bottomSpacer: {
     height: SCREEN_HEIGHT * 0.05,
+  },
+  
+  // Premium Section Styles
+  premiumCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#FF9800',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  premiumGradient: {
+    padding: 24,
+    backgroundColor: '#FFF3E0',
+    borderWidth: 2,
+    borderColor: '#FF9800',
+  },
+  premiumIcon: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  premiumTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FF9800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  premiumSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  premiumBenefits: {
+    marginBottom: 20,
+  },
+  premiumBenefit: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+    paddingLeft: 8,
+  },
+  premiumButton: {
+    backgroundColor: '#FF9800',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  premiumButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  premiumActiveCard: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+  },
+  premiumActiveIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  premiumActiveTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#4CAF50',
+    marginBottom: 8,
+  },
+  premiumActiveSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
