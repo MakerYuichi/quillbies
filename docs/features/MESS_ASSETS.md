@@ -27,20 +27,20 @@ Each theme has 3 messy variants in `assets/rooms/mess/themes/{theme-name}/`:
 **Epic Themes:**
 - `castle/castle-messy1.png`, `castle-messy2.png`, `castle-messy3.png`
 - `space/space-messy1.png`, `space-messy2.png`, `space-messy3.png`
-- `cherry-blossom/cherry-blossom-messy1.png`, `cherry-blossom-messy2.png`, `cherry-blossom-messy3.png`
+- `cherry-blossom/blossom-messy1.png`, `blossom-messy2.png`, `blossom-messy3.png`
 
 **Legendary Themes:**
 - `galaxy/galaxy-messy1.png`, `galaxy-messy2.png`, `galaxy-messy3.png`
-- `japanese-zen/japanese-zen-messy1.png`, `japanese-zen-messy2.png`, `japanese-zen-messy3.png`
+- `japanese-zen/zen-messy1.png`, `zen-messy2.png`, `zen-messy3.png`
 - `ocean/ocean-messy1.png`, `ocean-messy2.png`, `ocean-messy3.png`
 
 ### Redecor Furniture
 Each redecor has 3 messy variants in `assets/rooms/mess/redecor/{redecor-name}/`:
 
 **Epic Redecors:**
-- `gaming/gaming-mess1.png`, `gaming-mess2.png`, `gaming-mess3.png`
-- `library/library-mess1.png`, `library-mess2.png`, `library-mess3.png`
-- `home/home-mess1.png`, `home-mess2.png`, `home-mess3.png`
+- `gaming/gaming-messy1.png`, `gaming-messy2.png`, `gaming-messy3.png`
+- `library/library-messy1.png`, `library-messy2.png`, `library-messy3.png`
+- `home/home-messy1.png`, `home-messy2.png`, `home-messy3.png`
 
 ## Implementation
 

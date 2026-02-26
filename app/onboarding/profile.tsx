@@ -445,7 +445,7 @@ export default function ProfileScreen() {
               style={styles.textInput}
               value={userName}
               onChangeText={setUserName}
-              placeholder="e.g., Alex, Sam, Taylor"
+              placeholder="Your name"
               placeholderTextColor="#999"
               maxLength={30}
             />

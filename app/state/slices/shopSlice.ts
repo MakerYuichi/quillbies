@@ -295,9 +295,7 @@ export const createShopSlice: StateCreator<
     
     // Sync to database
     syncToDatabase(updatedUserData);
-  }
-});
-,
+  },
 
   setPremiumStatus: (isPremium: boolean) => {
     const { userData } = get();
@@ -316,3 +314,4 @@ export const createShopSlice: StateCreator<
     // Sync to database
     syncToDatabase(updatedUserData);
   }
+});

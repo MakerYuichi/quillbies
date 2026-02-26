@@ -28,48 +28,52 @@ export default function PremiumPaywallModal({
   onClose,
   onPurchaseSuccess,
 }: PremiumPaywallModalProps) {
-  const { userData, setPremiumStatus } = useQuillbyStore();
+  const { setPremiumStatus } = useQuillbyStore();
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
 
-  // Load available packages
+  // Load available products
   useEffect(() => {
     if (visible) {
-      loadPackages();
+      loadProducts();
     }
   }, [visible]);
 
-  const loadPackages = async () => {
+  const loadProducts = async () => {
     try {
       setLoading(true);
-      const offerings = await getOfferings();
+      console.log('[Paywall] Loading offerings...');
+      const offering = await getOfferings();
 
-      if (offerings && offerings.availablePackages.length > 0) {
-        // Filter for premium subscription packages
-        const premiumPackages = offerings.availablePackages.filter(
-          (pkg) =>
-            pkg.product.identifier.includes('premium') ||
-            pkg.identifier.includes('premium')
-        );
-        setPackages(premiumPackages);
+      if (offering && offering.availablePackages.length > 0) {
+        console.log('[Paywall] Found', offering.availablePackages.length, 'packages');
+        setPackages(offering.availablePackages);
 
         // Auto-select monthly package if available
-        const monthly = premiumPackages.find((pkg) =>
-          pkg.identifier.toLowerCase().includes('monthly')
+        const monthly = offering.availablePackages.find((p) =>
+          p.product.identifier.toLowerCase().includes('monthly')
         );
         if (monthly) {
           setSelectedPackage(monthly);
-        } else if (premiumPackages.length > 0) {
-          setSelectedPackage(premiumPackages[0]);
+        } else if (offering.availablePackages.length > 0) {
+          setSelectedPackage(offering.availablePackages[0]);
         }
       } else {
         console.warn('[Paywall] No premium packages available');
+        Alert.alert(
+          'Setup Required',
+          'Premium subscriptions are not configured yet. Please set up products in RevenueCat.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (error) {
-      console.error('[Paywall] Failed to load packages:', error);
-      Alert.alert('Error', 'Failed to load premium options. Please try again.');
+      console.error('[Paywall] Failed to load offerings:', error);
+      Alert.alert(
+        'Connection Error', 
+        'Failed to load premium options. Please check your internet connection.'
+      );
     } finally {
       setLoading(false);
     }
@@ -178,15 +182,15 @@ export default function PremiumPaywallModal({
   };
 
   const getPeriodText = (pkg: PurchasesPackage): string => {
-    const identifier = pkg.identifier.toLowerCase();
-    if (identifier.includes('monthly')) return 'per month';
-    if (identifier.includes('yearly')) return 'per year';
+    const productId = pkg.product.identifier.toLowerCase();
+    if (productId.includes('monthly')) return 'per month';
+    if (productId.includes('yearly')) return 'per year';
     return '';
   };
 
   const getSavingsText = (pkg: PurchasesPackage): string | null => {
-    const identifier = pkg.identifier.toLowerCase();
-    if (identifier.includes('yearly')) {
+    const productId = pkg.product.identifier.toLowerCase();
+    if (productId.includes('yearly')) {
       return 'Save 30%';
     }
     return null;
@@ -266,8 +270,6 @@ export default function PremiumPaywallModal({
 
             {/* Subscription Plans */}
             <View style={styles.plansSection}>
-              <Text style={styles.sectionTitle}>Choose Your Plan</Text>
-
               {loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#FF9800" />
@@ -275,12 +277,28 @@ export default function PremiumPaywallModal({
                 </View>
               ) : packages.length === 0 ? (
                 <View style={styles.errorContainer}>
+                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Text style={styles.errorTitle}>No Plans Available</Text>
                   <Text style={styles.errorText}>
-                    No plans available. Please try again later.
+                    Premium subscriptions are not configured yet.
                   </Text>
+                  <Text style={styles.errorSubtext}>
+                    This happens when:{'\n'}
+                    • Products aren't set up in RevenueCat{'\n'}
+                    • Using a test API key without products{'\n'}
+                    • No internet connection
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.retryButton}
+                    onPress={loadProducts}
+                  >
+                    <Text style={styles.retryButtonText}>Try Again</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
-                packages.map((pkg) => {
+                <>
+                  <Text style={styles.sectionTitle}>Choose Your Plan</Text>
+                  {packages.map((pkg) => {
                   const isSelected = selectedPackage?.identifier === pkg.identifier;
                   const savings = getSavingsText(pkg);
 
@@ -299,7 +317,7 @@ export default function PremiumPaywallModal({
 
                       <View style={styles.planHeader}>
                         <Text style={styles.planTitle}>
-                          {pkg.identifier.includes('yearly') ? 'Yearly' : 'Monthly'}
+                          {pkg.product.identifier.includes('yearly') ? 'Yearly' : 'Monthly'}
                         </Text>
                         <View style={styles.radioButton}>
                           {isSelected && <View style={styles.radioButtonInner} />}
@@ -310,7 +328,8 @@ export default function PremiumPaywallModal({
                       <Text style={styles.planPeriod}>{getPeriodText(pkg)}</Text>
                     </TouchableOpacity>
                   );
-                })
+                })}
+                </>
               )}
             </View>
 
@@ -364,7 +383,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: SCREEN_HEIGHT * 0.9,
+    height: SCREEN_HEIGHT * 0.9,
     paddingBottom: 20,
   },
   header: {
@@ -443,10 +462,39 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
+  },
   errorText: {
     fontSize: 14,
     color: '#E53935',
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  errorSubtext: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'left',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
   },
   planCard: {
     backgroundColor: '#F5F5F5',

@@ -1091,7 +1091,7 @@ function HomeScreenContent() {
       />
       
       {/* Volume Button - Floating */}
-      <VolumeButton position="top-left" top={50} left={16} />
+      <VolumeButton position="top-left" />
       
       {/* Status Bar Background - Only visible during exercise */}
       {isExercising && (

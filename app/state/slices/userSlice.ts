@@ -103,18 +103,28 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
       coffeeTapsToday: userData?.coffeeTapsToday ?? 0,
       lastConsumableReset: userData?.lastConsumableReset ?? today,
       purchasedItems: userData?.purchasedItems ?? (() => {
-      // For new users, add equipped items to purchasedItems
-      const equippedItems: string[] = [];
-      const roomCustomization = userData?.roomCustomization;
+      // For new users, add default room items to purchasedItems
+      // Default items: fairy-lights, lamp, plant
+      const defaultItems: string[] = ['fairy-lights', 'lamp', 'plant'];
       
+      // Also add any equipped items (in case they were set before)
+      const roomCustomization = userData?.roomCustomization;
       if (roomCustomization) {
-        if (roomCustomization.lightType) equippedItems.push(roomCustomization.lightType);
-        if (roomCustomization.plantType) equippedItems.push(roomCustomization.plantType);
-        if (roomCustomization.furnitureType) equippedItems.push(roomCustomization.furnitureType);
-        if (roomCustomization.themeType) equippedItems.push(roomCustomization.themeType);
+        if (roomCustomization.lightType && !defaultItems.includes(roomCustomization.lightType)) {
+          defaultItems.push(roomCustomization.lightType);
+        }
+        if (roomCustomization.plantType && !defaultItems.includes(roomCustomization.plantType)) {
+          defaultItems.push(roomCustomization.plantType);
+        }
+        if (roomCustomization.furnitureType && !defaultItems.includes(roomCustomization.furnitureType)) {
+          defaultItems.push(roomCustomization.furnitureType);
+        }
+        if (roomCustomization.themeType && !defaultItems.includes(roomCustomization.themeType)) {
+          defaultItems.push(roomCustomization.themeType);
+        }
       }
       
-      return equippedItems;
+      return defaultItems;
     })(),
       signupDate: userData?.signupDate ?? today,
       // Preserve any other existing fields

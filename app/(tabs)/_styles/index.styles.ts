@@ -43,7 +43,7 @@ export const homeStyles = StyleSheet.create({
   // Speech bubble container - now below asset area
   speechBubbleContainer: {
     position: 'absolute',
-    top: (SCREEN_HEIGHT * 385) / 852, // Below asset area (after 490px)
+    top: (SCREEN_HEIGHT * 365) / 852, // Below asset area (after 490px)
     left: (SCREEN_WIDTH * 17) / 393,  // Align with original speech bubble positioning
     width: (SCREEN_WIDTH * 355) / 393, // Match speech bubble width
     zIndex: 25, // Above scrollable content (20)

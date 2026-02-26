@@ -380,8 +380,8 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
           {/* LAYER 5: Lights - Behind photo frames, hide when sleeping, during wake-up animation, or when redecor furniture is equipped */}
           {!isSleeping && sleepAnimation !== 'sleeping' && sleepAnimation !== 'wake-up' && !hasRedecorFurniture && (
             <>
-              {/* Default Fairy Lights - Show when no customization (original default) */}
-              {!roomCustomization?.lightType && (
+              {/* Default Fairy Lights - Show when no customization OR when fairy-lights is equipped */}
+              {(!roomCustomization?.lightType || roomCustomization?.lightType === 'fairy-lights') && (
                 <Image 
                   source={require('../../../assets/rooms/fairy-lights.png')}
                   style={styles.fairyLightsDecor}

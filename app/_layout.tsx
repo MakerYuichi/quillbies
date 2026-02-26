@@ -4,8 +4,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text, Image, AppState, AppStateStatus, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { useQuillbyStore } from './state/store-modular';
+import { initializeRevenueCat } from '../lib/revenueCat';
 import { authenticateDevice, isDeviceAuthenticated } from '../lib/deviceAuth';
 import { requestNotificationPermissions, sendMessNotification } from '../lib/notifications';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -66,12 +66,23 @@ const preloadImages = async () => {
 
 // Global error handler for unhandled promise rejections
 const setupGlobalErrorHandlers = () => {
+  // Suppress console.error for keep awake errors
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    const errorString = args.join(' ');
+    if (errorString.includes('keep awake') || 
+        errorString.includes('KeepAwake') ||
+        errorString.includes('Unable to activate keep awake')) {
+      console.warn('[Suppressed] Keep awake error:', ...args);
+      return;
+    }
+    originalConsoleError(...args);
+  };
+
   // Handle unhandled promise rejections
   const originalHandler = (global as any).ErrorUtils?.setGlobalHandler;
   if (originalHandler) {
     (global as any).ErrorUtils.setGlobalHandler((error: any, isFatal: boolean) => {
-      console.error('[GlobalError] Unhandled error:', error);
-      
       // Handle keep awake errors specifically (multiple variations)
       const errorMessage = error?.message || '';
       const errorString = String(error);
@@ -80,9 +91,11 @@ const setupGlobalErrorHandlers = () => {
           errorMessage.includes('Unable to activate keep awake') ||
           errorString.includes('keep awake') ||
           errorString.includes('KeepAwake')) {
-        console.warn('[GlobalError] Keep awake error caught and ignored:', error);
+        console.warn('[GlobalError] Keep awake error caught and ignored');
         return; // Don't crash the app for keep awake errors
       }
+      
+      console.error('[GlobalError] Unhandled error:', error);
       
       // Call original handler for other errors
       if (originalHandler) {
@@ -179,15 +192,7 @@ export default function RootLayout() {
       // Initialize RevenueCat
       try {
         console.log('[App] Initializing RevenueCat...');
-        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-        
-        const apiKey = process.env.REVENUE_CAT_API_KEY;
-        
-        if (!apiKey) {
-          throw new Error('REVENUE_CAT_API_KEY not found in environment variables');
-        }
-        
-        Purchases.configure({ apiKey });
+        await initializeRevenueCat();
         console.log('[App] RevenueCat initialized successfully');
       } catch (rcError) {
         console.warn('[App] RevenueCat initialization failed:', rcError);

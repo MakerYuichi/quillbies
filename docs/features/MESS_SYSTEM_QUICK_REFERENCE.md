@@ -32,15 +32,15 @@ Mess3: assets/rooms/mess/themes/castle/castle-messy3.png
 ### Redecor Furniture
 ```
 Clean: assets/shop/epic/furniture/{redecor-name}.png
-Messy: assets/rooms/mess/redecor/{base-name}/{base-name}-mess{1-3}.png
+Messy: assets/rooms/mess/redecor/{base-name}/{base-name}-messy{1-3}.png
 ```
 
 Example:
 ```
 Clean: assets/shop/epic/furniture/gaming-redecor.png
-Mess1: assets/rooms/mess/redecor/gaming/gaming-mess1.png
-Mess2: assets/rooms/mess/redecor/gaming/gaming-mess2.png
-Mess3: assets/rooms/mess/redecor/gaming/gaming-mess3.png
+Mess1: assets/rooms/mess/redecor/gaming/gaming-messy1.png
+Mess2: assets/rooms/mess/redecor/gaming/gaming-messy2.png
+Mess3: assets/rooms/mess/redecor/gaming/gaming-messy3.png
 ```
 
 ## Code Integration
@@ -117,9 +117,9 @@ const themeMap: { [key: string]: any } = {
 2. **Create mess assets:**
 ```
 assets/rooms/mess/redecor/new/
-  ├── new-mess1.png
-  ├── new-mess2.png
-  └── new-mess3.png
+  ├── new-messy1.png
+  ├── new-messy2.png
+  └── new-messy3.png
 ```
 
 3. **Update RoomLayers.tsx getRedecorAsset():**
@@ -127,9 +127,9 @@ assets/rooms/mess/redecor/new/
 const messyRedecorMap: { [key: string]: { [key: number]: any } } = {
   // ... existing redecors
   'new-redecor': {
-    1: require('../../../assets/rooms/mess/redecor/new/new-mess1.png'),
-    2: require('../../../assets/rooms/mess/redecor/new/new-mess2.png'),
-    3: require('../../../assets/rooms/mess/redecor/new/new-mess3.png'),
+    1: require('../../../assets/rooms/mess/redecor/new/new-messy1.png'),
+    2: require('../../../assets/rooms/mess/redecor/new/new-messy2.png'),
+    3: require('../../../assets/rooms/mess/redecor/new/new-messy3.png'),
   },
 };
 

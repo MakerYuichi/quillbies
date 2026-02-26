@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ImageBackground, Image, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ImageBackground, Image, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store-modular';
 import ChangeHamsterModal from '../components/modals/ChangeHamsterModal';
@@ -9,10 +9,19 @@ import EditGoalsModal from '../components/modals/EditGoalsModal';
 import EditProfileModal from '../components/modals/EditProfileModal';
 import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
 import FeedbackModal from '../components/modals/FeedbackModal';
+import AccountDeletionModal from '../components/modals/AccountDeletionModal';
 import ThemedScreen from '../components/themed/ThemedScreen';
 import { playTabSound, playUISubmitSound } from '../../lib/soundManager';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { getPendingDeletionRequest, cancelAccountDeletion, getDaysUntilDeletion } from '../../lib/accountDeletion';
+import { 
+  SCREEN_WIDTH, 
+  SCREEN_HEIGHT, 
+  responsiveFontSize, 
+  getResponsivePadding, 
+  getResponsiveMargins,
+  responsiveSpacing,
+  getContainerWidth 
+} from '../utils/responsive';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -37,6 +46,10 @@ export default function SettingsScreen() {
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showAccountDeletionModal, setShowAccountDeletionModal] = useState(false);
+  
+  // Account deletion state
+  const [pendingDeletion, setPendingDeletion] = useState<{ scheduledFor: string } | null>(null);
   
   // Quillby reaction states
   const [quillbyExpression, setQuillbyExpression] = useState<'happy' | 'curious' | 'excited' | 'sleeping'>('happy');
@@ -49,6 +62,17 @@ export default function SettingsScreen() {
   const buddyName = userData.buddyName || 'Quillby';
   const currentCharacter = userData.selectedCharacter || 'casual';
   const enabledHabits = userData.enabledHabits || ['study'];
+  
+  // Check for pending deletion on mount
+  React.useEffect(() => {
+    const checkDeletion = async () => {
+      const request = await getPendingDeletionRequest();
+      if (request) {
+        setPendingDeletion({ scheduledFor: request.scheduledFor });
+      }
+    };
+    checkDeletion();
+  }, []);
   
   // Get character display name
   const getCharacterName = (char: string) => {
@@ -175,6 +199,32 @@ export default function SettingsScreen() {
         }
       ]
     );
+  };
+
+  const handleCancelDeletion = async () => {
+    Alert.alert(
+      'Cancel Account Deletion',
+      'Are you sure you want to cancel the account deletion request?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel Deletion',
+          onPress: async () => {
+            const result = await cancelAccountDeletion();
+            if (result.success) {
+              setPendingDeletion(null);
+              Alert.alert('Success', 'Account deletion has been cancelled. Your account is safe!');
+            } else {
+              Alert.alert('Error', 'Failed to cancel deletion. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeletionRequested = (scheduledFor: string) => {
+    setPendingDeletion({ scheduledFor });
   };
 
   return (
@@ -415,6 +465,49 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* 🗑️ Account Settings */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>🗑️ Account Settings</Text>
+            <Text style={styles.pawPrint}>⚠️</Text>
+          </View>
+          
+          {pendingDeletion ? (
+            <View style={styles.deletionWarningCard}>
+              <Text style={styles.deletionWarningIcon}>⚠️</Text>
+              <Text style={styles.deletionWarningTitle}>Account Deletion Scheduled</Text>
+              <Text style={styles.deletionWarningText}>
+                Your account will be deleted in {getDaysUntilDeletion(pendingDeletion.scheduledFor)} days
+              </Text>
+              <Text style={styles.deletionWarningDate}>
+                Scheduled for: {new Date(pendingDeletion.scheduledFor).toLocaleDateString()}
+              </Text>
+              <TouchableOpacity
+                style={styles.cancelDeletionButton}
+                onPress={handleCancelDeletion}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.cancelDeletionButtonText}>Cancel Deletion</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.deleteAccountCard}
+              onPress={() => {
+                playTabSound();
+                setShowAccountDeletionModal(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.deleteAccountIcon}>🗑️</Text>
+              <Text style={styles.deleteAccountTitle}>Delete Account</Text>
+              <Text style={styles.deleteAccountSubtitle}>
+                Permanently delete your account and all data
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Quillby v1.0.0 </Text>
@@ -485,6 +578,12 @@ export default function SettingsScreen() {
       <FeedbackModal
         visible={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
+      />
+
+      <AccountDeletionModal
+        visible={showAccountDeletionModal}
+        onClose={() => setShowAccountDeletionModal(false)}
+        onDeletionRequested={handleDeletionRequested}
       />
     </ThemedScreen>
   );
@@ -948,5 +1047,82 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  
+  // Account Deletion Styles
+  deleteAccountCard: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#EF5350',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  deleteAccountIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  deleteAccountTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#D32F2F',
+    marginBottom: 8,
+  },
+  deleteAccountSubtitle: {
+    fontSize: 14,
+    color: '#C62828',
+    textAlign: 'center',
+  },
+  deletionWarningCard: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FF9800',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  deletionWarningIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  deletionWarningTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F57C00',
+    marginBottom: 8,
+  },
+  deletionWarningText: {
+    fontSize: 16,
+    color: '#E65100',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  deletionWarningDate: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  cancelDeletionButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    padding: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  cancelDeletionButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });

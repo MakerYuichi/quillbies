@@ -37,12 +37,15 @@ export const initializeRevenueCat = async (): Promise<void> => {
   try {
     Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
     
-    const apiKey = process.env.REVENUE_CAT_API_KEY;
+    // In Expo, use EXPO_PUBLIC_ prefix for client-side access
+    const apiKey = process.env.EXPO_PUBLIC_REVENUE_CAT_API_KEY;
     
     if (!apiKey) {
-      throw new Error('REVENUE_CAT_API_KEY not found in environment variables');
+      console.error('[RevenueCat] API key not found. Please set EXPO_PUBLIC_REVENUE_CAT_API_KEY in .env');
+      throw new Error('EXPO_PUBLIC_REVENUE_CAT_API_KEY not found in environment variables');
     }
     
+    console.log('[RevenueCat] Initializing with API key:', apiKey.substring(0, 10) + '...');
     Purchases.configure({ apiKey });
     console.log('[RevenueCat] Initialized successfully');
   } catch (error) {

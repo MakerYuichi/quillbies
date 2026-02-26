@@ -1,8 +1,10 @@
 // Floating Volume Button - Shows on all screens
 import React, { useState } from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import VolumeSettingsModal from '../modals/VolumeSettingsModal';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface VolumeButtonProps {
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -27,18 +29,33 @@ export default function VolumeButton({
       return { top, right, bottom, left };
     }
 
-    // Otherwise use preset positions
+    // Otherwise use preset positions with responsive values
     switch (position) {
       case 'top-left':
-        return { top: 50, left: 16 };
+        return { 
+          top: SCREEN_HEIGHT * 0.070,  // 60/852 = 0.070
+          left: SCREEN_WIDTH * 0.041   // 16/393 = 0.041
+        };
       case 'top-right':
-        return { top: 50, right: 16 };
+        return { 
+          top: SCREEN_HEIGHT * 0.070,  // 60/852 = 0.070
+          right: SCREEN_WIDTH * 0.041  // 16/393 = 0.041
+        };
       case 'bottom-left':
-        return { bottom: 90, left: 16 };
+        return { 
+          bottom: SCREEN_HEIGHT * 0.106,  // 90/852 = 0.106
+          left: SCREEN_WIDTH * 0.041      // 16/393 = 0.041
+        };
       case 'bottom-right':
-        return { bottom: 90, right: 16 };
+        return { 
+          bottom: SCREEN_HEIGHT * 0.106,  // 90/852 = 0.106
+          right: SCREEN_WIDTH * 0.041     // 16/393 = 0.041
+        };
       default:
-        return { top: 50, right: 16 };
+        return { 
+          top: SCREEN_HEIGHT * 0.070,  // 60/852 = 0.070
+          right: SCREEN_WIDTH * 0.041  // 16/393 = 0.041
+        };
     }
   };
 

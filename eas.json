@@ -11,7 +11,7 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk",
+        "buildType": "app-bundle",
         "image": "latest",
         "ndk": "26.1.10909125"
       },
