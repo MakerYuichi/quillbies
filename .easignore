@@ -216,3 +216,8 @@ GoogleService-Info.plist
 *~.nib
 local.properties
 .gradle/
+
+# ============================================
+# FORCE PREBUILD (EAS GENERATES ANDROID)
+# ============================================
+/android
