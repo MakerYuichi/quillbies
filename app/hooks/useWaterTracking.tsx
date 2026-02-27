@@ -4,7 +4,8 @@ import { useQuillbyStore } from '../state/store-modular';
 import { soundManager, SOUNDS } from '../../lib/soundManager';
 
 export const useWaterTracking = (buddyName: string) => {
-  const { userData, logWater } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const logWater = useQuillbyStore((state) => state.logWater);
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle-sit');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);

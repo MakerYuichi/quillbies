@@ -56,12 +56,13 @@ export default function HomeScreen() {
 
 function HomeScreenContent() {
   const router = useRouter();
-  const { imagesLoaded } = useImageLoading();
+  // ImagePreloader is temporarily disabled, so skip the image loading check
+  // const { imagesLoaded } = useImageLoading();
   
   // Wrap store access in try-catch to prevent crashes
   let storeData;
   try {
-    storeData = useQuillbyStore();
+    storeData = useQuillbyStore((state) => state);
   } catch (error) {
     console.error('[HomeScreen] Store access error:', error);
     return (
@@ -91,10 +92,8 @@ function HomeScreenContent() {
     );
   }
   
-  // Wait for images to load before showing content
-  if (!imagesLoaded) {
-    return null; // ImagePreloader will show loading overlay
-  }
+  // ImagePreloader is disabled, so images will load on-demand
+  // Skip the imagesLoaded check
   
   // Start background music when entering main app
   useEffect(() => {

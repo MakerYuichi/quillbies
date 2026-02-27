@@ -19,7 +19,10 @@ interface DayDetailsModalProps {
 }
 
 export default function DayDetailsModal({ visible, onClose, date, onEmojiChange }: DayDetailsModalProps) {
-  const { userData, deadlines, deleteDeadline, startFocusSession } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const deadlines = useQuillbyStore((state) => state.deadlines);
+  const deleteDeadline = useQuillbyStore((state) => state.deleteDeadline);
+  const startFocusSession = useQuillbyStore((state) => state.startFocusSession);
   const router = useRouter();
   
   // Get theme colors

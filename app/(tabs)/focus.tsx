@@ -15,16 +15,16 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function FocusScreen() {
   const router = useRouter();
-  const { 
-    userData,
-    startFocusSession, 
-    createDeadline,
-    updateDeadline,
-    deleteDeadline,
-    getUrgentDeadlines,
-    getUpcomingDeadlines,
-    getCompletedDeadlines
-  } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const deadlines = useQuillbyStore((state) => state.deadlines);
+  const startFocusSession = useQuillbyStore((state) => state.startFocusSession);
+  const createDeadline = useQuillbyStore((state) => state.createDeadline);
+  const updateDeadline = useQuillbyStore((state) => state.updateDeadline);
+  const deleteDeadline = useQuillbyStore((state) => state.deleteDeadline);
+  const getUrgentDeadlines = useQuillbyStore((state) => state.getUrgentDeadlines);
+  const getUpcomingDeadlines = useQuillbyStore((state) => state.getUpcomingDeadlines);
+  const getCompletedDeadlines = useQuillbyStore((state) => state.getCompletedDeadlines);
+
   
   const buddyName = userData.buddyName || 'Quillby';
   

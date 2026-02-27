@@ -35,7 +35,8 @@ export default function DeadlineDetailModal({
   onEdit, 
   onDelete 
 }: DeadlineDetailModalProps) {
-  const { updateReminders, userData } = useQuillbyStore();
+  const updateReminders = useQuillbyStore((state) => state.updateReminders);
+  const userData = useQuillbyStore((state) => state.userData);
   
   // Get theme colors
   const themeType = userData.roomCustomization?.themeType;

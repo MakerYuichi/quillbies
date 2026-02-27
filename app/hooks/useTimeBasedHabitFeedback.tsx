@@ -4,7 +4,8 @@ import { useQuillbyStore } from '../state/store-modular';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useTimeBasedHabitFeedback = (buddyName: string) => {
-  const { userData, getTodaysSleepHours } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const getTodaysSleepHours = useQuillbyStore((state) => state.getTodaysSleepHours);
   const [feedbackMessage, setFeedbackMessage] = useState<string>('');
   const [feedbackTimestamp, setFeedbackTimestamp] = useState<number>(0);
 

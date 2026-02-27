@@ -1,6 +1,6 @@
 // Modular Zustand store combining all slices
 import { create } from 'zustand';
-import { persist, subscribeWithSelector } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import { createStorage } from './utils/storageUtils';
 import { syncToDatabase } from './utils/syncUtils';
 import { loadAllUserData } from '../../lib/syncManager';
@@ -131,8 +131,7 @@ const loadFromDatabase = async () => {
 };
 
 export const useQuillbyStore = create<QuillbyStore>()(
-  subscribeWithSelector(
-    persist(
+  persist(
     (...args) => ({
       // Combine all slices
       ...createUserSlice(...args),
@@ -156,8 +155,8 @@ export const useQuillbyStore = create<QuillbyStore>()(
             console.log('[Load] Local study_goal_hours:', userData.studyGoalHours);
             console.log('[Load] 🔍 MESS POINTS DEBUG:');
             console.log('[Load]   - Local cache (SOURCE OF TRUTH):', userData.messPoints);
-            console.log('[Load]   - Database (user_profiles):', dbData.userProfile.mess_points);
-            console.log('[Load]   - Database (daily_data):', dbData.dailyData?.mess_points);
+            console.log('[Load]   - Database (user_profiles):', dbData.userProfile.messPoints);
+            console.log('[Load]   - Database (daily_data):', dbData.dailyData?.messPoints);
             console.log('[Load]   - Will use LOCAL value (DB has sync lag)');
             
             // Merge database data with local data, prioritizing database for key fields
@@ -533,11 +532,11 @@ Room: ${roomState}`;
       }
     }),
     {
-      name: 'quillby-modular-storage', // New storage key to avoid old data
+      name: 'quillby-store-v3', // Changed storage key to force fresh start
       storage: createStorage(),
       
       // Only persist essential user data
-      partialize: (state) => ({
+      partialize: (state: QuillbyStore) => ({
         userData: state.userData,
         deadlines: state.deadlines,
       }),
@@ -550,7 +549,7 @@ Room: ${roomState}`;
       
       onRehydrateStorage: () => {
         console.log('[Storage] Starting data rehydration...');
-        return (state, error) => {
+        return (state?: QuillbyStore, error?: unknown) => {
           if (error) {
             console.error('[Storage] Failed to rehydrate:', error);
           } else {
@@ -561,6 +560,5 @@ Room: ${roomState}`;
         };
       }
     }
-  )
   )
 );

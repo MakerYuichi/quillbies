@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { useQuillbyStore } from '../state/store-modular';
 import RoomLayers from '../components/room/RoomLayers';
-import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
 import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
 import ShopItemCard from '../components/shop/ShopItemCard';
 import PurchaseConfirmModal from '../components/shop/PurchaseConfirmModal';
@@ -14,7 +13,11 @@ import RealTimeClock from '../components/ui/RealTimeClock';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ShopScreen() {
-  const { userData, getShopItems, purchaseItem, equipItem, unequipItem } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const getShopItems = useQuillbyStore((state) => state.getShopItems);
+  const purchaseItem = useQuillbyStore((state) => state.purchaseItem);
+  const equipItem = useQuillbyStore((state) => state.equipItem);
+  const unequipItem = useQuillbyStore((state) => state.unequipItem);
   
   // Get theme type to determine default category
   const themeType = userData.roomCustomization?.themeType;
@@ -432,21 +435,6 @@ export default function ShopScreen() {
           setShowSuccessModal(false);
           setPurchasedItem(null);
         }}
-      />
-
-      {/* Premium Upgrade Modal (for insufficient funds) */}
-      <PremiumUpgradeModal
-        visible={showPremiumModal}
-        onClose={() => {
-          setShowPremiumModal(false);
-          setInsufficientCoins(false);
-        }}
-        onUpgrade={() => {
-          console.log('[Shop] Premium upgrade requested');
-          // TODO: Implement premium upgrade flow
-          setShowPremiumModal(false);
-        }}
-        featureName="Shop items"
       />
 
       {/* Premium Paywall Modal (for locked premium items) */}

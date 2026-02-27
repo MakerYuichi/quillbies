@@ -11,7 +11,7 @@ interface RealTimeClockProps {
 }
 
 export default function RealTimeClock({ isExercising = false, customLabel }: RealTimeClockProps) {
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [fadeAnim] = useState(new Animated.Value(1));
   

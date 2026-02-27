@@ -36,19 +36,17 @@ export default function StudySessionScreen() {
 
 function StudySessionContent() {
   const router = useRouter();
-  const { 
-    userData, 
-    session, 
-    selectedDeadlineId, 
-    deadlines, 
-    updateFocusDuringSession, 
-    endFocusSession, 
-    handleDistraction, 
-    startBreak, 
-    endBreak,
-    tapAppleInSession,
-    tapCoffeeInSession
-  } = useQuillbyStore();
+  const session = useQuillbyStore((state) => state.session);
+  const userData = useQuillbyStore((state) => state.userData);
+  const selectedDeadlineId = useQuillbyStore((state) => state.selectedDeadlineId);
+  const deadlines = useQuillbyStore((state) => state.deadlines);
+  const updateFocusDuringSession = useQuillbyStore((state) => state.updateFocusDuringSession);
+  const endFocusSession = useQuillbyStore((state) => state.endFocusSession);
+  const handleDistraction = useQuillbyStore((state) => state.handleDistraction);
+  const startBreak = useQuillbyStore((state) => state.startBreak);
+  const endBreak = useQuillbyStore((state) => state.endBreak);
+  const tapAppleInSession = useQuillbyStore((state) => state.tapAppleInSession);
+  const tapCoffeeInSession = useQuillbyStore((state) => state.tapCoffeeInSession);
   
   // Get theme colors
   const themeType = userData.roomCustomization?.themeType;

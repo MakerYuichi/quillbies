@@ -8,10 +8,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const [deviceOnboardingCompleted, setDeviceOnboardingCompleted] = useState<boolean | null>(null);
   
-  const { 
-    updateEnergy,
-    userData
-  } = useQuillbyStore();
+  const updateEnergy = useQuillbyStore((state) => state.updateEnergy);
+  const userData = useQuillbyStore((state) => state.userData);
   
   const selectedCharacter = userData.selectedCharacter || 'casual';
   

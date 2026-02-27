@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -132,6 +133,9 @@ const HamsterCharacter = memo(function HamsterCharacter({ selectedCharacter, cur
   };
 
   try {
+    const characterImage = getCharacterImage();
+    const isGif = currentAnimation === 'exercising' || currentAnimation === 'exercise-complete';
+    
     return (
       <View pointerEvents={pointerEvents}>
         {/* Small white background for hamster belly */}
@@ -139,9 +143,12 @@ const HamsterCharacter = memo(function HamsterCharacter({ selectedCharacter, cur
         
         <View style={styles.petContainer} pointerEvents="none">
           <Image 
-            source={getCharacterImage()}
+            key={currentAnimation}
+            source={characterImage}
             style={styles.characterImage}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={200}
             onError={(error) => {
               console.warn('[HamsterCharacter] Image load error:', error);
             }}

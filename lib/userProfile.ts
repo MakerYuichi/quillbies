@@ -87,7 +87,7 @@ export const updateUserProfile = async (userId: string, updates: any) => {
             energy: updates.energy || 100,
             max_energy_cap: updates.max_energy_cap || 100,
             q_coins: updates.q_coins || 100,
-            mess_points: updates.mess_points || 0,
+            mess_points: updates.messPoints || 0,
             current_streak: updates.current_streak || 0,
             enabled_habits: updates.enabled_habits || ['study', 'hydration', 'sleep', 'exercise'],
             study_goal_hours: updates.study_goal_hours || 3,

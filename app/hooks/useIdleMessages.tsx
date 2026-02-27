@@ -101,7 +101,7 @@ const getRandomMessage = (messages: string[]): string => {
 };
 
 export const useIdleMessages = (buddyName: string) => {
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const [idleMessage, setIdleMessage] = useState<string>('');
   const [idleTimestamp, setIdleTimestamp] = useState<number>(0);
   const [lastInteractionTime, setLastInteractionTime] = useState<number>(Date.now());

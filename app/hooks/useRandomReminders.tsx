@@ -78,7 +78,7 @@ const getRandomMessage = (messages: string[]): string => {
 };
 
 export const useRandomReminders = (buddyName: string) => {
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const [reminderMessage, setReminderMessage] = useState<string>('');
   const [reminderTimestamp, setReminderTimestamp] = useState<number>(0);
 

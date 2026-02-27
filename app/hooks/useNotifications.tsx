@@ -17,7 +17,9 @@ interface NotificationData {
 }
 
 export function useNotifications() {
-  const { userData, checkStudyCheckpoints, deadlines } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const checkStudyCheckpoints = useQuillbyStore((state) => state.checkStudyCheckpoints);
+  const deadlines = useQuillbyStore((state) => state.deadlines);
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [lastNotificationCheck, setLastNotificationCheck] = useState(Date.now());
   

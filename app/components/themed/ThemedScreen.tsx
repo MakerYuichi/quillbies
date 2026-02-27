@@ -11,7 +11,7 @@ interface ThemedScreenProps {
 }
 
 export default function ThemedScreen({ children, showBackground = true }: ThemedScreenProps) {
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const themeType = userData.roomCustomization?.themeType;
   const themeColors = getThemeColors(themeType);
   const decorations = getThemeDecorations(themeType);

@@ -14,7 +14,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationAchievement, setCelebrationAchievement] = useState<Achievement | null>(null);
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   
   // Get theme colors
   const themeType = userData.roomCustomization?.themeType;
@@ -28,37 +28,33 @@ export default function TabLayout() {
   useEffect(() => {
     console.log('[Achievements] 🎧 Setting up achievement listener...');
     
-    // Use subscribeWithSelector for better change detection
-    const unsubscribe = useQuillbyStore.subscribe(
-      (state) => state.userData.achievements,
-      (newAchievements, prevAchievements) => {
-        console.log('[Achievements] 📡 Achievements changed!');
-        console.log('[Achievements] Previous:', prevAchievements);
-        console.log('[Achievements] New:', newAchievements);
-        
-        if (!newAchievements || !prevAchievements) {
-          console.log('[Achievements] ⚠️ Missing achievements data');
-          return;
-        }
-        
-        // Check for newly unlocked achievements
-        Object.keys(newAchievements).forEach(id => {
-          const wasUnlocked = prevAchievements[id]?.unlocked;
-          const isNowUnlocked = newAchievements[id]?.unlocked;
-          
-          console.log(`[Achievements] ${id}: was=${wasUnlocked}, now=${isNowUnlocked}`);
-          
-          if (isNowUnlocked && !wasUnlocked) {
-            // Achievement just unlocked!
-            console.log('[Achievements] 🎉 Showing celebration for:', id);
-            const achievement = ACHIEVEMENTS[id];
-            console.log('[Achievements] Achievement data:', achievement);
-            setCelebrationAchievement(achievement);
-            setShowCelebration(true);
-          }
-        });
+    // Use regular subscribe with manual comparison
+    let prevAchievements = useQuillbyStore.getState().userData.achievements || {};
+    
+    const unsubscribe = useQuillbyStore.subscribe((state) => {
+      const newAchievements = state.userData.achievements;
+      
+      if (!newAchievements) {
+        console.log('[Achievements] ⚠️ Missing achievements data');
+        return;
       }
-    );
+      
+      // Check for newly unlocked achievements
+      Object.keys(newAchievements).forEach(id => {
+        const wasUnlocked = prevAchievements[id]?.unlocked;
+        const isNowUnlocked = newAchievements[id]?.unlocked;
+        
+        if (isNowUnlocked && !wasUnlocked) {
+          // Achievement just unlocked!
+          console.log('[Achievements] 🎉 Showing celebration for:', id);
+          const achievement = ACHIEVEMENTS[id];
+          setCelebrationAchievement(achievement);
+          setShowCelebration(true);
+        }
+      });
+      
+      prevAchievements = newAchievements;
+    });
     
     console.log('[Achievements] ✅ Listener setup complete');
     return unsubscribe;

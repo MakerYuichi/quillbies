@@ -8,7 +8,7 @@ export const useDayEvaluationMessages = (buddyName: string) => {
   // Safely access userData with error handling
   let userData;
   try {
-    const store = useQuillbyStore();
+    const store = useQuillbyStore((state) => state);
     userData = store.userData;
   } catch (error) {
     console.warn('[useDayEvaluationMessages] Store access error:', error);

@@ -5,7 +5,9 @@ import { playEndSessionSound } from '../../lib/soundManager';
 import { soundManager, SOUNDS } from '../../lib/soundManager';
 
 export const useExerciseTracking = (buddyName: string) => {
-  const { userData, logExercise, resetDay } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const logExercise = useQuillbyStore((state) => state.logExercise);
+  const resetDay = useQuillbyStore((state) => state.resetDay);
   const [isExercising, setIsExercising] = useState(false);
   const [exerciseStartTime, setExerciseStartTime] = useState<number | null>(null);
   const [exerciseType, setExerciseType] = useState<'walk' | 'stretch' | 'cardio' | 'energizer' | 'custom'>('walk');

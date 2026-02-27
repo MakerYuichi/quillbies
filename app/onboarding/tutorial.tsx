@@ -93,7 +93,7 @@ const tutorialSteps = [
 
 export default function TutorialScreen() {
   const router = useRouter();
-  const { completeOnboarding } = useQuillbyStore();
+  const completeOnboarding = useQuillbyStore((state) => state.completeOnboarding);
   const [currentStep, setCurrentStep] = useState(0);
   const [showWelcome, setShowWelcome] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);

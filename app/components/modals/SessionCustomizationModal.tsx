@@ -11,7 +11,7 @@ import {
   SafeAreaView,
   Platform
 } from 'react-native';
-import PremiumUpgradeModal from './PremiumUpgradeModal';
+import PremiumPaywallModal from './PremiumPaywallModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -133,13 +133,6 @@ export default function SessionCustomizationModal({
 
   const handleUpgradePrompt = () => {
     setShowPremiumModal(true);
-  };
-  
-  const handleUpgrade = () => {
-    // TODO: Implement actual payment flow
-    // For now, just show alert
-    setShowPremiumModal(false);
-    alert('🚀 Payment integration coming soon! This will open your app store payment flow.');
   };
   
   const handleClosePremiumModal = () => {
@@ -338,12 +331,14 @@ export default function SessionCustomizationModal({
       </View>
     </Modal>
     
-    {/* Premium Upgrade Modal */}
-    <PremiumUpgradeModal
+    {/* Premium Paywall Modal */}
+    <PremiumPaywallModal
       visible={showPremiumModal}
       onClose={handleClosePremiumModal}
-      onUpgrade={handleUpgrade}
-      featureName="Custom Time"
+      onPurchaseSuccess={() => {
+        console.log('[SessionModal] Premium purchased successfully!');
+        setShowPremiumModal(false);
+      }}
     />
     </>
   );

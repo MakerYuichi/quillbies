@@ -23,7 +23,7 @@ export default function ClearStorageScreen() {
       );
     } catch (error) {
       console.error('[Clear] Error clearing storage:', error);
-      Alert.alert('Error', 'Failed to clear storage: ' + error.message);
+      Alert.alert('Error', 'Failed to clear storage: ' + error);
     }
   };
 

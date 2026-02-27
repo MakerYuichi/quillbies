@@ -12,6 +12,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import ImagePreloader from './components/ImagePreloader';
 import { getThemeColors } from './utils/themeColors';
 
+
+
 // Preload critical images at app startup
 const preloadImages = async () => {
   const images = [
@@ -134,15 +136,32 @@ const setupGlobalErrorHandlers = () => {
 };
 
 export default function RootLayout() {
-  // Load Schoolbell font
+  // ===== ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL RETURNS =====
+  
+  // Load Schoolbell font - MUST be called before any conditional returns
   const [fontsLoaded] = useFonts({
     'Schoolbell': require('../assets/fonts/Schoolbell-Regular.ttf'),
   });
   
-  // Use separate selectors to prevent object recreation
+  // Check if store is initialized - prevent crashes during hydration
+  const [storeReady, setStoreReady] = useState(false);
+  const [storeInitialized, setStoreInitialized] = useState(false);
+  
+  // ALWAYS call ALL hooks first - never conditionally
+  // Call store hooks with safe defaults
   const initializeUser = useQuillbyStore((state) => state.initializeUser);
   const loadFromDatabase = useQuillbyStore((state) => state.loadFromDatabase);
-  const userData = useQuillbyStore((state) => state.userData);
+  const userData = useQuillbyStore((state) => state.userData ?? {
+    messPoints: 0,
+    energy: 100,
+    maxEnergyCap: 100,
+    qCoins: 0,
+    gems: 0,
+    roomCustomization: null,
+    purchasedItems: [],
+    onboardingCompleted: false,
+    isPremium: false,
+  });
   
   const [isReady, setIsReady] = useState(false);
   const [showStartButton, setShowStartButton] = useState(false);
@@ -150,15 +169,55 @@ export default function RootLayout() {
   const appState = useRef<AppStateStatus>(AppState.currentState);
   const lastMessPoints = useRef<number>(0);
   
+  // Check if store is available
+  useEffect(() => {
+    try {
+      // Test if store is accessible
+      const state = useQuillbyStore.getState();
+      if (state) {
+        setStoreInitialized(true);
+      }
+    } catch (error) {
+      console.error('[App] Store not initialized yet:', error);
+      // Retry after a short delay
+      const retry = setTimeout(() => {
+        try {
+          const state = useQuillbyStore.getState();
+          if (state) {
+            setStoreInitialized(true);
+          }
+        } catch (e) {
+          console.error('[App] Store initialization failed:', e);
+          // Force initialization anyway to prevent infinite loading
+          setStoreInitialized(true);
+        }
+      }, 100);
+      return () => clearTimeout(retry);
+    }
+  }, []);
+  
+  useEffect(() => {
+    if (!storeInitialized) return;
+    
+    // Give store time to hydrate from persist middleware (automatic)
+    const timer = setTimeout(() => {
+      console.log('[App] Store marked as ready');
+      setStoreReady(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [storeInitialized]);
+  
   // Track app state changes to send notifications when app goes to background
   useEffect(() => {
+    if (!userData || userData.messPoints === undefined) return; // Wait for userData to be initialized
+    
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       // App is going to background
       if (appState.current.match(/active/) && nextAppState === 'background') {
         console.log('[App] Going to background, checking mess points...');
         
         // Check if mess points increased and room is messy
-        if (userData.messPoints >= 4 && userData.messPoints !== lastMessPoints.current) {
+        if (userData?.messPoints && userData.messPoints >= 4 && userData.messPoints !== lastMessPoints.current) {
           console.log(`[App] Mess points increased to ${userData.messPoints}, sending notification`);
           await sendMessNotification(userData.messPoints);
           lastMessPoints.current = userData.messPoints;
@@ -168,7 +227,9 @@ export default function RootLayout() {
       // App is coming to foreground
       if (appState.current.match(/background/) && nextAppState === 'active') {
         console.log('[App] Coming to foreground');
-        lastMessPoints.current = userData.messPoints; // Update reference
+        if (userData?.messPoints !== undefined) {
+          lastMessPoints.current = userData.messPoints; // Update reference
+        }
       }
       
       appState.current = nextAppState;
@@ -177,12 +238,14 @@ export default function RootLayout() {
     return () => {
       subscription.remove();
     };
-  }, [userData.messPoints]);
+  }, [userData?.messPoints]);
   
   // Initialize last mess points reference
   useEffect(() => {
-    lastMessPoints.current = userData.messPoints;
-  }, [userData.messPoints]);
+    if (userData?.messPoints !== undefined) {
+      lastMessPoints.current = userData.messPoints;
+    }
+  }, [userData?.messPoints]);
   
   // Memoize the initialization function to prevent re-runs
   const initializeAuth = useCallback(async () => {
@@ -286,7 +349,7 @@ export default function RootLayout() {
   }, [initializeAuth]);
   
   // Handle start button press - activate audio and prime sounds
-  const handleStartPress = async () => {
+  const handleStartPress = useCallback(async () => {
     try {
       console.log('[App] Start button pressed - activating audio...');
       const { soundManager, SOUNDS } = await import('../lib/soundManager');
@@ -309,10 +372,32 @@ export default function RootLayout() {
       // Continue anyway
       setShowStartButton(false);
     }
-  };
+  }, []);
+  
+  // ===== NOW CONDITIONAL RETURNS ARE SAFE =====
+
+  // Show loading screen while store initializes
+  if (!storeInitialized || !fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
+        <ActivityIndicator size="large" color="#FF9800" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>
+          Initializing...
+        </Text>
+      </View>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
+        <ActivityIndicator size="large" color="#FF9800" />
+      </View>
+    );
+  }
   
   if (!isReady || !fontsLoaded) {
-    const themeType = userData.roomCustomization?.themeType;
+    const themeType = userData?.roomCustomization?.themeType;
     const themeColors = getThemeColors(themeType);
     
     return (
@@ -454,11 +539,22 @@ export default function RootLayout() {
     // Don't block the app - just log the error and continue
   }
   
+  // Wait for store to be ready before rendering
+  if (!storeReady || !userData) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' }}>
+        <ActivityIndicator size="large" color="#FF9800" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>Initializing store...</Text>
+      </View>
+    );
+  }
+  
   return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        {/* Image Preloader - Wraps entire app to provide loading context */}
-        <ImagePreloader>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        {/* Image Preloader temporarily disabled due to React 19 Context compatibility issue */}
+        {/* Will be fixed in a future update - images will load on-demand for now */}
+        {/* <ImagePreloader> */}
           <StatusBar style="light" hidden={true} />
           <Stack
             screenOptions={{
@@ -513,8 +609,8 @@ export default function RootLayout() {
           }} 
         />
         </Stack>
-        </ImagePreloader>
-      </SafeAreaProvider>
-    </ErrorBoundary>
+        {/* </ImagePreloader> */}
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }

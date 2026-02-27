@@ -25,18 +25,16 @@ import {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { 
-    userData, 
-    setCharacter, 
-    setBuddyName,
-    setProfile,
-    setHabits,
-    setStudyGoal,
-    setExerciseGoal,
-    setHydrationGoal,
-    setWeightGoal,
-    setSleepGoal,
-  } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const setCharacter = useQuillbyStore((state) => state.setCharacter);
+  const setBuddyName = useQuillbyStore((state) => state.setBuddyName);
+  const setProfile = useQuillbyStore((state) => state.setProfile);
+  const setHabits = useQuillbyStore((state) => state.setHabits);
+  const setStudyGoal = useQuillbyStore((state) => state.setStudyGoal);
+  const setExerciseGoal = useQuillbyStore((state) => state.setExerciseGoal);
+  const setHydrationGoal = useQuillbyStore((state) => state.setHydrationGoal);
+  const setWeightGoal = useQuillbyStore((state) => state.setWeightGoal);
+  const setSleepGoal = useQuillbyStore((state) => state.setSleepGoal);
   
   // Modal states
   const [showProfileModal, setShowProfileModal] = useState(false);

@@ -45,9 +45,22 @@ export const initializeRevenueCat = async (): Promise<void> => {
       throw new Error('EXPO_PUBLIC_REVENUE_CAT_API_KEY not found in environment variables');
     }
     
-    console.log('[RevenueCat] Initializing with API key:', apiKey.substring(0, 10) + '...');
+    console.log('[RevenueCat] Initializing with API key:', apiKey.substring(0, 15) + '...');
+    console.log('[RevenueCat] Platform:', Platform.OS);
+    
     Purchases.configure({ apiKey });
     console.log('[RevenueCat] Initialized successfully');
+    
+    // Log customer info after initialization
+    setTimeout(async () => {
+      try {
+        const customerInfo = await Purchases.getCustomerInfo();
+        console.log('[RevenueCat] Customer ID:', customerInfo.originalAppUserId);
+        console.log('[RevenueCat] Active entitlements:', Object.keys(customerInfo.entitlements.active));
+      } catch (error) {
+        console.error('[RevenueCat] Failed to get customer info:', error);
+      }
+    }, 1000);
   } catch (error) {
     console.error('[RevenueCat] Initialization failed:', error);
     throw error;
@@ -59,14 +72,32 @@ export const initializeRevenueCat = async (): Promise<void> => {
  */
 export const getOfferings = async (): Promise<PurchasesOffering | null> => {
   try {
+    console.log('[RevenueCat] Fetching offerings...');
     const offerings = await Purchases.getOfferings();
     
+    console.log('[RevenueCat] All offerings:', Object.keys(offerings.all));
+    console.log('[RevenueCat] Current offering:', offerings.current?.identifier);
+    
     if (offerings.current !== null) {
-      console.log('[RevenueCat] Available offerings:', offerings.current.availablePackages.length);
+      const packages = offerings.current.availablePackages;
+      console.log('[RevenueCat] Available packages:', packages.length);
+      
+      // Log each package details
+      packages.forEach((pkg, index) => {
+        console.log(`[RevenueCat] Package ${index + 1}:`, {
+          identifier: pkg.identifier,
+          productId: pkg.product.identifier,
+          price: pkg.product.priceString,
+          title: pkg.product.title,
+          description: pkg.product.description,
+        });
+      });
+      
       return offerings.current;
     }
     
-    console.warn('[RevenueCat] No offerings available');
+    console.warn('[RevenueCat] No current offering available');
+    console.warn('[RevenueCat] Available offerings:', Object.keys(offerings.all));
     return null;
   } catch (error) {
     console.error('[RevenueCat] Failed to get offerings:', error);

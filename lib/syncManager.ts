@@ -59,7 +59,7 @@ export const syncAllUserData = async (userData: any) => {
     }
 
     // 2. Sync to daily_data table (consolidated from daily_progress)
-    // NOTE: mess_points is NOT synced here - user_profiles is the single source of truth
+    // NOTE: messPoints is NOT synced here - user_profiles is the single source of truth
     try {
       // Ensure water_glasses is a valid number between 0 and 8
       const waterGlasses = Math.max(0, Math.min(8, userData.waterGlasses || 0));
@@ -73,13 +73,13 @@ export const syncAllUserData = async (userData: any) => {
         exercise_minutes: userData.exerciseMinutes || 0,
         apple_taps_today: userData.appleTapsToday || 0,
         coffee_taps_today: userData.coffeeTapsToday || 0,
-        // Consolidated fields from daily_progress (excluding mess_points)
+        // Consolidated fields from daily_progress (excluding messPoints)
         energy: userData.energy || 100,
         q_coins: userData.qCoins || 0,
         current_streak: userData.currentStreak || 0,
         last_check_in_date: userData.lastCheckInDate || new Date().toISOString().split('T')[0],
       });
-      console.log('[SyncAll] ✅ daily_data synced successfully (mess_points excluded - using user_profiles as source of truth)');
+      console.log('[SyncAll] ✅ daily_data synced successfully (messPoints excluded - using user_profiles as source of truth)');
     } catch (dailyDataError) {
       console.error('[SyncAll] ❌ daily_data sync failed:', dailyDataError);
     }

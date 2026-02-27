@@ -4,7 +4,8 @@ import { useQuillbyStore } from '../../state/store-modular';
 import { CheckpointResult } from '../../core/types';
 
 export default function StudyProgress() {
-  const { userData, checkStudyCheckpoints } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const checkStudyCheckpoints = useQuillbyStore((state) => state.checkStudyCheckpoints);
   
   // Get theme colors
   const themeType = userData.roomCustomization?.themeType;

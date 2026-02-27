@@ -77,6 +77,9 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     
     // Create new user data, preserving any existing values
     const newUserData = {
+      // Spread existing userData first
+      ...userData,
+      // Then override with defaults for missing values
       energy: userData?.energy ?? 100,
       maxEnergyCap: userData?.maxEnergyCap ?? 100,
       qCoins: userData?.qCoins ?? 200,
@@ -126,9 +129,7 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
       
       return defaultItems;
     })(),
-      signupDate: userData?.signupDate ?? today,
-      // Preserve any other existing fields
-      ...userData
+      signupDate: userData?.signupDate ?? today
     };
     
     set({ userData: newUserData });

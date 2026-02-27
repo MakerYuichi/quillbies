@@ -14,7 +14,7 @@ export default function ImagePreloader({ children }: { children: React.ReactNode
   const [loadStartTime] = useState(Date.now());
   const totalImages = 37;
   
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const themeType = userData.roomCustomization?.themeType;
   const themeColors = getThemeColors(themeType);
 

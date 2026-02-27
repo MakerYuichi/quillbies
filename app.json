@@ -71,12 +71,17 @@
         "expo-build-properties",
         {
           "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
             "newArchEnabled": false,
             "useAndroidX": true,
             "enableJetifier": true
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-router"
     ],
     "extra": {
       "eas": {

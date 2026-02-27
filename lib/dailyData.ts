@@ -158,7 +158,7 @@ const ensureUserProfileExists = async (userId: string) => {
             energy: 100,
             max_energy_cap: 100,
             q_coins: 100,
-            mess_points: 0,
+            messPoints: 0,
             current_streak: 0,
             enabled_habits: ['study', 'hydration', 'sleep', 'exercise'],
             study_goal_hours: 3,

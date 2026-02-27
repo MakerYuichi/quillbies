@@ -72,7 +72,9 @@ const ACHIEVEMENT_ASSETS: { [key: string]: any } = {
 };
 
 export default function AchievementsModal({ visible, onClose }: AchievementsModalProps) {
-  const { userData, getTotalXP, getUnlockedCount } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const getTotalXP = useQuillbyStore((state) => state.getTotalXP);
+  const getUnlockedCount = useQuillbyStore((state) => state.getUnlockedCount);
   const achievements = getAllAchievements();
   
   const unlockedCount = getUnlockedCount();

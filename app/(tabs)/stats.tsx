@@ -4,7 +4,7 @@ import { useQuillbyStore } from '../state/store-modular';
 import { formatSleepTime, formatExerciseTime, formatStudyTime } from '../../lib/timeUtils';
 import { getTodaysSleepHours } from '../core/engine';
 import WeeklyLineGraph from '../components/stats/WeeklyLineGraph';
-import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
+import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
 import ActivityCard from '../components/stats/ActivityCard';
 import StreakCalendar from '../components/stats/StreakCalendar';
 import AchievementsSection from '../components/stats/AchievementsSection';
@@ -14,7 +14,12 @@ import { playTabSound } from '../../lib/soundManager';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function StatsScreen() {
-  const { userData, deadlines, session, getCompletedDeadlines, getUrgentDeadlines, getUpcomingDeadlines } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const deadlines = useQuillbyStore((state) => state.deadlines);
+  const session = useQuillbyStore((state) => state.session);
+  const getCompletedDeadlines = useQuillbyStore((state) => state.getCompletedDeadlines);
+  const getUrgentDeadlines = useQuillbyStore((state) => state.getUrgentDeadlines);
+  const getUpcomingDeadlines = useQuillbyStore((state) => state.getUpcomingDeadlines);
   const buddyName = userData.buddyName || 'Quillby';
   const [showPremiumModal, setShowPremiumModal] = React.useState(false);
   const [isPremiumExpanded, setIsPremiumExpanded] = React.useState(false);
@@ -479,14 +484,12 @@ export default function StatsScreen() {
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Premium Upgrade Modal */}
-      <PremiumUpgradeModal
+      {/* Premium Paywall Modal */}
+      <PremiumPaywallModal
         visible={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
-        onUpgrade={() => {
-          // TODO: Implement actual payment flow
-          // For now, just show an alert
-          alert('Premium upgrade coming soon! This will integrate with App Store/Google Play.');
+        onPurchaseSuccess={() => {
+          console.log('[Stats] Premium purchased successfully!');
           setShowPremiumModal(false);
         }}
       />

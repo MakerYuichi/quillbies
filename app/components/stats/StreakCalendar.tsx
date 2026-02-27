@@ -20,7 +20,7 @@ interface DayEmojis {
 }
 
 export default function StreakCalendar({ completedDays, currentMonth, userCreatedAt }: StreakCalendarProps) {
-  const { deadlines } = useQuillbyStore();
+  const deadlines = useQuillbyStore((state) => state.deadlines);
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0); // 0 = current month, -1 = previous, etc.
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetails, setShowDayDetails] = useState(false);

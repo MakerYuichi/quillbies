@@ -4,7 +4,8 @@ import { useQuillbyStore } from '../state/store-modular';
 import { soundManager, SOUNDS } from '../../lib/soundManager';
 
 export const useMealTracking = (buddyName: string) => {
-  const { userData, logMeal } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const logMeal = useQuillbyStore((state) => state.logMeal);
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
   const [message, setMessage] = useState<string>('');
   const [messageTimestamp, setMessageTimestamp] = useState<number>(0);

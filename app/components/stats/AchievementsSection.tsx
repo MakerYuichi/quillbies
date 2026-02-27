@@ -63,7 +63,7 @@ const ACHIEVEMENT_ASSETS: { [key: string]: any } = {
 };
 
 export default function AchievementsSection() {
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const [showModal, setShowModal] = useState(false);
   
   const achievements = getAllAchievements();

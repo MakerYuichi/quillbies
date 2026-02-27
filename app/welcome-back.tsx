@@ -7,7 +7,7 @@ import { getThemeColors } from './utils/themeColors';
 
 export default function WelcomeBackScreen() {
   const router = useRouter();
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const { imagesLoaded } = useImageLoading();
   
   const selectedCharacter = userData.selectedCharacter || 'casual';

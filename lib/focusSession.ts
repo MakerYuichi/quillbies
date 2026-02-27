@@ -117,14 +117,14 @@ export const endFocusSession = async (
     // Update user profile
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('energy, q_coins, mess_points')
+      .select('energy, q_coins, messPoints')
       .eq('id', userId)
       .single();
 
     await updateUserProfile(userId, {
       energy: Math.min((profile?.energy || 0) + energyGained, 100),
       q_coins: (profile?.q_coins || 0) + qCoinsEarned,
-      mess_points: Math.max((profile?.mess_points || 0) - messRemoved, 0),
+      messPoints: Math.max((profile?.messPoints || 0) - messRemoved, 0),
     });
 
     // Update daily data - INCREMENT study minutes, don't replace

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions, Image, ScrollView } from 'react-native';
 import { Achievement } from '../../core/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { soundManager, SOUNDS } from '../../../lib/soundManager';
@@ -165,7 +165,7 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
   const glowAnim = useRef(new Animated.Value(0)).current;
   
   // Get shop item reward from store
-  const { userData } = require('../../state/store-modular').useQuillbyStore();
+  const userData = require('../../state/store-modular').useQuillbyStore((state: any) => state.userData);
   const shopItemReward = achievement ? userData.achievements?.[achievement.id]?.shopItemReward : null;
   
   // Confetti animations
@@ -474,8 +474,8 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
   });
   
   const bounce = bounceAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -20],
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, -20, 0],
   });
   
   // Get achievement asset
@@ -509,145 +509,151 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
         colors={[color1, color2, '#1A1A1A']}
         style={styles.fullScreenContainer}
       >
-        <Animated.View 
-          style={[
-            styles.content,
-            { 
-              opacity: fadeAnim, 
-              transform: [
-                { translateY: slideAnim },
-                { translateY: bounce }
-              ] 
-            }
-          ]}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          {/* Confetti Rain with themed emojis */}
-          {[confetti1, confetti2, confetti3, confetti4, confetti5, confetti6].map((anim, index) => (
-            <Animated.View 
-              key={index}
-              style={[
-                styles.confetti, 
-                { 
-                  left: `${15 + index * 15}%`,
-                  transform: [{ translateY: anim }]
-                }
-              ]}
-            >
-              <Text style={[styles.confettiEmoji, { fontSize: confettiSize }]}>{themedEmojis[index]}</Text>
-            </Animated.View>
-          ))}
-          
-          {/* Header */}
-          <Text style={styles.title}>🏆 ACHIEVEMENT UNLOCKED! 🏆</Text>
-          
-          {/* Achievement Image/Icon */}
           <Animated.View 
             style={[
-              styles.imageContainer,
-              {
-                borderWidth: imageBorderWidth,
-                borderColor: 'rgba(255, 255, 255, 0.8)',
-                shadowRadius: imageShadowRadius,
-                shadowOpacity: imageShadowOpacity,
-                shadowColor: color1,
+              styles.content,
+              { 
+                opacity: fadeAnim, 
                 transform: [
-                  { scale: Animated.multiply(Animated.multiply(scaleAnim, pulseAnim), glow) },
-                  { rotate },
-                  { rotateZ: shake }
-                ]
+                  { translateY: slideAnim },
+                  { translateY: bounce }
+                ] 
               }
             ]}
           >
-            {achievementAsset ? (
-              <Image
-                source={achievementAsset}
-                style={styles.achievementImage}
-                resizeMode="contain"
-              />
-            ) : (
-              <Text style={styles.iconFallback}>{achievement.icon}</Text>
-            )}
-          </Animated.View>
-          
-          {/* Achievement Name */}
-          <Text style={styles.achievementName}>{achievement.name}</Text>
-          
-          {/* Achievement Type Badge */}
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeText}>
-              {achievement.id.startsWith('daily-') ? '📅 DAILY CHALLENGE' :
-               achievement.id.startsWith('weekly-') ? '📊 WEEKLY CHALLENGE' :
-               achievement.id.startsWith('monthly-') ? '🏆 MONTHLY CHALLENGE' :
-               achievement.id.startsWith('secret-') ? '🔒 SECRET QUEST' :
-               '🎯 SPECIAL'}
-            </Text>
-          </View>
-          
-          {/* Rarity Badge */}
-          <View style={[styles.rarityBadge, { backgroundColor: color1 }]}>
-            <Text style={styles.rarityText}>✦ {achievement.rarity.toUpperCase()} ✦</Text>
-          </View>
-          
-          {/* Description */}
-          <Text style={styles.description}>{achievement.description}</Text>
-          
-          {/* Rewards Section - Compact */}
-          <View style={styles.rewardsContainer}>
-            {/* Gems Reward */}
-            <View style={styles.rewardBox}>
-              <Text style={styles.rewardIcon}>💎</Text>
-              <Text style={styles.rewardValue}>+{achievement.xpReward}</Text>
-              <Text style={styles.rewardLabel}>Gems</Text>
-            </View>
+            {/* Confetti Rain with themed emojis */}
+            {[confetti1, confetti2, confetti3, confetti4, confetti5, confetti6].map((anim, index) => (
+              <Animated.View 
+                key={index}
+                style={[
+                  styles.confetti, 
+                  { 
+                    left: `${15 + index * 15}%`,
+                    transform: [{ translateY: anim }]
+                  }
+                ]}
+              >
+                <Text style={[styles.confettiEmoji, { fontSize: confettiSize }]}>{themedEmojis[index]}</Text>
+              </Animated.View>
+            ))}
             
-            <View style={styles.rewardDivider} />
+            {/* Header */}
+            <Text style={styles.title}>🏆 ACHIEVEMENT UNLOCKED! 🏆</Text>
             
-            {/* Q-Bies Reward */}
-            <View style={styles.rewardBox}>
-              <Image
-                source={require('../../../assets/overall/qbies.png')}
-                style={styles.qbiesIcon}
-                resizeMode="contain"
-              />
-              <Text style={styles.rewardValue}>+{achievement.coinReward}</Text>
-              <Text style={styles.rewardLabel}>Q-Bies</Text>
-            </View>
-          </View>
-          
-          {/* Shop Item Reward */}
-          {shopItemReward && (
-            <View style={[styles.shopItemContainer, { backgroundColor: shopItemReward.alreadyOwned ? 'rgba(255, 152, 0, 0.15)' : 'rgba(76, 175, 80, 0.15)' }]}>
-              <Text style={styles.shopItemTitle}>
-                {shopItemReward.alreadyOwned ? '🎁 Bonus Item (Already Owned)' : '🎁 New Item Unlocked!'}
-              </Text>
-              <Text style={[styles.shopItemName, { color: shopItemReward.alreadyOwned ? '#FF9800' : '#4CAF50' }]}>
-                {shopItemReward.itemName}
-              </Text>
-              {shopItemReward.alreadyOwned && (
-                <Text style={styles.shopItemSubtext}>
-                  Oops! You already have this. Better luck next time! 😅
-                </Text>
+            {/* Achievement Image/Icon */}
+            <Animated.View 
+              style={[
+                styles.imageContainer,
+                {
+                  borderWidth: imageBorderWidth,
+                  borderColor: 'rgba(255, 255, 255, 0.8)',
+                  shadowRadius: imageShadowRadius,
+                  shadowOpacity: imageShadowOpacity,
+                  shadowColor: color1,
+                  transform: [
+                    { scale: Animated.multiply(Animated.multiply(scaleAnim, pulseAnim), glow) },
+                    { rotate },
+                    { rotateZ: shake }
+                  ]
+                }
+              ]}
+            >
+              {achievementAsset ? (
+                <Image
+                  source={achievementAsset}
+                  style={styles.achievementImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={styles.iconFallback}>{achievement.icon}</Text>
               )}
+            </Animated.View>
+            
+            {/* Achievement Name */}
+            <Text style={styles.achievementName}>{achievement.name}</Text>
+            
+            {/* Achievement Type Badge */}
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeText}>
+                {achievement.id.startsWith('daily-') ? '📅 DAILY CHALLENGE' :
+                 achievement.id.startsWith('weekly-') ? '📊 WEEKLY CHALLENGE' :
+                 achievement.id.startsWith('monthly-') ? '🏆 MONTHLY CHALLENGE' :
+                 achievement.id.startsWith('secret-') ? '🔒 SECRET QUEST' :
+                 '🎯 SPECIAL'}
+              </Text>
             </View>
-          )}
-          
-          {/* Close Button */}
-          <TouchableOpacity 
-            style={[styles.closeButton, { backgroundColor: color1 }]} 
-            onPress={() => {
-              // Stop sound when closing
-              if (soundPlayingRef.current) {
-                console.log('[Achievement] 🔇 Stopping sound on close...');
-                soundManager.stopSound(SOUNDS.ACHIEVEMENT);
-                soundPlayingRef.current = false;
-              }
-              onClose();
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.closeButtonText}>AWESOME! 🎉</Text>
-          </TouchableOpacity>
-        </Animated.View>
+            
+            {/* Rarity Badge */}
+            <View style={[styles.rarityBadge, { backgroundColor: color1 }]}>
+              <Text style={styles.rarityText}>✦ {achievement.rarity.toUpperCase()} ✦</Text>
+            </View>
+            
+            {/* Description */}
+            <Text style={styles.description}>{achievement.description}</Text>
+            
+            {/* Rewards Section - Compact */}
+            <View style={styles.rewardsContainer}>
+              {/* Gems Reward */}
+              <View style={styles.rewardBox}>
+                <Text style={styles.rewardIcon}>💎</Text>
+                <Text style={styles.rewardValue}>+{achievement.xpReward}</Text>
+                <Text style={styles.rewardLabel}>Gems</Text>
+              </View>
+              
+              <View style={styles.rewardDivider} />
+              
+              {/* Q-Bies Reward */}
+              <View style={styles.rewardBox}>
+                <Image
+                  source={require('../../../assets/overall/qbies.png')}
+                  style={styles.qbiesIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.rewardValue}>+{achievement.coinReward}</Text>
+                <Text style={styles.rewardLabel}>Q-Bies</Text>
+              </View>
+            </View>
+            
+            {/* Shop Item Reward */}
+            {shopItemReward && (
+              <View style={[styles.shopItemContainer, { backgroundColor: shopItemReward.alreadyOwned ? 'rgba(255, 152, 0, 0.15)' : 'rgba(76, 175, 80, 0.15)' }]}>
+                <Text style={styles.shopItemTitle}>
+                  {shopItemReward.alreadyOwned ? '🎁 Bonus Item (Already Owned)' : '🎁 New Item Unlocked!'}
+                </Text>
+                <Text style={[styles.shopItemName, { color: shopItemReward.alreadyOwned ? '#FF9800' : '#4CAF50' }]}>
+                  {shopItemReward.itemName}
+                </Text>
+                {shopItemReward.alreadyOwned && (
+                  <Text style={styles.shopItemSubtext}>
+                    Oops! You already have this. Better luck next time! 😅
+                  </Text>
+                )}
+              </View>
+            )}
+            
+            {/* Close Button */}
+            <TouchableOpacity 
+              style={[styles.closeButton, { backgroundColor: color1 }]} 
+              onPress={() => {
+                // Stop sound when closing
+                if (soundPlayingRef.current) {
+                  console.log('[Achievement] 🔇 Stopping sound on close...');
+                  soundManager.stopSound(SOUNDS.ACHIEVEMENT);
+                  soundPlayingRef.current = false;
+                }
+                onClose();
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.closeButtonText}>AWESOME! 🎉</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
       </LinearGradient>
     </Modal>
   );
@@ -656,16 +662,17 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
 const styles = StyleSheet.create({
   fullScreenContainer: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    minHeight: SCREEN_HEIGHT,
   },
   content: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   confetti: {
     position: 'absolute',

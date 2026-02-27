@@ -61,7 +61,8 @@ const PRESET_SESSIONS = [
 export default function SessionCustomizationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { userData, startFocusSession } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const startFocusSession = useQuillbyStore((state) => state.startFocusSession);
   
   const deadlineId = params.deadlineId as string | undefined;
   const isPremium = userData.purchasedItems?.includes('premium') || false;

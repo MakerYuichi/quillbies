@@ -28,7 +28,7 @@ export default function PremiumPaywallModal({
   onClose,
   onPurchaseSuccess,
 }: PremiumPaywallModalProps) {
-  const { setPremiumStatus } = useQuillbyStore();
+  const setPremiumStatus = useQuillbyStore((state) => state.setPremiumStatus);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -262,7 +262,7 @@ export default function PremiumPaywallModal({
                 <View style={styles.benefitText}>
                   <Text style={styles.benefitTitle}>Best Value</Text>
                   <Text style={styles.benefitDescription}>
-                    Save ₹2189 with yearly plan (30% off!)
+                    Save up to 30% with yearly plan
                   </Text>
                 </View>
               </View>

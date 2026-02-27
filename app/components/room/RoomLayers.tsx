@@ -18,7 +18,7 @@ interface RoomLayersProps {
 }
 
 export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0, gems = 0, hideItems = false, showDefaultBackground = false }: RoomLayersProps) {
-  const { userData } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
   const roomCustomization = userData.roomCustomization;
   
   console.log('[RoomLayers] Rendering with:', {

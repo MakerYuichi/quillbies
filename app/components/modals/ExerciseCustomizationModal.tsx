@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, ScrollView, TextInput } from 'react-native';
-import PremiumUpgradeModal from './PremiumUpgradeModal';
+import PremiumPaywallModal from './PremiumPaywallModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -42,11 +42,6 @@ export default function ExerciseCustomizationModal({
 
   const handleUpgradePrompt = () => {
     setShowPremiumModal(true);
-  };
-  
-  const handleUpgrade = () => {
-    setShowPremiumModal(false);
-    alert('🚀 Payment integration coming soon! This will open your app store payment flow.');
   };
   
   const handleClosePremiumModal = () => {
@@ -239,12 +234,14 @@ export default function ExerciseCustomizationModal({
       </View>
     </Modal>
     
-    {/* Premium Upgrade Modal */}
-    <PremiumUpgradeModal
+    {/* Premium Paywall Modal */}
+    <PremiumPaywallModal
       visible={showPremiumModal}
       onClose={handleClosePremiumModal}
-      onUpgrade={handleUpgrade}
-      featureName="Custom Exercise"
+      onPurchaseSuccess={() => {
+        console.log('[ExerciseModal] Premium purchased successfully!');
+        setShowPremiumModal(false);
+      }}
     />
     </>
   );

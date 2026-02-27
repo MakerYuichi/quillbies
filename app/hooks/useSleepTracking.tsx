@@ -5,7 +5,10 @@ import { formatSleepTime } from '../../lib/timeUtils';
 import { soundManager, SOUNDS, playEndSessionSound } from '../../lib/soundManager';
 
 export const useSleepTracking = (buddyName: string) => {
-  const { userData, startSleep, endSleep, getTodaysSleepHours } = useQuillbyStore();
+  const userData = useQuillbyStore((state) => state.userData);
+  const startSleep = useQuillbyStore((state) => state.startSleep);
+  const endSleep = useQuillbyStore((state) => state.endSleep);
+  const getTodaysSleepHours = useQuillbyStore((state) => state.getTodaysSleepHours);
   const [isSleeping, setIsSleeping] = useState(false);
   const [activeSleepSessionId, setActiveSleepSessionId] = useState<string | null>(null);
   const [sleepStartTime, setSleepStartTime] = useState<number | null>(null);
