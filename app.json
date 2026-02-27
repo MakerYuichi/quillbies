@@ -67,6 +67,7 @@
       ],
       "expo-secure-store",
       "./plugins/withHermesEnabled",
+      "./plugins/withAndroidX",
       [
         "expo-build-properties",
         {
@@ -76,7 +77,8 @@
             "buildToolsVersion": "35.0.0",
             "newArchEnabled": false,
             "useAndroidX": true,
-            "enableJetifier": true
+            "enableJetifier": true,
+            "extraPropertiesFile": "./android/gradle.properties"
           }
         }
       ],

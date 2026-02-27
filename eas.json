@@ -13,7 +13,7 @@
       "android": {
         "buildType": "app-bundle",
         "image": "latest",
-        "ndk": "26.1.10909125"
+        "ndk": "27.1.12297006"
       },
       "ios": {
         "simulator": false,
@@ -25,7 +25,7 @@
         "buildType": "app-bundle",
         "autoIncrement": true,
         "image": "latest",
-        "ndk": "26.1.10909125",
+        "ndk": "27.1.12297006",
         "env": {
           "EXPO_NO_CAPABILITY_SYNC": "1"
         },
