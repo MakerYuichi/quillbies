@@ -77,8 +77,7 @@
             "buildToolsVersion": "35.0.0",
             "newArchEnabled": false,
             "useAndroidX": true,
-            "enableJetifier": true,
-            "extraPropertiesFile": "./android/gradle.properties"
+            "enableJetifier": true
           }
         }
       ],
