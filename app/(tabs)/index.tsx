@@ -35,7 +35,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import NotificationBanner from '../components/ui/NotificationBanner';
 import VolumeButton from '../components/ui/VolumeButton';
 import { useImageLoading } from '../components/ImagePreloader';
-import { homeStyles as styles } from './_styles/index.styles';
+import { homeStyles as styles } from './_styles/homeStyles';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

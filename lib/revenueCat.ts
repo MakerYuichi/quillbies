@@ -79,7 +79,7 @@ export const getOfferings = async (): Promise<PurchasesOffering | null> => {
     console.log('[RevenueCat] Current offering:', offerings.current?.identifier);
     
     // Try to get current offering first
-    if (offerings.current !== null) {
+    if (offerings.current !== null && offerings.current.availablePackages.length > 0) {
       const packages = offerings.current.availablePackages;
       console.log('[RevenueCat] Available packages:', packages.length);
       
@@ -98,15 +98,30 @@ export const getOfferings = async (): Promise<PurchasesOffering | null> => {
     }
     
     // Fallback: try to get "default" offering if current is not set
-    if (offerings.all['default']) {
+    if (offerings.all['default'] && offerings.all['default'].availablePackages.length > 0) {
       console.log('[RevenueCat] No current offering, using "default" offering');
       const defaultOffering = offerings.all['default'];
       console.log('[RevenueCat] Default offering packages:', defaultOffering.availablePackages.length);
       return defaultOffering;
     }
     
-    console.warn('[RevenueCat] No current offering available');
+    // Fallback: try any available offering with packages
+    const allOfferingKeys = Object.keys(offerings.all);
+    for (const key of allOfferingKeys) {
+      const offering = offerings.all[key];
+      if (offering.availablePackages.length > 0) {
+        console.log('[RevenueCat] Using fallback offering:', key);
+        console.log('[RevenueCat] Fallback offering packages:', offering.availablePackages.length);
+        return offering;
+      }
+    }
+    
+    console.warn('[RevenueCat] No offerings with packages available');
     console.warn('[RevenueCat] Available offerings:', Object.keys(offerings.all));
+    console.error('[RevenueCat] ⚠️ This usually means:');
+    console.error('[RevenueCat]   1. Products not published in Google Play Console');
+    console.error('[RevenueCat]   2. No offering set as "Current" in RevenueCat dashboard');
+    console.error('[RevenueCat]   3. ProGuard stripping RevenueCat classes (check proguard-rules.pro)');
     return null;
   } catch (error) {
     console.error('[RevenueCat] Failed to get offerings:', error);
