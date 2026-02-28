@@ -14,6 +14,10 @@ import { getThemeColors } from './utils/themeColors';
 
 
 
+// Global flags to prevent duplicate initialization across component remounts
+let globalInitializationStarted = false;
+let globalInitializationCompleted = false;
+
 // Preload critical images at app startup
 const preloadImages = async () => {
   const images = [
@@ -148,10 +152,10 @@ export default function RootLayout() {
   const [storeInitialized, setStoreInitialized] = useState(false);
   
   // ALWAYS call ALL hooks first - never conditionally
-  // Call store hooks with safe defaults
-  const initializeUser = useQuillbyStore((state) => state.initializeUser);
-  const loadFromDatabase = useQuillbyStore((state) => state.loadFromDatabase);
-  const userData = useQuillbyStore((state) => state.userData ?? {
+  // Call store hooks with safe defaults and error handling
+  const initializeUser = useQuillbyStore((state) => state?.initializeUser || (() => {}));
+  const loadFromDatabase = useQuillbyStore((state) => state?.loadFromDatabase || (async () => {}));
+  const userData = useQuillbyStore((state) => state?.userData || {
     messPoints: 0,
     energy: 100,
     maxEnergyCap: 100,
@@ -168,32 +172,43 @@ export default function RootLayout() {
   const [authError, setAuthError] = useState<string | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
   const lastMessPoints = useRef<number>(0);
+  const initializationStarted = useRef(false); // Prevent duplicate initialization
+  const initializationCompleted = useRef(false); // Track completion
   
   // Check if store is available
   useEffect(() => {
-    try {
-      // Test if store is accessible
-      const state = useQuillbyStore.getState();
-      if (state) {
-        setStoreInitialized(true);
-      }
-    } catch (error) {
-      console.error('[App] Store not initialized yet:', error);
-      // Retry after a short delay
-      const retry = setTimeout(() => {
+    const checkStore = async () => {
+      try {
+        // Test if store is accessible
+        const state = useQuillbyStore.getState();
+        if (state && typeof state === 'object') {
+          console.log('[App] Store initialized successfully');
+          setStoreInitialized(true);
+        } else {
+          throw new Error('Store state is invalid');
+        }
+      } catch (error) {
+        console.error('[App] Store not initialized yet:', error);
+        // Retry after a short delay
+        await new Promise(resolve => setTimeout(resolve, 100));
         try {
           const state = useQuillbyStore.getState();
-          if (state) {
+          if (state && typeof state === 'object') {
+            console.log('[App] Store initialized on retry');
             setStoreInitialized(true);
+          } else {
+            throw new Error('Store state is invalid on retry');
           }
         } catch (e) {
-          console.error('[App] Store initialization failed:', e);
+          console.error('[App] Store initialization failed after retry:', e);
           // Force initialization anyway to prevent infinite loading
+          // The store will initialize with defaults
           setStoreInitialized(true);
         }
-      }, 100);
-      return () => clearTimeout(retry);
-    }
+      }
+    };
+    
+    checkStore();
   }, []);
   
   useEffect(() => {
@@ -249,6 +264,21 @@ export default function RootLayout() {
   
   // Memoize the initialization function to prevent re-runs
   const initializeAuth = useCallback(async () => {
+    // Prevent duplicate initialization using global flag
+    if (globalInitializationStarted || globalInitializationCompleted) {
+      console.log('[App] Initialization already in progress or completed (global check), skipping');
+      // If already completed, set local state immediately
+      if (globalInitializationCompleted) {
+        setIsReady(true);
+        setShowStartButton(true);
+        initializationCompleted.current = true;
+      }
+      return;
+    }
+    
+    globalInitializationStarted = true;
+    initializationStarted.current = true;
+    
     try {
       console.log('[App] Initializing device authentication...');
       
@@ -258,7 +288,9 @@ export default function RootLayout() {
         await initializeRevenueCat();
         console.log('[App] RevenueCat initialized successfully');
       } catch (rcError) {
-        console.warn('[App] RevenueCat initialization failed:', rcError);
+        console.warn('[App] RevenueCat initialization failed (this is normal in emulator):', rcError);
+        // RevenueCat errors are expected in emulator without Google Play billing
+        // The app will work fine, just without in-app purchases
       }
       
       // Preload images first for instant display
@@ -290,7 +322,8 @@ export default function RootLayout() {
       
       // Initialize local user data (only if needed)
       try {
-        initializeUser();
+        const { initializeUser: initUser } = useQuillbyStore.getState();
+        initUser();
         console.log('[App] User data initialized');
       } catch (userError) {
         console.warn('[App] User initialization failed:', userError);
@@ -299,7 +332,8 @@ export default function RootLayout() {
       // Load data from database after initialization
       try {
         console.log('[App] Loading data from database...');
-        await loadFromDatabase();
+        const { loadFromDatabase: loadDB } = useQuillbyStore.getState();
+        await loadDB();
         console.log('[App] Database data loaded');
       } catch (dbError) {
         console.warn('[App] Database load failed, continuing with local data:', dbError);
@@ -329,16 +363,23 @@ export default function RootLayout() {
         console.warn('[App] Notification setup failed:', notifError);
       }
       
+      // Mark as completed BEFORE setting state
+      globalInitializationCompleted = true;
+      initializationCompleted.current = true;
+      
+      console.log('[App] Initialization complete, setting ready state');
       setIsReady(true);
       setShowStartButton(true); // Show start button instead of going directly to app
     } catch (err) {
       console.error('[App] Critical initialization error:', err);
       setAuthError(String(err));
       // Still mark as ready - app can work with basic functionality
+      globalInitializationCompleted = true;
+      initializationCompleted.current = true;
       setIsReady(true);
       setShowStartButton(true);
     }
-  }, [initializeUser, loadFromDatabase]);
+  }, []); // Empty deps - only run once
   
   // Initialize device authentication and user data on app start
   useEffect(() => {
@@ -376,6 +417,16 @@ export default function RootLayout() {
   
   // ===== NOW CONDITIONAL RETURNS ARE SAFE =====
 
+  console.log('[App] Render state:', { 
+    storeInitialized, 
+    fontsLoaded, 
+    userData: !!userData, 
+    isReady, 
+    showStartButton,
+    initializationCompleted: initializationCompleted.current,
+    globalInitializationCompleted 
+  });
+
   // Show loading screen while store initializes
   if (!storeInitialized || !fontsLoaded) {
     return (
@@ -396,7 +447,8 @@ export default function RootLayout() {
     );
   }
   
-  if (!isReady || !fontsLoaded) {
+  // Only show loading if initialization hasn't completed yet (check global flag)
+  if (!isReady && !globalInitializationCompleted) {
     const themeType = userData?.roomCustomization?.themeType;
     const themeColors = getThemeColors(themeType);
     

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from
 import { useQuillbyStore } from '../state/store-modular';
 import RoomLayers from '../components/room/RoomLayers';
 import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
+import GemsPurchaseModal from '../components/modals/GemsPurchaseModal';
 import ShopItemCard from '../components/shop/ShopItemCard';
 import PurchaseConfirmModal from '../components/shop/PurchaseConfirmModal';
 import PurchaseSuccessModal from '../components/shop/PurchaseSuccessModal';
@@ -27,6 +28,8 @@ export default function ShopScreen() {
   
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [showGemsModal, setShowGemsModal] = useState(false);
+  const [requiredGems, setRequiredGems] = useState(0);
   const [insufficientCoins, setInsufficientCoins] = useState(false);
   const [requiredCoins, setRequiredCoins] = useState(0);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -173,9 +176,17 @@ export default function ShopScreen() {
     console.log(`[Shop] Can afford gems:`, canAffordGems, `(has ${userData.gems}, needs ${item.gemPrice})`);
     
     if (!canAffordCoins && !canAffordGems) {
-      // Not enough currency - show premium upgrade modal
+      // Check if item has gem price - show gems modal
+      if (item.gemPrice && item.gemPrice > 0) {
+        console.log(`[Shop] Insufficient gems - showing Gems Purchase modal`);
+        setRequiredGems(item.gemPrice);
+        setShowGemsModal(true);
+        return;
+      }
+      
+      // Otherwise show premium upgrade modal for coins
       console.log(`[Shop] Insufficient funds - showing Premium Upgrade modal`);
-      setRequiredCoins(item.price || item.gemPrice || 0);
+      setRequiredCoins(item.price || 0);
       setInsufficientCoins(true);
       setShowPremiumModal(true);
       return;
@@ -233,13 +244,14 @@ export default function ShopScreen() {
       {/* Room Preview - Same as home tab but without Quillby */}
       <View style={styles.roomPreviewContainer}>
         <RoomLayers 
-          pointerEvents="none" 
+          pointerEvents="box-none"
           messPoints={userData.messPoints} 
           isSleeping={false}
           sleepAnimation="idle"
           qCoins={userData.qCoins}
           gems={userData.gems || 0}
           hideItems={false}
+          onGemsPress={() => setShowGemsModal(true)}
         />
         
         {/* Clock - Same as home tab */}
@@ -263,7 +275,10 @@ export default function ShopScreen() {
             setSelectedCategory('owned');
           }}
         >
-          <Text style={[styles.categoryText, selectedCategory === 'owned' && styles.categoryTextActive]}>
+          <Text 
+            style={[styles.categoryText, selectedCategory === 'owned' && styles.categoryTextActive]}
+            allowFontScaling={false}
+          >
             🎒
           </Text>
         </TouchableOpacity>
@@ -446,6 +461,21 @@ export default function ShopScreen() {
           setShowPaywallModal(false);
         }}
       />
+
+      {/* Gems Purchase Modal */}
+      <GemsPurchaseModal
+        visible={showGemsModal}
+        onClose={() => {
+          setShowGemsModal(false);
+          setRequiredGems(0);
+        }}
+        onPurchaseSuccess={(gemsGranted) => {
+          console.log('[Shop] Gems purchased successfully!', gemsGranted);
+          setShowGemsModal(false);
+          setRequiredGems(0);
+        }}
+        requiredGems={requiredGems > 0 ? requiredGems : undefined}
+      />
     </View>
   );
 }
@@ -481,7 +511,7 @@ const styles = StyleSheet.create({
   // Scrollable Content Area - Starts below asset
   scrollableContentArea: {
     position: 'absolute',
-    top: (SCREEN_HEIGHT * 415) / 852, // Start right after asset (490px + small gap)
+    top: (SCREEN_HEIGHT * 490) / 852, // Start below floor, same as home tab
     left: 0,
     right: 0,
     bottom: 0,
@@ -511,7 +541,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   categoryTextActive: {
-    transform: [{ scale: 1.2 }],
+    fontSize: 28, // Direct size instead of scale to prevent blur
   },
   
   // Shop Scroll View

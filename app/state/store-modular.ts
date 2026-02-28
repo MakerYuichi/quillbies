@@ -1,7 +1,7 @@
 // Modular Zustand store combining all slices
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { createStorage } from './utils/storageUtils';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncToDatabase } from './utils/syncUtils';
 import { loadAllUserData } from '../../lib/syncManager';
 import { getDeviceUser } from '../../lib/deviceAuth';
@@ -322,6 +322,16 @@ export const useQuillbyStore = create<QuillbyStore>()(
             console.log('[Load] Merged enabled_habits:', mergedUserData.enabledHabits);
             console.log('[Load] 🔍 MESS POINTS - Final merged value (from LOCAL cache):', mergedUserData.messPoints);
 
+            // Migration: Add createdAt for existing users who don't have it
+            if (!mergedUserData.createdAt && mergedUserData.signupDate) {
+              console.log('[Load] 🔄 MIGRATION: Adding createdAt for existing user');
+              // For existing users, set createdAt to 25 hours ago so they're past grace period
+              mergedUserData.createdAt = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+              console.log('[Load] ✅ Migration complete - createdAt:', mergedUserData.createdAt);
+              // Sync to database immediately
+              syncToDatabase(mergedUserData);
+            }
+
             set({ 
               userData: mergedUserData,
               deadlines: mergedDeadlines
@@ -384,6 +394,29 @@ export const useQuillbyStore = create<QuillbyStore>()(
       addMissedCheckpoint: (missingHours: number = 1) => {
         const [set, get] = args;
         const { userData } = get();
+        
+        // Check if user is within 24-hour grace period
+        const accountAge = userData.createdAt ? Date.now() - new Date(userData.createdAt).getTime() : Infinity;
+        const isInGracePeriod = accountAge < 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
+        if (isInGracePeriod) {
+          const hoursRemaining = Math.ceil((24 * 60 * 60 * 1000 - accountAge) / (60 * 60 * 1000));
+          console.log(`[addMissedCheckpoint] 🎉 NEW USER GRACE PERIOD - No mess points added`);
+          console.log(`[addMissedCheckpoint] Grace period remaining: ${hoursRemaining} hours`);
+          console.log(`[addMissedCheckpoint] Warning: You're behind on studying, but mess points won't be added for the first 24 hours`);
+          
+          // Still increment missed checkpoints counter for tracking, but don't add mess
+          const newMissedCount = (userData.missedCheckpoints || 0) + 1;
+          const updatedUserData = {
+            ...userData,
+            missedCheckpoints: newMissedCount
+          };
+          
+          set({ userData: updatedUserData });
+          syncToDatabase(updatedUserData);
+          return;
+        }
+        
         const newMissedCount = (userData.missedCheckpoints || 0) + 1;
         
         const messPointsIncrease = Math.max(0.5, missingHours);
@@ -533,7 +566,7 @@ Room: ${roomState}`;
     }),
     {
       name: 'quillby-store-v3', // Changed storage key to force fresh start
-      storage: createStorage(),
+      storage: createJSONStorage(() => AsyncStorage),
       
       // Only persist essential user data
       partialize: (state: QuillbyStore) => ({
@@ -558,7 +591,10 @@ Room: ${roomState}`;
             // Database loading will be handled by the component initialization
           }
         };
-      }
+      },
+      
+      // Skip automatic hydration to prevent race conditions
+      skipHydration: false,
     }
   )
 );

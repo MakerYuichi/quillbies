@@ -55,11 +55,27 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     coffeeTapsToday: 0,
     lastConsumableReset: new Date().toDateString(),
     purchasedItems: [],
-    signupDate: new Date().toDateString()
+    signupDate: new Date().toDateString(),
+    createdAt: new Date().toISOString() // ISO timestamp for 24h grace period
   },
 
   initializeUser: () => {
     const { userData } = get();
+    
+    // Migration: Add createdAt for existing users who don't have it
+    if (userData && !userData.createdAt && userData.signupDate) {
+      console.log('[User] Migrating existing user - adding createdAt based on signupDate');
+      const migratedUserData = {
+        ...userData,
+        // For existing users, set createdAt to 25 hours ago so they're past grace period
+        // This ensures existing users don't suddenly get a grace period
+        createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString()
+      };
+      set({ userData: migratedUserData });
+      syncToDatabase(migratedUserData);
+      console.log('[User] Migration completed - createdAt set to 25 hours ago');
+      return;
+    }
     
     // Check if user data already exists and is properly initialized
     if (userData && 
@@ -129,7 +145,8 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
       
       return defaultItems;
     })(),
-      signupDate: userData?.signupDate ?? today
+      signupDate: userData?.signupDate ?? today,
+      createdAt: userData?.createdAt ?? new Date().toISOString() // ISO timestamp for precise 24h calculation
     };
     
     set({ userData: newUserData });

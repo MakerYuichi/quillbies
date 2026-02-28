@@ -8,6 +8,7 @@ import ManageHabitsModal from '../components/modals/ManageHabitsModal';
 import EditGoalsModal from '../components/modals/EditGoalsModal';
 import EditProfileModal from '../components/modals/EditProfileModal';
 import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
+import GemsPurchaseModal from '../components/modals/GemsPurchaseModal';
 import FeedbackModal from '../components/modals/FeedbackModal';
 import AccountDeletionModal from '../components/modals/AccountDeletionModal';
 import ThemedScreen from '../components/themed/ThemedScreen';
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
   const [showHabitsModal, setShowHabitsModal] = useState(false);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [showGemsModal, setShowGemsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showAccountDeletionModal, setShowAccountDeletionModal] = useState(false);
   
@@ -371,53 +373,63 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ✨ Premium Section */}
-        {!userData.isPremium && (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>✨ Go Premium</Text>
-              <Text style={styles.pawPrint}>👑</Text>
-            </View>
-            
+        {/* ✨ Premium & 💎 Gems Section - Side by Side */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>💰 Shop & Premium</Text>
+            <Text style={styles.pawPrint}>✨</Text>
+          </View>
+          
+          <View style={styles.twoColumnGrid}>
+            {/* Premium Card */}
+            {!userData.isPremium ? (
+              <TouchableOpacity 
+                style={styles.halfWidthCard}
+                onPress={() => {
+                  playTabSound();
+                  setShowPaywallModal(true);
+                }}
+                activeOpacity={0.9}
+              >
+                <View style={styles.premiumGradientCompact}>
+                  <Text style={styles.compactIcon}>👑</Text>
+                  <Text style={styles.compactTitle}>Premium</Text>
+                  <Text style={styles.compactSubtitle}>Legendary themes</Text>
+                  <View style={styles.compactButton}>
+                    <Text style={styles.compactButtonText}>Upgrade</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.halfWidthCard}>
+                <View style={styles.premiumActiveCompact}>
+                  <Text style={styles.compactIcon}>👑</Text>
+                  <Text style={styles.compactTitle}>Premium</Text>
+                  <Text style={styles.compactActiveText}>Active ✓</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Gems Card */}
             <TouchableOpacity 
-              style={styles.premiumCard}
+              style={styles.halfWidthCard}
               onPress={() => {
                 playTabSound();
-                setShowPaywallModal(true);
+                setShowGemsModal(true);
               }}
               activeOpacity={0.9}
             >
-              <View style={styles.premiumGradient}>
-                <Text style={styles.premiumIcon}>👑</Text>
-                <Text style={styles.premiumTitle}>Upgrade to Premium</Text>
-                <Text style={styles.premiumSubtitle}>Unlock legendary themes & exclusive items</Text>
-                <View style={styles.premiumBenefits}>
-                  <Text style={styles.premiumBenefit}>🎨 Galaxy, Zen & Ocean themes</Text>
-                  <Text style={styles.premiumBenefit}>🛍️ Exclusive shop items</Text>
-                  <Text style={styles.premiumBenefit}>⏰ Extended focus sessions</Text>
-                </View>
-                <View style={styles.premiumButton}>
-                  <Text style={styles.premiumButtonText}>See Plans →</Text>
+              <View style={styles.gemsGradientCompact}>
+                <Text style={styles.compactIcon}>💎</Text>
+                <Text style={styles.compactTitle}>Gems</Text>
+                <Text style={styles.compactSubtitle}>{userData.gems || 0} gems</Text>
+                <View style={styles.compactButtonGems}>
+                  <Text style={styles.compactButtonText}>Buy More</Text>
                 </View>
               </View>
             </TouchableOpacity>
           </View>
-        )}
-
-        {userData.isPremium && (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>✨ Premium Status</Text>
-              <Text style={styles.pawPrint}>👑</Text>
-            </View>
-            
-            <View style={styles.premiumActiveCard}>
-              <Text style={styles.premiumActiveIcon}>👑</Text>
-              <Text style={styles.premiumActiveTitle}>Premium Active</Text>
-              <Text style={styles.premiumActiveSubtitle}>Thank you for your support!</Text>
-            </View>
-          </View>
-        )}
+        </View>
 
         {/* ⚙️ Human Stuff */}
         <View style={styles.sectionContainer}>
@@ -570,6 +582,15 @@ export default function SettingsScreen() {
         onPurchaseSuccess={() => {
           console.log('[Settings] Premium purchased successfully!');
           setShowPaywallModal(false);
+        }}
+      />
+
+      <GemsPurchaseModal
+        visible={showGemsModal}
+        onClose={() => setShowGemsModal(false)}
+        onPurchaseSuccess={(gemsGranted) => {
+          console.log('[Settings] Gems purchased successfully!', gemsGranted);
+          setShowGemsModal(false);
         }}
       />
 
@@ -1045,6 +1066,154 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  
+  // Two Column Grid for Premium & Gems
+  twoColumnGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfWidthCard: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  premiumGradientCompact: {
+    padding: 16,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FF9800',
+    alignItems: 'center',
+    minHeight: 160,
+    justifyContent: 'space-between',
+  },
+  premiumActiveCompact: {
+    padding: 16,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    alignItems: 'center',
+    minHeight: 160,
+    justifyContent: 'center',
+  },
+  gemsGradientCompact: {
+    padding: 16,
+    backgroundColor: '#F3E5F5',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#7E57C2',
+    alignItems: 'center',
+    minHeight: 160,
+    justifyContent: 'space-between',
+  },
+  compactIcon: {
+    fontSize: 40,
+    marginBottom: 8,
+  },
+  compactTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  compactSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  compactActiveText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4CAF50',
+    marginTop: 4,
+  },
+  compactButton: {
+    backgroundColor: '#FF9800',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  compactButtonGems: {
+    backgroundColor: '#7E57C2',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  compactButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  
+  // Gems Section Styles
+  gemsCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  gemsGradient: {
+    padding: 24,
+    backgroundColor: '#F3E5F5',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#7E57C2',
+  },
+  gemsIcon: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  gemsTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#7E57C2',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  gemsSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  gemsInfo: {
+    backgroundColor: 'rgba(126, 87, 194, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  gemsInfoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#7E57C2',
+    textAlign: 'center',
+  },
+  gemsButton: {
+    backgroundColor: '#7E57C2',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  gemsButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
   },
   
   // Account Deletion Styles

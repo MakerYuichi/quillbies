@@ -342,7 +342,7 @@ export const homeStyles = StyleSheet.create({
   },
   exerciseTimerLabel: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: (SCREEN_WIDTH * 16) / 393,
+    fontSize: 20, // Fixed size for crisp emoji rendering
     color: '#FFF',
     marginBottom: 4,
     textAlign: 'center',

@@ -1,27 +1,27 @@
-# Zustand Pattern Fix for React 19 Compatibility
+# Zustand 5 Pattern for React 19 Compatibility
 
 ## Problem
-Using `const { userData } = useQuillbyStore()` causes "stale property" error with React 19.
+Using `const { userData } = useQuillbyStore()` without `useShallow` can cause unnecessary re-renders in Zustand 5 + React 19.
 
-## Solution
-Use selector functions: `const userData = useQuillbyStore((state) => state.userData)`
+## Solution (Zustand 5)
+Use selector functions OR use `useShallow` for destructuring multiple values.
 
 ## Files to Fix (30 total)
 
 ### ✅ FIXED
 1. `app/(tabs)/_layout.tsx:18` - Fixed
 2. `app/welcome-back.tsx:10` - Fixed
+3. `app/(tabs)/index.tsx:65` - Fixed (using individual selectors)
+4. `app/(tabs)/focus.tsx:27` - Fixed (using individual selectors)
+5. `app/(tabs)/shop.tsx:17` - Fixed (using individual selectors)
+6. `app/(tabs)/stats.tsx:17` - Fixed (using individual selectors)
+7. `app/(tabs)/settings.tsx:39` - Fixed (using individual selectors)
+8. `app/study-session.tsx:51` - Fixed (using individual selectors)
 
 ### 🔴 NEEDS FIX
 
 #### Core App Files (High Priority)
-3. `app/index.tsx:14` - `} = useQuillbyStore();`
-4. `app/study-session.tsx:51` - `} = useQuillbyStore();`
-5. `app/(tabs)/index.tsx:65` - `storeData = useQuillbyStore();`
-6. `app/(tabs)/focus.tsx:27` - `} = useQuillbyStore();`
-7. `app/(tabs)/shop.tsx:17` - `const { userData, getShopItems, purchaseItem, equipItem, unequipItem } = useQuillbyStore();`
-8. `app/(tabs)/stats.tsx:17` - `const { userData, deadlines, session, getCompletedDeadlines, getUrgentDeadlines, getUpcomingDeadlines } = useQuillbyStore();`
-9. `app/(tabs)/settings.tsx:39` - `} = useQuillbyStore();`
+9. `app/index.tsx:14` - `} = useQuillbyStore();`
 10. `app/session-customization.tsx:64` - `const { userData, startFocusSession } = useQuillbyStore();`
 
 #### Components
@@ -52,36 +52,59 @@ Use selector functions: `const userData = useQuillbyStore((state) => state.userD
 #### Onboarding
 32. `app/onboarding/tutorial.tsx:96` - `const { completeOnboarding } = useQuillbyStore();`
 
-## Fix Pattern Examples
+## Zustand 5 Pattern Examples
 
-### Single property:
+### Single property (both work):
 ```tsx
-// ❌ Bad
-const { userData } = useQuillbyStore();
-
-// ✅ Good
+// ✅ Option 1: Selector (recommended for performance)
 const userData = useQuillbyStore((state) => state.userData);
+
+// ✅ Option 2: Direct destructuring (works in Zustand 5)
+const { userData } = useQuillbyStore();
 ```
 
 ### Multiple properties:
 ```tsx
-// ❌ Bad
-const { userData, deadlines, startFocusSession } = useQuillbyStore();
-
-// ✅ Good
+// ✅ Option 1: Individual selectors (best performance)
 const userData = useQuillbyStore((state) => state.userData);
 const deadlines = useQuillbyStore((state) => state.deadlines);
 const startFocusSession = useQuillbyStore((state) => state.startFocusSession);
+
+// ✅ Option 2: useShallow for destructuring (Zustand 5)
+import { useShallow } from 'zustand/react/shallow';
+
+const { userData, deadlines, startFocusSession } = useQuillbyStore(
+  useShallow((state) => ({ 
+    userData: state.userData, 
+    deadlines: state.deadlines,
+    startFocusSession: state.startFocusSession 
+  }))
+);
+
+// ⚠️ Works but may cause unnecessary re-renders
+const { userData, deadlines, startFocusSession } = useQuillbyStore();
 ```
 
 ### Entire store (rare cases):
 ```tsx
-// ❌ Bad
+// ❌ Avoid - causes re-renders on any state change
 const store = useQuillbyStore();
 
-// ✅ Good - only if you truly need the entire store
-const store = useQuillbyStore((state) => state);
-// Or better: extract only what you need
+// ✅ Better: Extract only what you need
 const userData = useQuillbyStore((state) => state.userData);
 const someMethod = useQuillbyStore((state) => state.someMethod);
 ```
+
+## Key Differences: Zustand 4 vs 5
+
+### Zustand 4
+- Destructuring `const { x } = useStore()` caused "stale" errors with React 19
+- MUST use selectors: `const x = useStore((state) => state.x)`
+
+### Zustand 5
+- Destructuring works but may cause unnecessary re-renders
+- Use `useShallow` for multiple values to optimize re-renders
+- Selectors still recommended for best performance
+
+## Recommendation
+For this codebase, continue using individual selectors as they provide the best performance and are already implemented in critical files.

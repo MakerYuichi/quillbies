@@ -142,8 +142,10 @@ class SoundManager {
 
       // Get the best available instance (not currently playing)
       let soundToPlay = null;
+      const corruptedIndices: number[] = [];
       
-      for (const instance of instances) {
+      for (let i = 0; i < instances.length; i++) {
+        const instance = instances[i];
         try {
           const status = await instance.getStatusAsync();
           if (status.isLoaded && !status.isPlaying) {
@@ -151,9 +153,39 @@ class SoundManager {
             break;
           }
         } catch (e) {
-          // Instance might be corrupted, skip it
+          // Instance might be corrupted, mark for removal
           console.warn(`[Sound] Skipping corrupted instance for ${key}`);
+          corruptedIndices.push(i);
           continue;
+        }
+      }
+      
+      // Remove corrupted instances and reload if needed
+      if (corruptedIndices.length > 0) {
+        console.log(`[Sound] Removing ${corruptedIndices.length} corrupted instances for ${key}`);
+        // Remove from end to start to maintain indices
+        for (let i = corruptedIndices.length - 1; i >= 0; i--) {
+          const idx = corruptedIndices[i];
+          try {
+            await instances[idx].unloadAsync();
+          } catch (e) {
+            // Ignore unload errors for corrupted instances
+          }
+          instances.splice(idx, 1);
+        }
+        
+        // If all instances were corrupted, reload the sound
+        if (instances.length === 0) {
+          console.log(`[Sound] All instances corrupted for ${key}, reloading...`);
+          try {
+            const { sound } = await Audio.Sound.createAsync(soundFiles[key]);
+            instances.push(sound);
+            soundToPlay = sound;
+            console.log(`[Sound] ✓ Reloaded ${key}`);
+          } catch (reloadError) {
+            console.error(`[Sound] Failed to reload ${key}:`, reloadError);
+            return 0;
+          }
         }
       }
 

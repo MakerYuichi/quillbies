@@ -87,7 +87,7 @@ const checkForExistingUserData = async (): Promise<boolean> => {
     const { data: profile, error } = await supabase
       .from('user_profiles')
       .select('id, buddy_name, user_name')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .maybeSingle();
 
     if (error) {

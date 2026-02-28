@@ -78,6 +78,7 @@ export const getOfferings = async (): Promise<PurchasesOffering | null> => {
     console.log('[RevenueCat] All offerings:', Object.keys(offerings.all));
     console.log('[RevenueCat] Current offering:', offerings.current?.identifier);
     
+    // Try to get current offering first
     if (offerings.current !== null) {
       const packages = offerings.current.availablePackages;
       console.log('[RevenueCat] Available packages:', packages.length);
@@ -96,11 +97,51 @@ export const getOfferings = async (): Promise<PurchasesOffering | null> => {
       return offerings.current;
     }
     
+    // Fallback: try to get "default" offering if current is not set
+    if (offerings.all['default']) {
+      console.log('[RevenueCat] No current offering, using "default" offering');
+      const defaultOffering = offerings.all['default'];
+      console.log('[RevenueCat] Default offering packages:', defaultOffering.availablePackages.length);
+      return defaultOffering;
+    }
+    
     console.warn('[RevenueCat] No current offering available');
     console.warn('[RevenueCat] Available offerings:', Object.keys(offerings.all));
     return null;
   } catch (error) {
     console.error('[RevenueCat] Failed to get offerings:', error);
+    return null;
+  }
+};
+
+/**
+ * Get gem offerings specifically
+ */
+export const getGemOfferings = async (): Promise<PurchasesOffering | null> => {
+  try {
+    console.log('[RevenueCat] Fetching gem offerings...');
+    const offerings = await Purchases.getOfferings();
+    
+    // Try to get the 'gems' offering
+    const gemsOffering = offerings.all['gems'] ?? null;
+    
+    if (gemsOffering) {
+      console.log('[RevenueCat] Gems offering found with', gemsOffering.availablePackages.length, 'packages');
+      gemsOffering.availablePackages.forEach((pkg, index) => {
+        console.log(`[RevenueCat] Gem Package ${index + 1}:`, {
+          identifier: pkg.identifier,
+          productId: pkg.product.identifier,
+          price: pkg.product.priceString,
+          gems: GEM_AMOUNTS[pkg.product.identifier] || 0,
+        });
+      });
+    } else {
+      console.warn('[RevenueCat] No gems offering found');
+    }
+    
+    return gemsOffering;
+  } catch (error) {
+    console.error('[RevenueCat] Failed to get gem offerings:', error);
     return null;
   }
 };

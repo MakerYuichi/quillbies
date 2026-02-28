@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#FFFFFF', // Fully opaque white
     paddingVertical: 3,
     paddingHorizontal: 4,
     zIndex: 10,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(76, 175, 80, 0.95)',
+    backgroundColor: '#4CAF50', // Fully opaque green
     paddingVertical: 3,
     alignItems: 'center',
     zIndex: 10,

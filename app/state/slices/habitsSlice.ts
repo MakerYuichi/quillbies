@@ -26,16 +26,53 @@ export const createHabitsSlice: StateCreator<
   logWater: () => {
     const { userData, checkSpecificAchievement } = get() as any;
     const hydrationGoal = userData.hydrationGoalGlasses || 8;
+    const HARD_LIMIT = 16; // Maximum glasses allowed per day
     
-    // Allow logging beyond goal (no hard limit)
+    // Check if at hard limit
+    if (userData.waterGlasses >= HARD_LIMIT) {
+      console.log(`[Water] Hard limit reached (${userData.waterGlasses}/${HARD_LIMIT}), cannot log more`);
+      return;
+    }
+    
+    // Check if already at or above goal
+    if (userData.waterGlasses >= hydrationGoal) {
+      console.log(`[Water] Already at goal (${userData.waterGlasses}/${hydrationGoal}), no coins awarded`);
+      
+      // Still increment count but no rewards (up to hard limit)
+      const newCount = userData.waterGlasses + 1;
+      const updatedUserData = {
+        ...userData,
+        waterGlasses: newCount,
+      };
+      
+      set({ userData: updatedUserData });
+      syncToDatabase(updatedUserData);
+      
+      console.log(`[Water] Logged glass ${newCount} (goal: ${hydrationGoal}) - no rewards`);
+      return;
+    }
+    
+    // Below goal - give rewards
+    // Calculate coins to ensure total is always 40 coins at goal
+    const TOTAL_COINS_AT_GOAL = 40;
     const newCount = userData.waterGlasses + 1;
+    
+    // Calculate how many coins should have been earned by now
+    const targetCoinsAtThisGlass = Math.floor((newCount / hydrationGoal) * TOTAL_COINS_AT_GOAL);
+    
+    // Calculate how many coins were earned in previous glasses
+    const previousTargetCoins = Math.floor((userData.waterGlasses / hydrationGoal) * TOTAL_COINS_AT_GOAL);
+    
+    // The difference is what we should give now
+    const coinsToGive = targetCoinsAtThisGlass - previousTargetCoins;
+    
     const energyGain = 5;
     
     const updatedUserData = {
       ...userData,
       waterGlasses: newCount,
       energy: Math.min(userData.energy + energyGain, 100),
-      qCoins: userData.qCoins + 5
+      qCoins: userData.qCoins + coinsToGive
     };
     
     set({ userData: updatedUserData });
@@ -43,7 +80,7 @@ export const createHabitsSlice: StateCreator<
     // Sync to database
     syncToDatabase(updatedUserData);
     
-    console.log(`[Water] Logged glass ${newCount} (goal: ${hydrationGoal})`);
+    console.log(`[Water] Logged glass ${newCount}/${hydrationGoal} - +5 energy, +${coinsToGive} coins (total will be ${TOTAL_COINS_AT_GOAL} at goal)`);
     
     // Check for daily-water achievement (8 glasses)
     if (newCount >= 8) {
@@ -82,9 +119,24 @@ export const createHabitsSlice: StateCreator<
 
   logMeal: () => {
     const { userData, checkSpecificAchievement } = get() as any;
+    const mealGoal = userData.mealGoalCount || 3;
     
-    if (userData.mealsLogged >= 3) {
-      console.log('[Meal] Already logged 3 meals today');
+    // Calculate hard limit based on meal goal
+    // Lose weight (2 meal goal) -> max 2 meals (no extras)
+    // Normal (3 meal goal) -> max 4 meals (1 extra allowed)
+    // Gain weight (4 meal goal) -> max 5 meals (1 extra allowed)
+    let hardLimit = 4;
+    if (mealGoal === 2) {
+      hardLimit = 2; // Lose weight: strict, no extras
+    } else if (mealGoal === 3) {
+      hardLimit = 4; // Normal: 3 goal + 1 extra = 4 max
+    } else if (mealGoal >= 4) {
+      hardLimit = 5; // Gain weight: 4 goal + 1 extra = 5 max
+    }
+    
+    // Check if at hard limit
+    if (userData.mealsLogged >= hardLimit) {
+      console.log(`[Meal] Hard limit reached (${userData.mealsLogged}/${hardLimit}), cannot log more`);
       return;
     }
     
@@ -96,12 +148,28 @@ export const createHabitsSlice: StateCreator<
     const isBreakfastTime = currentHour >= 6 && currentHour <= 11;
     const shouldMarkBreakfast = isBreakfastTime && !userData.ateBreakfast;
     
+    // Calculate coins proportionally like water (total 30 coins at goal)
+    const TOTAL_COINS_AT_GOAL = 30;
+    let coinsToGive = 0;
+    
+    if (mealCount <= mealGoal) {
+      // Calculate how many coins should have been earned by now
+      const targetCoinsAtThisMeal = Math.floor((mealCount / mealGoal) * TOTAL_COINS_AT_GOAL);
+      
+      // Calculate how many coins were earned in previous meals
+      const previousTargetCoins = Math.floor((userData.mealsLogged / mealGoal) * TOTAL_COINS_AT_GOAL);
+      
+      // The difference is what we should give now
+      coinsToGive = targetCoinsAtThisMeal - previousTargetCoins;
+    }
+    // If beyond goal, no coins
+    
     const updatedUserData = {
       ...userData,
       mealsLogged: mealCount,
       ateBreakfast: shouldMarkBreakfast ? true : userData.ateBreakfast,
       energy: Math.min(userData.energy + energyGain, 100),
-      qCoins: userData.qCoins + 10
+      qCoins: userData.qCoins + coinsToGive
     };
     
     set({ userData: updatedUserData });
@@ -113,7 +181,11 @@ export const createHabitsSlice: StateCreator<
       console.log('[Meal] Breakfast logged - reminder will stop');
     }
     
-    console.log(`[Meal] Logged meal ${mealCount}/3`);
+    if (coinsToGive > 0) {
+      console.log(`[Meal] Logged meal ${mealCount}/${mealGoal} - +10 energy, +${coinsToGive} coins (total will be ${TOTAL_COINS_AT_GOAL} at goal)`);
+    } else {
+      console.log(`[Meal] Logged meal ${mealCount}/${mealGoal} (extra meal) - +10 energy, no coins`);
+    }
     
     // Check for daily-meals achievement (3 meals logged)
     if (mealCount >= 3) {

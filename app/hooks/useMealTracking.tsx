@@ -14,6 +14,31 @@ export const useMealTracking = (buddyName: string) => {
   const handleMealLog = async () => {
     console.log('[Meal] Logging meal...');
     
+    const mealGoal = userData.mealGoalCount || 3;
+    const currentCount = userData.mealsLogged;
+    
+    // Calculate hard limit based on meal goal
+    let hardLimit = 4;
+    if (mealGoal === 2) {
+      hardLimit = 2; // Lose weight: strict, no extras
+    } else if (mealGoal === 3) {
+      hardLimit = 4; // Normal: 3 goal + 1 extra = 4 max
+    } else if (mealGoal >= 4) {
+      hardLimit = 5; // Gain weight: 4 goal + 1 extra = 5 max
+    }
+    
+    // Check if at hard limit - don't do anything
+    if (currentCount >= hardLimit) {
+      console.log(`[MealTracking] Hard limit reached (${currentCount}/${hardLimit}), button disabled`);
+      setMessage(`🍽️ Daily limit reached!\n${hardLimit} meals is the maximum for today.`);
+      setMessageTimestamp(Date.now());
+      setTimeout(() => {
+        setMessage('');
+        setMessageTimestamp(0);
+      }, 3000);
+      return;
+    }
+    
     // Stop any previous sound loop
     soundLoopActive.current = false;
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -21,8 +46,19 @@ export const useMealTracking = (buddyName: string) => {
     // Log the meal
     logMeal();
     
-    // Show eating animation
-    setCurrentAnimation('eating-normal');
+    // Show eating animation based on meal goal count
+    let eatingAnimation = 'eating-normal';
+    
+    if (mealGoal === 2) {
+      eatingAnimation = 'eating-light'; // Lose weight (2 meals)
+    } else if (mealGoal === 3) {
+      eatingAnimation = 'eating-normal'; // Normal (3 meals)
+    } else if (mealGoal >= 4) {
+      eatingAnimation = 'eating-heavy'; // Gain weight (4+ meals)
+    }
+    
+    console.log(`[Meal] Using animation: ${eatingAnimation} for meal goal: ${mealGoal}`);
+    setCurrentAnimation(eatingAnimation);
     
     // Start new sound loop for exactly 3 seconds
     soundLoopActive.current = true;
@@ -45,13 +81,17 @@ export const useMealTracking = (buddyName: string) => {
     
     // Update message
     const mealsLogged = userData.mealsLogged + 1;
-    const mealGoal = userData.mealGoalCount || 3;
     
     let newMessage = '';
-    if (mealsLogged >= mealGoal) {
+    
+    // Check if this meal is beyond the goal (no coins earned)
+    if (mealsLogged > mealGoal) {
+      newMessage = `🍽️ Extra meal logged (${mealsLogged}/${hardLimit})\n⚠️ Goal already reached - no coins earned`;
+    } else if (mealsLogged >= mealGoal) {
       newMessage = `🍽️ Yum! All ${mealGoal} meals logged today!\nFeeling energized! ⚡`;
     } else {
-      newMessage = `🍽️ Nom nom! Meal ${mealsLogged}/${mealGoal} logged\nTasty! 😋`;
+      const remaining = mealGoal - mealsLogged;
+      newMessage = `🍽️ Nom nom! Meal ${mealsLogged}/${mealGoal} logged\n${remaining} more to go! 😋`;
     }
     
     setMessage(newMessage);

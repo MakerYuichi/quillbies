@@ -8,22 +8,22 @@ import { getThemeColors } from './utils/themeColors';
 export default function WelcomeBackScreen() {
   const router = useRouter();
   const userData = useQuillbyStore((state) => state.userData);
-  const { imagesLoaded } = useImageLoading();
+  // ImagePreloader is disabled, so skip the imagesLoaded check
   
   const selectedCharacter = userData.selectedCharacter || 'casual';
   const themeType = userData.roomCustomization?.themeType;
   const themeColors = getThemeColors(themeType);
   
-  // Navigate to home when images are loaded
+  // Navigate to home immediately since ImagePreloader is disabled
   useEffect(() => {
-    if (imagesLoaded) {
-      console.log('[WelcomeBack] Images ready, navigating to home');
-      // Small delay to show "Ready!" message
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 300);
-    }
-  }, [imagesLoaded, router]);
+    console.log('[WelcomeBack] Navigating to home');
+    // Small delay to show welcome message
+    const timer = setTimeout(() => {
+      router.replace('/(tabs)');
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [router]);
   
   const getCharacterImage = () => {
     switch (selectedCharacter) {
@@ -68,7 +68,7 @@ export default function WelcomeBackScreen() {
             styles.loadingText,
             { color: themeType ? themeColors.textPrimary : '#333' }
           ]}>
-            {imagesLoaded ? 'Ready!' : 'Loading assets...'}
+            Welcome back!
           </Text>
           <Text style={[
             styles.loadingSubtext,

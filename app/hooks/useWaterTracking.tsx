@@ -29,8 +29,23 @@ export const useWaterTracking = (buddyName: string) => {
   }, [userData.enabledHabits, userData.studyGoalHours, userData.studyMinutesToday, userData.hydrationGoalGlasses, userData.waterGlasses]);
 
   const handleDrinkWater = useCallback(async () => {
-    const newCount = userData.waterGlasses + 1;
     const hydrationGoal = userData.hydrationGoalGlasses || 8;
+    const currentCount = userData.waterGlasses;
+    const HARD_LIMIT = 16; // Maximum glasses allowed per day
+    
+    // Check if at hard limit - don't do anything
+    if (currentCount >= HARD_LIMIT) {
+      console.log(`[WaterTracking] Hard limit reached (${currentCount}/${HARD_LIMIT}), button disabled`);
+      setMessage(`💧 Daily limit reached!\n${HARD_LIMIT} glasses is the maximum for today.`);
+      setMessageTimestamp(Date.now());
+      setTimeout(() => {
+        setMessage('');
+        setMessageTimestamp(0);
+      }, 3000);
+      return;
+    }
+    
+    const newCount = currentCount + 1;
     const currentHour = new Date().getHours();
     
     console.log('[WaterTracking] Drinking water - setting animation to drinking');
@@ -86,7 +101,10 @@ export const useWaterTracking = (buddyName: string) => {
     // Generate time-aware and progress-aware messages
     let newMessage = '';
     
-    if (newCount < hydrationGoal) {
+    // Check if already at or above goal BEFORE this drink
+    if (currentCount >= hydrationGoal) {
+      newMessage = `💧 Extra hydration logged (${newCount} glasses)\n⚠️ Goal already reached - no coins earned`;
+    } else if (newCount < hydrationGoal) {
       const remaining = hydrationGoal - newCount;
       
       // Time-based encouragement
@@ -120,16 +138,6 @@ export const useWaterTracking = (buddyName: string) => {
         newMessage = `🎉 Perfect! Goal reached this afternoon!\n${newCount} glasses • Bonus energy incoming! ⚡`;
       } else {
         newMessage = `🎉 Nice! Daily goal completed!\n${newCount} glasses • Great job staying consistent! ⚡`;
-      }
-    } else {
-      // Over-hydration messages
-      const excess = newCount - hydrationGoal;
-      if (excess === 1) {
-        newMessage = `💧 Bonus hydration! ${newCount} glasses total.\n🌊 You're really taking care of yourself!`;
-      } else if (excess <= 3) {
-        newMessage = `💧💧 Super hydrated! ${newCount} glasses today.\n🌊 Your body is loving this extra care!`;
-      } else {
-        newMessage = `💧💧💧 Hydration master! ${newCount} glasses!\n🌊 Maybe pace yourself a bit? 😅`;
       }
     }
     

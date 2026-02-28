@@ -1,6 +1,6 @@
 // Room background layers component
 import React from 'react';
-import { View, Image, StyleSheet, Dimensions, Text } from 'react-native';
+import { View, Image, StyleSheet, Dimensions, Text, TouchableOpacity } from 'react-native';
 import { useQuillbyStore } from '../../state/store-modular';
 import { getThemeColors, getThemeDecorations } from '../../utils/themeColors';
 
@@ -15,9 +15,10 @@ interface RoomLayersProps {
   gems?: number; // Add gems count for display
   hideItems?: boolean; // Hide plants/furniture for shop preview
   showDefaultBackground?: boolean; // Show orange theme background when no theme (home tab only)
+  onGemsPress?: () => void; // Callback when gems display is pressed
 }
 
-export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0, gems = 0, hideItems = false, showDefaultBackground = false }: RoomLayersProps) {
+export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0, gems = 0, hideItems = false, showDefaultBackground = false, onGemsPress }: RoomLayersProps) {
   const userData = useQuillbyStore((state) => state.userData);
   const roomCustomization = userData.roomCustomization;
   
@@ -453,7 +454,7 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
      
       
       {/* LAYER 10: Currency Display - Q-Bies and Gems */}
-      <View style={styles.currencyContainer}>
+      <View style={styles.currencyContainer} pointerEvents="box-none">
         {/* Q-Bies */}
         <View style={[
           styles.qCoinsContainer,
@@ -484,14 +485,19 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
         
         {/* Gems - Only show if gems > 0 or in shop */}
         {gems >= 0 && (
-          <View style={[
-            styles.gemsContainer,
-            hasTheme && { 
-              backgroundColor: themeColors.isDark ? 'rgba(126, 87, 194, 0.5)' : 'rgba(255, 255, 255, 0.95)',
-              borderColor: themeColors.isDark ? '#BA68C8' : '#7E57C2',
-              borderWidth: 2.5,
-            }
-          ]}>
+          <TouchableOpacity 
+            style={[
+              styles.gemsContainer,
+              hasTheme && { 
+                backgroundColor: themeColors.isDark ? 'rgba(126, 87, 194, 0.5)' : 'rgba(255, 255, 255, 0.95)',
+                borderColor: themeColors.isDark ? '#BA68C8' : '#7E57C2',
+                borderWidth: 2.5,
+              }
+            ]}
+            onPress={onGemsPress}
+            activeOpacity={onGemsPress ? 0.7 : 1}
+            disabled={!onGemsPress}
+          >
             <Text style={styles.gemIcon}>💎</Text>
             <Text style={[
               styles.currencyText, 
@@ -505,7 +511,7 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
             ]}>
               {gems}
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
     </View>

@@ -59,25 +59,19 @@ function HomeScreenContent() {
   // ImagePreloader is temporarily disabled, so skip the image loading check
   // const { imagesLoaded } = useImageLoading();
   
-  // Wrap store access in try-catch to prevent crashes
-  let storeData;
-  try {
-    storeData = useQuillbyStore((state) => state);
-  } catch (error) {
-    console.error('[HomeScreen] Store access error:', error);
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' }}>
-        <Text style={{ fontSize: 18, color: '#333', textAlign: 'center', padding: 20 }}>
-          Loading your study companion...
-        </Text>
-      </View>
-    );
-  }
-  
-  const { userData, updateEnergy, cleanRoom, addMissedCheckpoint, checkAndProcessCheckpoints, startFocusSession, getUrgentDeadlines, getUpcomingDeadlines, getTodaysSleepHours } = storeData;
+  // Use proper Zustand selector pattern for React 19 compatibility
+  const userData = useQuillbyStore((state) => state.userData);
+  const updateEnergy = useQuillbyStore((state) => state.updateEnergy);
+  const cleanRoom = useQuillbyStore((state) => state.cleanRoom);
+  const addMissedCheckpoint = useQuillbyStore((state) => state.addMissedCheckpoint);
+  const checkAndProcessCheckpoints = useQuillbyStore((state) => state.checkAndProcessCheckpoints);
+  const startFocusSession = useQuillbyStore((state) => state.startFocusSession);
+  const getUrgentDeadlines = useQuillbyStore((state) => state.getUrgentDeadlines);
+  const getUpcomingDeadlines = useQuillbyStore((state) => state.getUpcomingDeadlines);
+  const getTodaysSleepHours = useQuillbyStore((state) => state.getTodaysSleepHours);
   
   // Get theme info
-  const themeType = userData.roomCustomization?.themeType;
+  const themeType = userData?.roomCustomization?.themeType;
   const themeColors = themeType ? require('../utils/themeColors').getThemeColors(themeType) : null;
   
   // Safety check: ensure userData is properly initialized
@@ -704,6 +698,19 @@ function HomeScreenContent() {
   
   // Check if all habits are completed according to current time of day
   const areAllHabitsCompletedForCurrentTime = () => {
+    // Check if user is within 24-hour grace period
+    console.log('[HappyCheck] Checking grace period - createdAt:', userData.createdAt);
+    const accountAge = userData.createdAt ? Date.now() - new Date(userData.createdAt).getTime() : Infinity;
+    const isInGracePeriod = accountAge < 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    
+    console.log('[HappyCheck] Account age (ms):', accountAge, 'Is in grace period:', isInGracePeriod);
+    
+    if (isInGracePeriod) {
+      const hoursRemaining = Math.ceil((24 * 60 * 60 * 1000 - accountAge) / (60 * 60 * 1000));
+      console.log(`[HappyCheck] 🎉 NEW USER GRACE PERIOD - Always happy! ${hoursRemaining}h remaining`);
+      return true; // Always show happy face during grace period
+    }
+    
     const enabledHabits = userData.enabledHabits || [];
     let currentHour: number;
     
@@ -1118,10 +1125,13 @@ function HomeScreenContent() {
             borderColor: themeColors.isDark ? 'rgba(76, 175, 80, 0.5)' : '#FFF',
           }
         ]}>
-          <Text style={[
-            styles.exerciseTimerLabel,
-            themeType && themeColors.isDark && { color: '#FFFFFF' }
-          ]}>
+          <Text 
+            style={[
+              styles.exerciseTimerLabel,
+              themeType && themeColors.isDark && { color: '#FFFFFF' }
+            ]}
+            allowFontScaling={false}
+          >
             {randomExerciseMessage || "Let's exercise together! 💪"}
           </Text>
           <Text style={[

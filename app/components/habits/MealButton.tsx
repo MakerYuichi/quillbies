@@ -14,14 +14,28 @@ interface MealButtonProps {
 }
 
 export default function MealButton({ mealsLogged, mealGoal = 3, portionDescription, onPress, disabled, textColor }: MealButtonProps) {
+  // Calculate hard limit based on meal goal
+  let hardLimit = 4;
+  if (mealGoal === 2) {
+    hardLimit = 2; // Lose weight: strict, no extras
+  } else if (mealGoal === 3) {
+    hardLimit = 4; // Normal: 3 goal + 1 extra = 4 max
+  } else if (mealGoal >= 4) {
+    hardLimit = 5; // Gain weight: 4 goal + 1 extra = 5 max
+  }
+  
+  const isAtLimit = mealsLogged >= hardLimit;
+  
   // Get color based on meal count
   const getColor = () => {
+    if (isAtLimit) return '#999'; // Gray when at limit
     if (mealsLogged < mealGoal) return '#FB8C00'; // Orange
     if (mealsLogged === mealGoal) return '#FFB300'; // Yellow warning
     return '#E53935'; // Red danger
   };
 
   const getEmoji = () => {
+    if (isAtLimit) return '🚫';
     if (mealsLogged < mealGoal) return '🍎';
     if (mealsLogged === mealGoal) return '🍽️';
     return '⚠️';
@@ -34,12 +48,13 @@ export default function MealButton({ mealsLogged, mealGoal = 3, portionDescripti
     <TouchableOpacity 
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={isAtLimit ? 1 : 0.7}
+      disabled={isAtLimit}
     >
       {/* Circular icon with progress ring */}
       <View style={styles.iconContainer}>
         {/* Progress ring background */}
-        <View style={[styles.progressRingBg, { borderColor: `${color}33` }]} />
+        <View style={[styles.progressRingBg, { borderColor: isAtLimit ? 'rgba(150, 150, 150, 0.3)' : `${color}33` }]} />
         {/* Progress ring fill */}
         <View style={[styles.progressRing, { 
           borderColor: color,
@@ -55,7 +70,10 @@ export default function MealButton({ mealsLogged, mealGoal = 3, portionDescripti
       </View>
       
       {/* Label */}
-      <Text style={[styles.label, textColor && { color: textColor }]}>{mealsLogged}/{mealGoal}</Text>
+      <Text style={[styles.label, textColor && { color: textColor }, isAtLimit && { color: '#999' }]}>
+        {mealsLogged}/{mealGoal}
+        {isAtLimit && '\n(Max)'}
+      </Text>
     </TouchableOpacity>
   );
 }

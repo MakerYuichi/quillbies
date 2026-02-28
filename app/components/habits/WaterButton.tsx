@@ -12,34 +12,40 @@ interface WaterButtonProps {
 }
 
 export default function WaterButton({ waterGlasses, hydrationGoal = 8, onPress, textColor }: WaterButtonProps) {
+  const HARD_LIMIT = 16; // Maximum glasses allowed per day
+  const isAtLimit = waterGlasses >= HARD_LIMIT;
   const progress = Math.min(waterGlasses / hydrationGoal, 1);
   
   return (
     <TouchableOpacity 
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={isAtLimit ? 1 : 0.7}
+      disabled={isAtLimit}
     >
       {/* Circular icon with progress ring */}
       <View style={styles.iconContainer}>
         {/* Progress ring background */}
-        <View style={styles.progressRingBg} />
+        <View style={[styles.progressRingBg, isAtLimit && { borderColor: 'rgba(150, 150, 150, 0.3)' }]} />
         {/* Progress ring fill */}
         <View style={[styles.progressRing, { 
-          borderColor: '#29B6F6',
+          borderColor: isAtLimit ? '#999' : '#29B6F6',
           borderTopWidth: 4,
           borderRightWidth: progress > 0.25 ? 4 : 0,
           borderBottomWidth: progress > 0.5 ? 4 : 0,
           borderLeftWidth: progress > 0.75 ? 4 : 0,
         }]} />
         {/* Icon circle */}
-        <View style={[styles.iconCircle, { backgroundColor: '#29B6F6' }]}>
+        <View style={[styles.iconCircle, { backgroundColor: isAtLimit ? '#999' : '#29B6F6' }]}>
           <Text style={styles.iconEmoji}>💧</Text>
         </View>
       </View>
       
       {/* Label */}
-      <Text style={[styles.label, textColor && { color: textColor }]}>{waterGlasses}/{hydrationGoal}</Text>
+      <Text style={[styles.label, textColor && { color: textColor }, isAtLimit && { color: '#999' }]}>
+        {waterGlasses}/{hydrationGoal}
+        {isAtLimit && '\n(Max)'}
+      </Text>
     </TouchableOpacity>
   );
 }
