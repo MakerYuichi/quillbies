@@ -14,9 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.quillbyapp",
-      "statusBarHidden": true,
-      "statusBarStyle": "light-content"
+      "bundleIdentifier": "com.quillbyapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -34,9 +32,6 @@
         "com.android.vending.BILLING"
       ],
       "softwareKeyboardLayoutMode": "pan",
-      "statusBarHidden": false,
-      "statusBarTranslucent": true,
-      "statusBarStyle": "light-content",
       "navigationBar": {
         "visible": false
       }

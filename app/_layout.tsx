@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Text, Image, AppState, AppStateStatus, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { useFonts } from 'expo-font';
 import { useQuillbyStore } from './state/store-modular';
 import { initializeRevenueCat } from '../lib/revenueCat';
@@ -142,6 +143,14 @@ const setupGlobalErrorHandlers = () => {
 export default function RootLayout() {
   // ===== ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL RETURNS =====
   
+  // Hide navigation bar on Android
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setVisibilityAsync('hidden');
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+    }
+  }, []);
+  
   // Load Schoolbell font - MUST be called before any conditional returns
   const [fontsLoaded] = useFonts({
     'Schoolbell': require('../assets/fonts/Schoolbell-Regular.ttf'),
@@ -244,6 +253,12 @@ export default function RootLayout() {
         console.log('[App] Coming to foreground');
         if (userData?.messPoints !== undefined) {
           lastMessPoints.current = userData.messPoints; // Update reference
+        }
+        
+        // Re-hide navigation bar on Android when app comes back
+        if (Platform.OS === 'android') {
+          NavigationBar.setVisibilityAsync('hidden');
+          NavigationBar.setBehaviorAsync('overlay-swipe');
         }
       }
       
