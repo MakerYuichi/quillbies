@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ImageBackground, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store-modular';
+import { useFocusEffect } from '@react-navigation/native';
 import { DeadlineFormData, Deadline } from '../core/types';
 import { calculateFocusEnergyCost } from '../core/engine';
 import CreateDeadlineModal from '../components/modals/CreateDeadlineModal';
@@ -47,6 +48,16 @@ export default function FocusScreen() {
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [selectedDeadline, setSelectedDeadline] = useState<Deadline | null>(null);
   const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
+  
+  // Scroll ref for auto-scroll to top when tab is focused
+  const scrollRef = useRef<ScrollView>(null);
+  
+  // Scroll to top when tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
   const [pendingDeadlineId, setPendingDeadlineId] = useState<string | undefined>(undefined);
   
   // Collapsible sections state
@@ -166,7 +177,7 @@ export default function FocusScreen() {
   return (
     <>
       <ThemedScreen showBackground={false}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content}>
           {/* Quillby Commander Section */}
           <View style={styles.commanderSection}>
             <Image

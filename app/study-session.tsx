@@ -6,6 +6,7 @@ import { useQuillbyStore } from './state/store-modular';
 import InteractiveTooltip from './components/ui/InteractiveTooltip';
 import SessionCompletionModal from './components/modals/SessionCompletionModal';
 import VolumeSettingsModal from './components/modals/VolumeSettingsModal';
+import PremiumPaywallModal from './components/modals/PremiumPaywallModal';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { playEndSessionSound } from '../lib/soundManager';
@@ -158,6 +159,7 @@ function StudySessionContent() {
   
   // Confirmation dialog state
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   
   // Session control states
@@ -185,72 +187,72 @@ function StudySessionContent() {
       id: 'coffee',
       title: '☕ Coffee Boost',
       description: 'Tap here for +6 focus for 3 minutes. You get 3 free uses per day (costs 3 coins each).',
-      position: { top: SCREEN_HEIGHT * 0.587, left: SCREEN_WIDTH * 0.051 },
+      position: { top: SCREEN_HEIGHT * 0.60, left: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.885, 
+        top: SCREEN_HEIGHT * 0.744 + SCREEN_HEIGHT * 0.12, // Move up slightly
         left: SCREEN_WIDTH * 0.051, 
-        width: (SCREEN_WIDTH - (SCREEN_WIDTH * 0.127)) / 2, 
-        height: SCREEN_HEIGHT * 0.094 
+        width: (SCREEN_WIDTH * 0.898) / 2 - 5, // Increase width
+        height: SCREEN_HEIGHT * 0.07 
       },
     },
     {
       id: 'apple',
       title: '🍎 Apple Snack',
       description: 'Tap here for +3 focus instantly. You get 5 free uses per day (costs 2 coins each).',
-      position: { top: SCREEN_HEIGHT * 0.587, right: SCREEN_WIDTH * 0.051 },
+      position: { top: SCREEN_HEIGHT * 0.60, right: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.885, 
-        left: SCREEN_WIDTH * 0.5 + (SCREEN_WIDTH * 0.013), 
-        width: (SCREEN_WIDTH - (SCREEN_WIDTH * 0.127)) / 2, 
-        height: SCREEN_HEIGHT * 0.094 
+        top: SCREEN_HEIGHT * 0.744 + SCREEN_HEIGHT * 0.12, // Move up slightly
+        left: SCREEN_WIDTH * 0.051 + (SCREEN_WIDTH * 0.898) / 2 + 5, 
+        width: (SCREEN_WIDTH * 0.898) / 2 - 5, // Increase width
+        height: SCREEN_HEIGHT * 0.07 
       },
     },
     {
       id: 'focus',
       title: '📊 Focus Score',
       description: 'This shows your current focus level. Stay in the app to keep it high!',
-      position: { top: SCREEN_HEIGHT * 0.352, left: SCREEN_WIDTH * 0.051 },
+      position: { top: SCREEN_HEIGHT * 0.75, left: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.683, 
+        top: SCREEN_HEIGHT * 0.65, // Move up more
         left: SCREEN_WIDTH * 0.153, 
-        width: SCREEN_WIDTH * 0.204, 
-        height: SCREEN_HEIGHT * 0.059 
+        width: SCREEN_WIDTH * 0.201, 
+        height: SCREEN_HEIGHT * 0.056 
       },
     },
     {
       id: 'break',
       title: '⏸️ Take a Break',
       description: 'Need a break? Tap here for a 5-minute rest. You have limited break time per session.',
-      position: { top: SCREEN_HEIGHT * 0.352, left: SCREEN_WIDTH * 0.5 - (SCREEN_WIDTH * 0.356) },
+      position: { top: SCREEN_HEIGHT * 0.75, left: SCREEN_WIDTH * 0.1 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.683, 
-        left: SCREEN_WIDTH * 0.382, 
-        width: SCREEN_WIDTH * 0.305, 
-        height: SCREEN_HEIGHT * 0.059 
+        top: SCREEN_HEIGHT * 0.65, // Move up more
+        left: SCREEN_WIDTH * 0.3945, 
+        width: SCREEN_WIDTH * 0.201, 
+        height: SCREEN_HEIGHT * 0.056 
       },
     },
     {
       id: 'done',
       title: '✅ Finish Session',
       description: 'When you\'re done studying, tap here. You\'ll earn coins and XP based on your performance!',
-      position: { top: SCREEN_HEIGHT * 0.352, right: SCREEN_WIDTH * 0.051 },
+      position: { top: SCREEN_HEIGHT * 0.75, right: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.683, 
-        left: SCREEN_WIDTH - (SCREEN_WIDTH * 0.356), 
-        width: SCREEN_WIDTH * 0.204, 
-        height: SCREEN_HEIGHT * 0.059 
+        top: SCREEN_HEIGHT * 0.65, // Move up more
+        left: SCREEN_WIDTH * 0.636, 
+        width: SCREEN_WIDTH * 0.201, 
+        height: SCREEN_HEIGHT * 0.056 
       },
     },
     {
       id: 'final',
       title: '🚀 Ready to Focus!',
       description: 'Stay in the app while studying to maintain your focus score. Good luck!',
-      position: { top: SCREEN_HEIGHT * 0.5 - (SCREEN_HEIGHT * 0.117), left: SCREEN_WIDTH * 0.051 },
+      position: { top: SCREEN_HEIGHT * 0.4, left: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
     },
   ];
@@ -1021,6 +1023,12 @@ function StudySessionContent() {
             onPress={() => {
               if (!session) return;
               
+              if (userData.coffeeTapsToday >= 3 && session.coffeePremiumUsedThisSession) {
+                // Button is disabled, show premium modal
+                setShowPremiumModal(true);
+                return;
+              }
+              
               if (userData.coffeeTapsToday < 3) {
                 if (tapCoffeeInSession(false)) {
                   playAnimation('drinking');
@@ -1033,7 +1041,7 @@ function StudySessionContent() {
                 }
               }
             }}
-            disabled={userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession}
+            disabled={false}
           >
             <View style={styles.buttonLeft}>
               <ImageBackground
@@ -1046,17 +1054,15 @@ function StudySessionContent() {
             
             <View style={styles.buttonRight}>
               {userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession ? (
-                <Text style={styles.habitUsed}>USED</Text>
+                <View style={styles.buttonStats}>
+                  <Text style={styles.lockIcon}>🔒</Text>
+                </View>
               ) : userData.coffeeTapsToday >= 3 ? (
                 <View style={styles.buttonStats}>
-                  <Text style={styles.premiumLabel}>PREMIUM</Text>
-                  <Text style={styles.habitReward}>+15 5m</Text>
                   <Text style={styles.habitCost}>-15🪙</Text>
                 </View>
               ) : (
                 <View style={styles.buttonStats}>
-                  <Text style={styles.habitReward}>+6 3m</Text>
-                  <Text style={styles.habitCost}>-3🪙</Text>
                   <Text style={styles.habitCount}>({userData.coffeeTapsToday}/3)</Text>
                 </View>
               )}
@@ -1073,6 +1079,12 @@ function StudySessionContent() {
             onPress={() => {
               if (!session) return;
               
+              if (userData.appleTapsToday >= 5 && session.applePremiumUsedThisSession) {
+                // Button is disabled, show premium modal
+                setShowPremiumModal(true);
+                return;
+              }
+              
               if (userData.appleTapsToday < 5) {
                 if (tapAppleInSession(false)) {
                   playAnimation('eating');
@@ -1085,7 +1097,7 @@ function StudySessionContent() {
                 }
               }
             }}
-            disabled={userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession}
+            disabled={false}
           >
             <View style={styles.buttonLeft}>
               <ImageBackground
@@ -1098,17 +1110,15 @@ function StudySessionContent() {
             
             <View style={styles.buttonRight}>
               {userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession ? (
-                <Text style={styles.habitUsed}>USED</Text>
+                <View style={styles.buttonStats}>
+                  <Text style={styles.lockIcon}>🔒</Text>
+                </View>
               ) : userData.appleTapsToday >= 5 ? (
                 <View style={styles.buttonStats}>
-                  <Text style={styles.premiumLabel}>PREMIUM</Text>
-                  <Text style={styles.habitReward}>+10</Text>
                   <Text style={styles.habitCost}>-10🪙</Text>
                 </View>
               ) : (
                 <View style={styles.buttonStats}>
-                  <Text style={styles.habitReward}>+3 🍎</Text>
-                  <Text style={styles.habitCost}>-2🪙</Text>
                   <Text style={styles.habitCount}>({userData.appleTapsToday}/5)</Text>
                 </View>
               )}
@@ -1188,23 +1198,15 @@ function StudySessionContent() {
               
               <View style={styles.buttonRight}>
                 {userData.coffeeTapsToday >= 3 && session?.coffeePremiumUsedThisSession ? (
-                  <Text style={styles.habitUsed}>USED</Text>
+                  <View style={styles.buttonStats}>
+                    <Text style={styles.lockIcon}>🔒</Text>
+                  </View>
                 ) : userData.coffeeTapsToday >= 3 ? (
                   <View style={styles.buttonStats}>
-                    <Text style={styles.premiumLabel}>PREMIUM</Text>
-                    <Text style={[
-                      styles.habitReward,
-                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
-                    ]}>+15 5m</Text>
                     <Text style={styles.habitCost}>-15🪙</Text>
                   </View>
                 ) : (
                   <View style={styles.buttonStats}>
-                    <Text style={[
-                      styles.habitReward,
-                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
-                    ]}>+6 3m</Text>
-                    <Text style={styles.habitCost}>-3🪙</Text>
                     <Text style={styles.habitCount}>({userData.coffeeTapsToday}/3)</Text>
                   </View>
                 )}
@@ -1253,23 +1255,15 @@ function StudySessionContent() {
               
               <View style={styles.buttonRight}>
                 {userData.appleTapsToday >= 5 && session?.applePremiumUsedThisSession ? (
-                  <Text style={styles.habitUsed}>USED</Text>
+                  <View style={styles.buttonStats}>
+                    <Text style={styles.lockIcon}>🔒</Text>
+                  </View>
                 ) : userData.appleTapsToday >= 5 ? (
                   <View style={styles.buttonStats}>
-                    <Text style={styles.premiumLabel}>PREMIUM</Text>
-                    <Text style={[
-                      styles.habitReward,
-                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
-                    ]}>+10</Text>
                     <Text style={styles.habitCost}>-10🪙</Text>
                   </View>
                 ) : (
                   <View style={styles.buttonStats}>
-                    <Text style={[
-                      styles.habitReward,
-                      themeType && { color: themeColors.isDark ? '#FFFFFF' : '#000000' }
-                    ]}>+3 🍎</Text>
-                    <Text style={styles.habitCost}>-2🪙</Text>
                     <Text style={styles.habitCount}>({userData.appleTapsToday}/5)</Text>
                   </View>
                 )}
@@ -1422,6 +1416,16 @@ function StudySessionContent() {
         visible={showVolumeSettings}
         onClose={() => setShowVolumeSettings(false)}
       />
+      
+      {/* Premium Paywall Modal */}
+      <PremiumPaywallModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onPurchaseSuccess={() => {
+          console.log('[StudySession] Premium purchased successfully!');
+          setShowPremiumModal(false);
+        }}
+      />
     </View>
   );
 }
@@ -1457,7 +1461,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: (SCREEN_WIDTH * 518) / 393,
     height: (SCREEN_HEIGHT * 336) / 852,
-    left: -90,
+    left: SCREEN_WIDTH * -0.229, // -90/393 = -22.9%
     top: (SCREEN_HEIGHT * 239) / 852,
     borderWidth: 1,
     borderColor: '#000000',
@@ -1475,8 +1479,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: (SCREEN_WIDTH * 266) / 393,
     height: (SCREEN_HEIGHT * 66) / 852,
-    left: 16,
-    top: 9,
+    left: SCREEN_WIDTH * 0.041, // 16/393 = 4.1%
+    top: SCREEN_HEIGHT * 0.011, // 9/852 = 1.1%
   },
   
   headerText: {
@@ -1657,8 +1661,8 @@ const styles = StyleSheet.create({
     fontSize: (SCREEN_WIDTH * 14) / 393,
     lineHeight: (SCREEN_HEIGHT * 18) / 852,
     color: '#000000',
-    left: 77,
-    bottom: 10,
+    left: SCREEN_WIDTH * 0.196, // 77/393 = 19.6%
+    bottom: SCREEN_HEIGHT * 0.012, // 10/852 = 1.2%
   },
 
   // Hamster Character - Large studying position
@@ -1936,6 +1940,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   
+  lockIcon: {
+    fontSize: (SCREEN_WIDTH * 24) / 393,
+    textAlign: 'right',
+  },
+  
   bottomText: {
     position: 'absolute',
     fontFamily: 'Chakra Petch',
@@ -1943,8 +1952,8 @@ const styles = StyleSheet.create({
     fontSize: (SCREEN_WIDTH * 14) / 393,
     lineHeight: (SCREEN_HEIGHT * 18) / 852,
     color: '#000000',
-    left: 98,
-    bottom: 30,
+    left: SCREEN_WIDTH * 0.249, // 98/393 = 24.9%
+    bottom: SCREEN_HEIGHT * 0.035, // 30/852 = 3.5%
   },
   
   errorText: {

@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ImageBackground, Image, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuillbyStore } from '../state/store-modular';
+import { useFocusEffect } from '@react-navigation/native';
 import ChangeHamsterModal from '../components/modals/ChangeHamsterModal';
 import ChangeNameModal from '../components/modals/ChangeNameModal';
 import ManageHabitsModal from '../components/modals/ManageHabitsModal';
@@ -47,6 +48,16 @@ export default function SettingsScreen() {
   const [showGemsModal, setShowGemsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showAccountDeletionModal, setShowAccountDeletionModal] = useState(false);
+  
+  // Scroll ref for auto-scroll to top when tab is focused
+  const scrollRef = useRef<ScrollView>(null);
+  
+  // Scroll to top when tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
   
   // Account deletion state
   const [pendingDeletion, setPendingDeletion] = useState<{ scheduledFor: string } | null>(null);
@@ -230,6 +241,7 @@ export default function SettingsScreen() {
   return (
     <ThemedScreen showBackground={false}>
       <ScrollView 
+        ref={scrollRef}
         style={styles.container} 
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event(

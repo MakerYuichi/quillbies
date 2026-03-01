@@ -28,7 +28,9 @@ export default function CustomDatePicker({ visible, onClose, onDateSelect, initi
   React.useEffect(() => {
     if (initialDate) {
       console.log('[CustomDatePicker] Initializing with date:', initialDate);
-      const date = new Date(initialDate);
+      // Parse date and create at noon to avoid timezone issues
+      const parts = initialDate.split('-');
+      const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
       console.log('[CustomDatePicker] Parsed date object:', date);
       setSelectedYear(date.getFullYear());
       setSelectedMonth(date.getMonth());
@@ -61,7 +63,8 @@ export default function CustomDatePicker({ visible, onClose, onDateSelect, initi
   };
 
   const handleConfirm = () => {
-    const date = new Date(selectedYear, selectedMonth, selectedDay);
+    // Create date at noon to avoid timezone issues
+    const date = new Date(selectedYear, selectedMonth, selectedDay, 12, 0, 0);
     const formattedDate = date.toISOString().split('T')[0];
     console.log('[CustomDatePicker] Confirming date:', formattedDate);
     console.log('[CustomDatePicker] Selected values:', { selectedYear, selectedMonth, selectedDay });

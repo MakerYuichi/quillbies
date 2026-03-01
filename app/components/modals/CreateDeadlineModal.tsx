@@ -55,8 +55,8 @@ export default function CreateDeadlineModal({
 }: CreateDeadlineModalProps) {
   const [formData, setFormData] = useState<DeadlineFormData>({
     title: '',
-    dueDate: getTodayDate(), // Default to today
-    dueTime: getCurrentTime(), // Default to current time
+    dueDate: '', // Start empty to show placeholder style
+    dueTime: '', // Start empty to show placeholder style
     priority: 'medium',
     estimatedHours: '',
     category: 'study'
@@ -110,8 +110,8 @@ export default function CreateDeadlineModal({
     if (visible && mode === 'create' && !initialData) {
       setFormData({
         title: '',
-        dueDate: getTodayDate(),
-        dueTime: getCurrentTime(),
+        dueDate: '',
+        dueTime: '',
         priority: 'medium',
         estimatedHours: '',
         category: 'study'
@@ -284,14 +284,22 @@ export default function CreateDeadlineModal({
                   <TouchableOpacity 
                     style={styles.emojiButton}
                     onPress={() => {
-                      console.log('[CreateDeadlineModal] Opening date picker with current date:', formData.dueDate);
+                      // If date is empty, set today's date as initial value for picker
+                      const dateToShow = formData.dueDate || getTodayDate();
+                      console.log('[CreateDeadlineModal] Opening date picker with current date:', dateToShow);
+                      if (!formData.dueDate) {
+                        setFormData(prev => ({...prev, dueDate: getTodayDate()}));
+                      }
                       setShowDatePicker(true);
                     }}
                   >
                     <Text style={styles.dateTimeEmoji}>📅</Text>
                   </TouchableOpacity>
                   <TextInput
-                    style={styles.dateTimeInput}
+                    style={[
+                      styles.dateTimeInput,
+                      !formData.dueDate && styles.dateTimeInputBlurred
+                    ]}
                     placeholder="2024-12-28"
                     placeholderTextColor="#BBB"
                     value={formData.dueDate}
@@ -308,18 +316,35 @@ export default function CreateDeadlineModal({
                 <View style={styles.dateTimeInputContainer}>
                   <TouchableOpacity 
                     style={styles.emojiButton}
-                    onPress={() => setShowTimePicker(true)}
+                    onPress={() => {
+                      // If time is empty, set current time as initial value for picker
+                      if (!formData.dueTime) {
+                        setFormData(prev => ({...prev, dueTime: getCurrentTime()}));
+                      }
+                      setShowTimePicker(true);
+                    }}
                   >
                     <Text style={styles.dateTimeEmoji}>⏰</Text>
                   </TouchableOpacity>
                   <TextInput
-                    style={styles.dateTimeInput}
+                    style={[
+                      styles.dateTimeInput,
+                      !formData.dueTime && styles.dateTimeInputBlurred
+                    ]}
                     placeholder="14:30"
                     placeholderTextColor="#BBB"
                     value={formData.dueTime}
                     onChangeText={(text) => setFormData(prev => ({...prev, dueTime: text}))}
                     keyboardType="numeric"
                   />
+                  {formData.dueTime && (
+                    <TouchableOpacity 
+                      style={styles.clearButton}
+                      onPress={() => setFormData(prev => ({...prev, dueTime: ''}))}
+                    >
+                      <Text style={styles.clearButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <Text style={styles.inputHint}>Tap ⏰ for time picker or type time</Text>
               </View>
@@ -866,5 +891,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginHorizontal: SCREEN_WIDTH * 0.01,
+  },
+  // Blur styles for optional time field - make text look like placeholder
+  dateTimeSubLabelBlurred: {
+    color: '#BBB',
+    fontWeight: '400',
+  },
+  dateTimeInputContainerBlurred: {
+    borderColor: '#E0E0E0',
+  },
+  dateTimeEmojiBlurred: {
+    // Emoji stays normal, no blur
+  },
+  dateTimeInputBlurred: {
+    color: '#BBB',
+    fontWeight: '400',
+  },
+  inputHintBlurred: {
+    color: '#CCC',
+  },
+  clearButton: {
+    padding: SCREEN_WIDTH * 0.02,
+    marginLeft: SCREEN_WIDTH * 0.01,
+  },
+  clearButtonText: {
+    fontSize: SCREEN_WIDTH * 0.045,
+    color: '#FF5252',
+    fontWeight: '600',
   },
 });

@@ -1,6 +1,7 @@
 import * as Device from 'expo-device';
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
+import { supabase } from './supabase';
 
 export interface FeedbackData {
   category: string;
@@ -25,7 +26,7 @@ interface ExtendedFeedbackData extends FeedbackData {
 }
 
 /**
- * Submit feedback to your backend or email service
+ * Submit feedback to Supabase
  */
 export async function submitFeedback(feedback: FeedbackData): Promise<void> {
   try {
@@ -44,84 +45,40 @@ export async function submitFeedback(feedback: FeedbackData): Promise<void> {
       deviceInfo,
     };
 
-    console.log('[Feedback] Submitting feedback:', extendedFeedback);
-
-    // OPTION 1: Send to your backend API
-    // Uncomment and configure your backend endpoint
-    /*
-    const response = await fetch('https://your-backend.com/api/feedback', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(extendedFeedback),
+    console.log('[Feedback] Submitting feedback to Supabase:', {
+      category: feedback.category,
+      title: feedback.title,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('[Feedback] Submission successful:', result);
-    */
-
-    // OPTION 2: Send via email service (e.g., SendGrid, Mailgun)
-    // This requires a backend proxy to keep API keys secure
-    /*
-    const response = await fetch('https://your-backend.com/api/send-feedback-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(extendedFeedback),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Email service error! status: ${response.status}`);
-    }
-    */
-
-    // OPTION 3: Use a third-party feedback service (e.g., Formspree, Google Forms)
-    // Example with Formspree (free tier available)
-    const formspreeEndpoint = process.env.FORMSPREE_ENDPOINT || 'YOUR_FORMSPREE_ENDPOINT';
-    
-    if (formspreeEndpoint && formspreeEndpoint !== 'YOUR_FORMSPREE_ENDPOINT') {
-      const response = await fetch(formspreeEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    // Insert feedback into Supabase
+    const { data, error } = await supabase
+      .from('feedback')
+      .insert([
+        {
           category: feedback.category,
           title: feedback.title,
           description: feedback.description,
-          email: feedback.email || 'No email provided',
-          userName: feedback.userName,
-          deviceId: feedback.deviceId,
+          email: feedback.email || null,
+          user_name: feedback.userName,
+          device_id: feedback.deviceId,
           platform: deviceInfo.platform,
-          osVersion: deviceInfo.osVersion,
-          deviceModel: deviceInfo.deviceModel,
-          appVersion: deviceInfo.appVersion,
+          os_version: deviceInfo.osVersion,
+          device_model: deviceInfo.deviceModel,
+          device_name: deviceInfo.deviceName,
+          app_version: deviceInfo.appVersion,
+          build_number: deviceInfo.buildNumber,
           timestamp: feedback.timestamp,
-        }),
-      });
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select();
 
-      if (!response.ok) {
-        throw new Error(`Formspree error! status: ${response.status}`);
-      }
-
-      console.log('[Feedback] Submitted via Formspree successfully');
-      return;
+    if (error) {
+      console.error('[Feedback] Supabase error:', error);
+      throw new Error(`Failed to submit feedback: ${error.message}`);
     }
 
-    // OPTION 4: Store locally and sync later (fallback)
-    // You can implement local storage and batch upload later
-    console.log('[Feedback] No backend configured - feedback logged locally');
-    console.log('[Feedback] Configure FORMSPREE_ENDPOINT in .env to enable submission');
-    
-    // For now, just log it (you can implement local storage here)
-    // In production, you should store this in AsyncStorage and sync when online
-    
+    console.log('[Feedback] Successfully submitted to Supabase:', data);
   } catch (error) {
     console.error('[Feedback] Submission error:', error);
     throw error;
@@ -129,17 +86,29 @@ export async function submitFeedback(feedback: FeedbackData): Promise<void> {
 }
 
 /**
- * Get feedback submission history (if stored locally)
+ * Get feedback submission history from Supabase (optional - for admin dashboard)
  */
-export async function getFeedbackHistory(): Promise<FeedbackData[]> {
-  // TODO: Implement local storage retrieval
-  return [];
-}
+export async function getFeedbackHistory(deviceId?: string): Promise<FeedbackData[]> {
+  try {
+    let query = supabase
+      .from('feedback')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-/**
- * Clear feedback history
- */
-export async function clearFeedbackHistory(): Promise<void> {
-  // TODO: Implement local storage clearing
-  console.log('[Feedback] History cleared');
+    if (deviceId) {
+      query = query.eq('device_id', deviceId);
+    }
+
+    const { data, error } = await query.limit(50);
+
+    if (error) {
+      console.error('[Feedback] Error fetching history:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('[Feedback] Error fetching history:', error);
+    return [];
+  }
 }

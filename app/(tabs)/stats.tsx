@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, ImageBackground, TouchableOpacity, Image } from 'react-native';
 import { useQuillbyStore } from '../state/store-modular';
 import { formatSleepTime, formatExerciseTime, formatStudyTime } from '../../lib/timeUtils';
+import { useFocusEffect } from '@react-navigation/native';
 import { getTodaysSleepHours } from '../core/engine';
 import WeeklyLineGraph from '../components/stats/WeeklyLineGraph';
 import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
@@ -23,6 +24,16 @@ export default function StatsScreen() {
   const buddyName = userData.buddyName || 'Quillby';
   const [showPremiumModal, setShowPremiumModal] = React.useState(false);
   const [isPremiumExpanded, setIsPremiumExpanded] = React.useState(false);
+  
+  // Scroll ref for auto-scroll to top when tab is focused
+  const scrollRef = useRef<ScrollView>(null);
+  
+  // Scroll to top when tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   // Generate mock weekly data (last 7 days)
   // In production, this would come from historical data stored in the database
@@ -126,7 +137,7 @@ export default function StatsScreen() {
 
   return (
     <ThemedScreen showBackground={false}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>📊 Your Progress</Text>

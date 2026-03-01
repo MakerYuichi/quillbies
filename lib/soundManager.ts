@@ -160,7 +160,7 @@ class SoundManager {
         }
       }
       
-      // Remove corrupted instances and reload if needed
+      // Remove corrupted instances
       if (corruptedIndices.length > 0) {
         console.log(`[Sound] Removing ${corruptedIndices.length} corrupted instances for ${key}`);
         // Remove from end to start to maintain indices
@@ -174,18 +174,10 @@ class SoundManager {
           instances.splice(idx, 1);
         }
         
-        // If all instances were corrupted, reload the sound
+        // If all instances were corrupted, log error and return
         if (instances.length === 0) {
-          console.log(`[Sound] All instances corrupted for ${key}, reloading...`);
-          try {
-            const { sound } = await Audio.Sound.createAsync(soundFiles[key]);
-            instances.push(sound);
-            soundToPlay = sound;
-            console.log(`[Sound] ✓ Reloaded ${key}`);
-          } catch (reloadError) {
-            console.error(`[Sound] Failed to reload ${key}:`, reloadError);
-            return 0;
-          }
+          console.error(`[Sound] All instances corrupted for ${key}, cannot play`);
+          return 0;
         }
       }
 
@@ -441,116 +433,84 @@ export const SOUNDS = {
 
 // Preload essential sounds
 export async function preloadSounds(): Promise<void> {
-  console.log('[Sound] Preloading sounds...');
+  console.log('[Sound] Preloading sounds in parallel...');
   
   try {
-    await soundManager.loadSound(
-      SOUNDS.HAMSTER_EATING,
-      require('../assets/sounds/character/hamster_eating.mp3')
-    );
-    console.log('[Sound] Hamster eating sound loaded');
+    // Load all sounds in parallel for faster startup
+    await Promise.all([
+      soundManager.loadSound(
+        SOUNDS.HAMSTER_EATING,
+        require('../assets/sounds/character/hamster_eating.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.HAMSTER_DRINKING,
+        require('../assets/sounds/character/drinking-water.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.HAMSTER_YAWN,
+        require('../assets/sounds/character/yawn.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.HAMSTER_JUMPING,
+        require('../assets/sounds/character/jumping.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.WET_GRASS,
+        require('../assets/sounds/background_music/wet-grass.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.BIRDS_CHIRPING,
+        require('../assets/sounds/background_music/birds-chirping.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.TOGGLE,
+        require('../assets/sounds/ui_buttons/toggle.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.TAB,
+        require('../assets/sounds/ui_buttons/tab.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.END_SESSION,
+        require('../assets/sounds/ui_buttons/end-session.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.EQUIP,
+        require('../assets/sounds/ui_buttons/equip.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.UI_SUBMIT,
+        require('../assets/sounds/ui_buttons/ui-submit.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.ACHIEVEMENT,
+        require('../assets/sounds/background_music/achievement.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.COFFEE_SLURP,
+        require('../assets/sounds/study_actions/coffee-slurp.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.EATING_APPLE,
+        require('../assets/sounds/study_actions/eating-an-apple.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.BROOM,
+        require('../assets/sounds/mess/broom.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.SCRUB,
+        require('../assets/sounds/mess/scrub.mp3')
+      ),
+      soundManager.loadSound(
+        SOUNDS.DEEP_CLEAN,
+        require('../assets/sounds/mess/deep-clean.mp3')
+      ),
+    ]);
     
-    await soundManager.loadSound(
-      SOUNDS.HAMSTER_DRINKING,
-      require('../assets/sounds/character/drinking-water.mp3')
-    );
-    console.log('[Sound] Hamster drinking sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.HAMSTER_YAWN,
-      require('../assets/sounds/character/yawn.mp3')
-    );
-    console.log('[Sound] Hamster yawn sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.HAMSTER_JUMPING,
-      require('../assets/sounds/character/jumping.mp3')
-    );
-    console.log('[Sound] Hamster jumping sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.WET_GRASS,
-      require('../assets/sounds/background_music/wet-grass.mp3')
-    );
-    console.log('[Sound] Wet grass sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.BIRDS_CHIRPING,
-      require('../assets/sounds/background_music/birds-chirping.mp3')
-    );
-    console.log('[Sound] Birds chirping sound loaded');
-    
-    // UI Sounds
-    await soundManager.loadSound(
-      SOUNDS.TOGGLE,
-      require('../assets/sounds/ui_buttons/toggle.mp3')
-    );
-    console.log('[Sound] Toggle sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.TAB,
-      require('../assets/sounds/ui_buttons/tab.mp3')
-    );
-    console.log('[Sound] Tab sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.END_SESSION,
-      require('../assets/sounds/ui_buttons/end-session.mp3')
-    );
-    console.log('[Sound] End session sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.EQUIP,
-      require('../assets/sounds/ui_buttons/equip.mp3')
-    );
-    console.log('[Sound] Equip sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.UI_SUBMIT,
-      require('../assets/sounds/ui_buttons/ui-submit.mp3')
-    );
-    console.log('[Sound] UI submit sound loaded');
-    
-    // Achievement Sound
-    await soundManager.loadSound(
-      SOUNDS.ACHIEVEMENT,
-      require('../assets/sounds/background_music/achievement.mp3')
-    );
-    console.log('[Sound] Achievement sound loaded');
-    
-    // Study Action Sounds
-    await soundManager.loadSound(
-      SOUNDS.COFFEE_SLURP,
-      require('../assets/sounds/study_actions/coffee-slurp.mp3')
-    );
-    console.log('[Sound] Coffee slurp sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.EATING_APPLE,
-      require('../assets/sounds/study_actions/eating-an-apple.mp3')
-    );
-    console.log('[Sound] Eating apple sound loaded');
-    
-    // Cleaning Sounds
-    await soundManager.loadSound(
-      SOUNDS.BROOM,
-      require('../assets/sounds/mess/broom.mp3')
-    );
-    console.log('[Sound] Broom sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.SCRUB,
-      require('../assets/sounds/mess/scrub.mp3')
-    );
-    console.log('[Sound] Scrub sound loaded');
-    
-    await soundManager.loadSound(
-      SOUNDS.DEEP_CLEAN,
-      require('../assets/sounds/mess/deep-clean.mp3')
-    );
-    console.log('[Sound] Deep clean sound loaded');
+    console.log('[Sound] ✅ All sounds preloaded successfully');
   } catch (error) {
-    console.warn('[Sound] Failed to load sounds:', error);
+    console.warn('[Sound] Failed to load some sounds:', error);
   }
   
   console.log('[Sound] Preloading complete');

@@ -56,6 +56,8 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
       const day = String(date.getDate()).padStart(2, '0');
       const dateString = `${year}-${month}-${day}`;
       
+      console.log('[DayDetailsModal] Loading note for date:', dateString, 'from Date object:', date.toISOString());
+      
       const dayNote = await getCalendarDayNote(user.id, dateString);
       if (dayNote) {
         setNote(dayNote.note || '');
@@ -82,6 +84,8 @@ export default function DayDetailsModal({ visible, onClose, date, onEmojiChange 
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const dateString = `${year}-${month}-${day}`;
+      
+      console.log('[DayDetailsModal] Saving note for date:', dateString, 'from Date object:', date.toISOString());
       
       await saveCalendarDayNote(user.id, dateString, note, selectedDayEmoji);
       console.log('[DayDetailsModal] Note saved successfully');

@@ -123,12 +123,13 @@ export default function StreakCalendar({ completedDays, currentMonth, userCreate
   const today = new Date().getDate();
   
   const handleDayPress = (day: number) => {
-    const date = new Date(selectedMonth.year, selectedMonth.month, day);
+    // Create date at noon to avoid timezone issues
+    const date = new Date(selectedMonth.year, selectedMonth.month, day, 12, 0, 0);
     const today = new Date();
     
     // Set time to start of day for accurate comparison
-    const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
     
     // Check if date is in the future
     if (dateStart > todayStart) {
@@ -153,7 +154,7 @@ export default function StreakCalendar({ completedDays, currentMonth, userCreate
   };
   
   const getDayEmoji = (day: number) => {
-    const date = new Date(selectedMonth.year, selectedMonth.month, day);
+    const date = new Date(selectedMonth.year, selectedMonth.month, day, 12, 0, 0);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const dayStr = String(date.getDate()).padStart(2, '0');
@@ -233,7 +234,7 @@ export default function StreakCalendar({ completedDays, currentMonth, userCreate
           const dayEmoji = getDayEmoji(day);
           
           // Check if this day has deadlines
-          const date = new Date(selectedMonth.year, selectedMonth.month, day);
+          const date = new Date(selectedMonth.year, selectedMonth.month, day, 12, 0, 0);
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const dayStr = String(date.getDate()).padStart(2, '0');

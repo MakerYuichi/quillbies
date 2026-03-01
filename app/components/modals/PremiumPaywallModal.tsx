@@ -213,6 +213,14 @@ export default function PremiumPaywallModal({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Context Message */}
+            <View style={styles.contextMessage}>
+              <Text style={styles.contextIcon}>🔒</Text>
+              <Text style={styles.contextText}>
+                You've used all your free boosts for this session! Upgrade to Premium to unlock unlimited Coffee and Apple boosts.
+              </Text>
+            </View>
+
             {/* Premium Benefits */}
             <View style={styles.benefitsSection}>
               <Text style={styles.sectionTitle}>Premium Benefits</Text>
@@ -414,6 +422,27 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+  },
+  contextMessage: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFE69C',
+  },
+  contextIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  contextText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#856404',
+    lineHeight: 20,
+    fontWeight: '500',
   },
   benefitsSection: {
     marginBottom: 24,

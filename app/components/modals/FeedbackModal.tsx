@@ -66,13 +66,18 @@ export default function FeedbackModal({ visible, onClose }: FeedbackModalProps) 
     setIsSubmitting(true);
 
     try {
+      // Get device ID from device auth
+      const { getDeviceUser } = await import('../../../lib/deviceAuth');
+      const deviceUser = await getDeviceUser();
+      const deviceId = deviceUser?.id || userData.deviceId || 'unknown';
+
       const feedbackData = {
         category,
         title: title.trim(),
         description: description.trim(),
         email: email.trim() || undefined,
-        userName: userData.name || 'Anonymous',
-        deviceId: userData.deviceId,
+        userName: userData.name || userData.buddyName || 'Anonymous',
+        deviceId: deviceId,
         appVersion: '1.0.0', // You can get this from app.json or package.json
         timestamp: new Date().toISOString(),
       };

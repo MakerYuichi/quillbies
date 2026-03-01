@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Dimensions, ImageBackground, TouchableOpacity, Text, ScrollView, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { CleaningPlan, CleaningStage } from '../core/types';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { useQuillbyStore } from '../state/store-modular';
 import { calculateFocusEnergyCost } from '../core/engine';
@@ -58,6 +59,16 @@ function HomeScreenContent() {
   const router = useRouter();
   // ImagePreloader is temporarily disabled, so skip the image loading check
   // const { imagesLoaded } = useImageLoading();
+  
+  // Scroll ref for auto-scroll to top when tab is focused
+  const scrollRef = useRef<ScrollView>(null);
+  
+  // Scroll to top when tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
   
   // Use proper Zustand selector pattern for React 19 compatibility
   const userData = useQuillbyStore((state) => state.userData);
@@ -1327,6 +1338,7 @@ function HomeScreenContent() {
       
       {/* SCROLLABLE CONTENT AREA - Inside orange theme background */}
       <ScrollView 
+        ref={scrollRef}
         style={[
           styles.scrollableContent,
           themeType && {
