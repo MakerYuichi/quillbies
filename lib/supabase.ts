@@ -26,6 +26,34 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: {
+    headers: {
+      'X-Client-Info': 'quillby-app',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+  // Add fetch options with timeout
+  fetch: (url, options = {}) => {
+    return fetch(url, {
+      ...options,
+      // 10 second timeout for all requests
+      signal: AbortSignal.timeout(10000),
+    }).catch((error) => {
+      console.error('[Supabase] Fetch error:', error);
+      // If timeout or network error, throw a more descriptive error
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        throw new Error('Network timeout - please check your internet connection');
+      }
+      throw error;
+    });
+  },
 });
 
 export type Database = any; // You can generate types later with Supabase CLI

@@ -33,12 +33,12 @@ export default function VolumeButton({
     switch (position) {
       case 'top-left':
         return { 
-          top: SCREEN_HEIGHT * 0.070,  // 60/852 = 0.070
+          top: SCREEN_HEIGHT * 0.090,  // 9% - matches study session
           left: SCREEN_WIDTH * 0.041   // 16/393 = 0.041
         };
       case 'top-right':
         return { 
-          top: SCREEN_HEIGHT * 0.070,  // 60/852 = 0.070
+          top: SCREEN_HEIGHT * 0.090,  // 9% - matches study session
           right: SCREEN_WIDTH * 0.041  // 16/393 = 0.041
         };
       case 'bottom-left':
@@ -53,7 +53,7 @@ export default function VolumeButton({
         };
       default:
         return { 
-          top: SCREEN_HEIGHT * 0.070,  // 60/852 = 0.070
+          top: SCREEN_HEIGHT * 0.090,  // 9% - matches study session
           right: SCREEN_WIDTH * 0.041  // 16/393 = 0.041
         };
     }
@@ -61,12 +61,14 @@ export default function VolumeButton({
 
   return (
     <>
+      {/* Container handles absolute positioning */}
       <TouchableOpacity
-        style={[styles.button, getPositionStyle()]}
+        style={[styles.container, getPositionStyle()]}
         onPress={() => setShowModal(true)}
         activeOpacity={0.8}
       >
-        <Ionicons name="volume-medium" size={22} color="#FFF" />
+        {/* Button uses relative positioning within container */}
+        <Ionicons name="volume-medium" size={22} color="#FFF" style={styles.button} />
       </TouchableOpacity>
 
       <VolumeSettingsModal
@@ -78,8 +80,8 @@ export default function VolumeButton({
 }
 
 const styles = StyleSheet.create({
-  button: {
-    position: 'absolute',
+  container: {
+    position: 'absolute', // Container handles absolute positioning
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -92,5 +94,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     zIndex: 1000,
+  },
+  button: {
+    // Icon uses relative positioning (default)
+    // No position property needed - defaults to relative
   },
 });

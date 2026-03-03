@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   currencyContainer: {
     position: 'absolute',
     right: SCREEN_WIDTH * 0.041, // 16/393 = 4.1%
-    top: SCREEN_HEIGHT * 0.004, // 3/852 = 0.4%
+    top: SCREEN_HEIGHT * 0.012, // Increased from 0.4% to 1.2% to avoid camera notch
     flexDirection: 'row',
     gap: SCREEN_WIDTH * 0.031, // 12/393 = 3.1%
     zIndex: 30, // Above everything including decorations
@@ -704,16 +704,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 152, 0, 0.1)',
     paddingHorizontal: SCREEN_WIDTH * 0.025, // 10/393 = 2.5%
-    paddingVertical: SCREEN_HEIGHT * 0.007, // 6/852 = 0.7%
+    paddingVertical: SCREEN_HEIGHT * 0.004, // Reduced from 0.7% to 0.4% for shorter height
     borderRadius: SCREEN_WIDTH * 0.031, // 12/393 = 3.1%
     borderWidth: 1.5,
     borderColor: '#FF9800',
     minWidth: SCREEN_WIDTH * 0.127, // 50/393 = 12.7%
   },
   qbiesIcon: {
-    width: SCREEN_WIDTH * 0.061, // 24/393 = 6.1%
-    height: SCREEN_WIDTH * 0.061, // Keep square
-    marginBottom: SCREEN_HEIGHT * 0.002, // 2/852 = 0.2%
+    width: SCREEN_WIDTH * 0.051, // Reduced from 6.1% to 5.1%
+    height: SCREEN_WIDTH * 0.051, // Keep square
+    marginBottom: 0, // Remove margin to align with gem emoji
   },
   currencyText: {
     fontFamily: 'ChakraPetch_700Bold',
@@ -725,14 +725,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(126, 87, 194, 0.1)',
     paddingHorizontal: SCREEN_WIDTH * 0.025, // 10/393 = 2.5%
-    paddingVertical: SCREEN_HEIGHT * 0.007, // 6/852 = 0.7%
+    paddingVertical: SCREEN_HEIGHT * 0.004, // Reduced from 0.7% to 0.4% for shorter height
     borderRadius: SCREEN_WIDTH * 0.031, // 12/393 = 3.1%
     borderWidth: 1.5,
     borderColor: '#7E57C2',
     minWidth: SCREEN_WIDTH * 0.127, // 50/393 = 12.7%
   },
   gemIcon: {
-    fontSize: SCREEN_WIDTH * 0.051, // 20/393 = 5.1%
-    marginBottom: SCREEN_HEIGHT * 0.002, // 2/852 = 0.2%
+    fontSize: SCREEN_WIDTH * 0.051, // Match qbies icon size
+    marginBottom: 0, // Remove margin to align with qbies
+    lineHeight: SCREEN_WIDTH * 0.051, // Match icon height for alignment
   },
 });

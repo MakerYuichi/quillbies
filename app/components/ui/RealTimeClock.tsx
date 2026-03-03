@@ -74,17 +74,21 @@ export default function RealTimeClock({ isExercising = false, customLabel }: Rea
     
     // Show different text during exercise session
     if (isExercising) {
-      return `${time} 💪 ${buddyName}'s Exercise Session`;
+      return `${time} 💪\n${buddyName}'s Exercise Session`;
     }
     
     // Use custom label if provided
     const label = customLabel || 'Room';
-    return `${time} ${timeEmoji} ${buddyName}'s ${label}`;
+    return `${time} ${timeEmoji}\n${buddyName}'s ${label}`;
   };
 
   return (
     <View style={styles.container} pointerEvents="none">
-      <Animated.Text style={[styles.clockText, { opacity: fadeAnim, color: textColor }]}>
+      <Animated.Text 
+        style={[styles.clockText, { opacity: fadeAnim, color: textColor }]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
         {getClockText()}
       </Animated.Text>
     </View>
@@ -95,7 +99,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     // Dynamic positioning based on iPhone 15 Pro specs (393x852)
-    width: '90%', // 266px on iPhone 15 Pro
+    width: '55%', // Reduced from 90% to prevent overlap with currency display
     height: (SCREEN_HEIGHT * 66) / 852, // 66px on iPhone 15 Pro
     left: (SCREEN_WIDTH * 16) / 393, // 16px on iPhone 15 Pro
     top: (SCREEN_HEIGHT * 9) / 852, // 9px on iPhone 15 Pro
@@ -105,8 +109,9 @@ const styles = StyleSheet.create({
   clockText: {
     fontFamily: 'ChakraPetch_400Regular',
     fontSize: (SCREEN_WIDTH * 21) / 393, // 21px on iPhone 15 Pro, scales with screen
-    lineHeight: (SCREEN_WIDTH * 33) / 393, // 33px line height, scales with screen
+    lineHeight: (SCREEN_WIDTH * 26) / 393, // Reduced from 33 to 26 for tighter spacing
     color: '#000000',
     textAlign: 'left',
+    flexShrink: 1, // Allow text to shrink if needed
   },
 });

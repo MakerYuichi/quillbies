@@ -1,7 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Dimensions, View } from 'react-native';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { responsiveWidth, responsiveFontSize, fs } from '../../utils/responsive';
 
 interface CleanButtonProps {
   messPoints: number;
@@ -26,7 +25,6 @@ export default function CleanButton({ messPoints, onPress, textColor }: CleanBut
   };
 
   const color = getColor();
-  const intensity = Math.min(messPoints / 30, 1); // Visual intensity
 
   return (
     <TouchableOpacity
@@ -57,24 +55,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconContainer: {
-    width: (SCREEN_WIDTH * 60) / 393,
-    height: (SCREEN_WIDTH * 60) / 393,
+    width: responsiveWidth(60),
+    height: responsiveWidth(60),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
   warningRing: {
     position: 'absolute',
-    width: (SCREEN_WIDTH * 60) / 393,
-    height: (SCREEN_WIDTH * 60) / 393,
-    borderRadius: (SCREEN_WIDTH * 30) / 393,
+    width: responsiveWidth(60),
+    height: responsiveWidth(60),
+    borderRadius: responsiveWidth(30),
     borderWidth: 3,
     opacity: 0.6,
   },
   iconCircle: {
-    width: (SCREEN_WIDTH * 50) / 393,
-    height: (SCREEN_WIDTH * 50) / 393,
-    borderRadius: (SCREEN_WIDTH * 25) / 393,
+    width: responsiveWidth(50),
+    height: responsiveWidth(50),
+    borderRadius: responsiveWidth(25),
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#F57F17',
@@ -84,10 +82,10 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   iconEmoji: {
-    fontSize: (SCREEN_WIDTH * 28) / 393,
+    fontSize: fs(7),
   },
   label: {
-    fontSize: (SCREEN_WIDTH * 12) / 393,
+    fontSize: fs(3),
     fontWeight: '700',
     color: '#333',
     textAlign: 'center',

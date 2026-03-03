@@ -1,13 +1,14 @@
 // Responsive utility for handling different screen sizes
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions, PixelRatio } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Base dimensions (design reference - iPhone 14)
+const BASE_WIDTH = 393;
+const BASE_HEIGHT = 852;
+
 // Device type detection
 export const isTablet = () => {
-  const aspectRatio = SCREEN_HEIGHT / SCREEN_WIDTH;
-  // Tablets typically have aspect ratios closer to 4:3 or 16:10
-  // Phones are usually 16:9 or taller
   return Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) >= 600;
 };
 
@@ -26,50 +27,50 @@ export const getResponsiveDimensions = () => {
   };
 };
 
-// Responsive width with max constraints for tablets
-export const responsiveWidth = (percentage: number, maxWidth?: number): number => {
-  const width = SCREEN_WIDTH * (percentage / 100);
-  
-  if (isTablet() && maxWidth) {
-    return Math.min(width, maxWidth);
-  }
-  
-  return width;
+// Scale size with min/max constraints to prevent extreme scaling
+const scaleSize = (size: number, minScale: number = 0.85, maxScale: number = 1.15): number => {
+  const scale = SCREEN_WIDTH / BASE_WIDTH;
+  const constrainedScale = Math.max(minScale, Math.min(maxScale, scale));
+  return Math.round(size * constrainedScale);
 };
 
-// Responsive height with max constraints for tablets
-export const responsiveHeight = (percentage: number, maxHeight?: number): number => {
-  const height = SCREEN_HEIGHT * (percentage / 100);
-  
-  if (isTablet() && maxHeight) {
-    return Math.min(height, maxHeight);
+// Responsive width - scales based on design but with constraints
+export const responsiveWidth = (baseWidth: number, minScale?: number, maxScale?: number): number => {
+  if (isTablet()) {
+    // Tablets use fixed scaling
+    return Math.min(baseWidth * 1.2, baseWidth + 100);
   }
-  
-  return height;
+  return scaleSize(baseWidth, minScale, maxScale);
 };
 
-// Responsive font size
-export const responsiveFontSize = (size: number): number => {
-  const tablet = isTablet();
-  
-  // On tablets, increase font size slightly but not proportionally
-  if (tablet) {
-    return size * 1.2; // 20% larger on tablets
+// Responsive height - scales based on design but with constraints
+export const responsiveHeight = (baseHeight: number, minScale?: number, maxScale?: number): number => {
+  if (isTablet()) {
+    return Math.min(baseHeight * 1.2, baseHeight + 100);
   }
-  
-  return size;
+  const scale = SCREEN_HEIGHT / BASE_HEIGHT;
+  const constrainedScale = Math.max(minScale || 0.85, Math.min(maxScale || 1.15, scale));
+  return Math.round(baseHeight * constrainedScale);
 };
 
-// Responsive spacing
-export const responsiveSpacing = (size: number): number => {
-  const tablet = isTablet();
-  
-  // On tablets, increase spacing slightly
-  if (tablet) {
-    return size * 1.3; // 30% more spacing on tablets
+// Responsive font size with proper constraints
+export const responsiveFontSize = (baseSize: number): number => {
+  if (isTablet()) {
+    return baseSize * 1.2;
   }
   
-  return size;
+  // Use tighter constraints for fonts to prevent readability issues
+  const scale = SCREEN_WIDTH / BASE_WIDTH;
+  const constrainedScale = Math.max(0.9, Math.min(1.1, scale));
+  return Math.round(baseSize * constrainedScale * PixelRatio.getFontScale());
+};
+
+// Responsive spacing with constraints
+export const responsiveSpacing = (baseSize: number): number => {
+  if (isTablet()) {
+    return baseSize * 1.3;
+  }
+  return scaleSize(baseSize, 0.9, 1.1);
 };
 
 // Get container width with max constraint
@@ -158,15 +159,12 @@ export const getSafeContentWidth = (): number => {
   return SCREEN_WIDTH;
 };
 
-// Responsive icon size
+// Responsive icon size with constraints
 export const getIconSize = (baseSize: number): number => {
-  const tablet = isTablet();
-  
-  if (tablet) {
-    return baseSize * 1.3; // 30% larger on tablets
+  if (isTablet()) {
+    return baseSize * 1.3;
   }
-  
-  return baseSize;
+  return scaleSize(baseSize, 0.9, 1.1);
 };
 
 // Responsive button height
@@ -211,3 +209,23 @@ export const createResponsiveStyle = <T extends Record<string, any>>(
 
 // Export dimensions for backward compatibility
 export { SCREEN_WIDTH, SCREEN_HEIGHT };
+
+// Helper to convert percentage-based width to responsive fixed width
+export const wp = (percentage: number): number => {
+  return responsiveWidth((BASE_WIDTH * percentage) / 100);
+};
+
+// Helper to convert percentage-based height to responsive fixed height
+export const hp = (percentage: number): number => {
+  return responsiveHeight((BASE_HEIGHT * percentage) / 100);
+};
+
+// Helper for font sizes - converts percentage to fixed size
+export const fs = (percentage: number): number => {
+  return responsiveFontSize((BASE_WIDTH * percentage) / 100);
+};
+
+// Helper for spacing - converts percentage to fixed spacing
+export const sp = (percentage: number): number => {
+  return responsiveSpacing((BASE_WIDTH * percentage) / 100);
+};
