@@ -1,7 +1,22 @@
 // Enhanced notification system with smart reminders
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { Deadline } from '../app/core/types';
+import { Deadline, UserData } from '../app/core/types';
+
+// Helper function to check if notification type is enabled
+function isNotificationEnabled(
+  preferences: UserData['notificationPreferences'],
+  type: keyof NonNullable<UserData['notificationPreferences']>
+): boolean {
+  // If no preferences set, default to all enabled
+  if (!preferences) return true;
+  
+  // Check master toggle first
+  if (preferences.allEnabled === false) return false;
+  
+  // Check specific preference (default to true if not set)
+  return preferences[type] !== false;
+}
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -104,8 +119,15 @@ async function scheduleNotification(
 // 1. DEADLINE NOTIFICATIONS
 export async function scheduleDeadlineNotifications(
   deadline: Deadline,
-  userName: string
+  userName: string,
+  preferences?: UserData['notificationPreferences']
 ): Promise<void> {
+  // Check if deadline notifications are enabled
+  if (!isNotificationEnabled(preferences, 'deadlines')) {
+    console.log('[Notifications] Deadline notifications disabled by user');
+    return;
+  }
+  
   try {
     const dueDate = new Date(deadline.dueDate);
     const now = new Date();
@@ -186,11 +208,12 @@ export async function scheduleHabitReminders(
     mealGoal?: number;
     exerciseGoal?: number;
   },
-  userName: string
+  userName: string,
+  preferences?: UserData['notificationPreferences']
 ): Promise<void> {
   try {
     // WATER REMINDERS - Every 2 hours from 8 AM to 8 PM
-    if (enabledHabits.includes('hydration')) {
+    if (enabledHabits.includes('hydration') && isNotificationEnabled(preferences, 'water')) {
       const waterTimes = [8, 10, 12, 14, 16, 18, 20];
       const glassesPerReminder = Math.ceil((goals.hydrationGoal || 8) / waterTimes.length);
       
@@ -209,7 +232,7 @@ export async function scheduleHabitReminders(
     }
     
     // MEAL REMINDERS
-    if (enabledHabits.includes('meals')) {
+    if (enabledHabits.includes('meals') && isNotificationEnabled(preferences, 'meals')) {
       const mealTimes = [
         { hour: 8, name: 'Breakfast', emoji: '🍳' },
         { hour: 13, name: 'Lunch', emoji: '🥗' },
@@ -231,7 +254,7 @@ export async function scheduleHabitReminders(
     }
     
     // EXERCISE REMINDERS
-    if (enabledHabits.includes('exercise')) {
+    if (enabledHabits.includes('exercise') && isNotificationEnabled(preferences, 'exercise')) {
       const exerciseTimes = [7, 17]; // Morning and evening options
       
       for (const hour of exerciseTimes) {
@@ -258,8 +281,15 @@ export async function scheduleHabitReminders(
 export async function scheduleSleepReminders(
   userName: string,
   petName: string,
-  sleepGoalHours: number = 8
+  sleepGoalHours: number = 8,
+  preferences?: UserData['notificationPreferences']
 ): Promise<void> {
+  // Check if sleep notifications are enabled
+  if (!isNotificationEnabled(preferences, 'sleep')) {
+    console.log('[Notifications] Sleep notifications disabled by user');
+    return;
+  }
+  
   try {
     // Calculate ideal bedtime (assuming 7 AM wake up)
     const bedtimeHour = 23 - Math.floor(sleepGoalHours);
@@ -297,8 +327,15 @@ export async function scheduleSleepReminders(
 // 4. MOTIVATIONAL NOTIFICATIONS
 export async function scheduleMotivationalNotifications(
   userName: string,
-  petName: string
+  petName: string,
+  preferences?: UserData['notificationPreferences']
 ): Promise<void> {
+  // Check if motivational notifications are enabled
+  if (!isNotificationEnabled(preferences, 'motivational')) {
+    console.log('[Notifications] Motivational notifications disabled by user');
+    return;
+  }
+  
   try {
     const motivationalMessages = [
       { hour: 10, message: `${petName} believes in you! Keep up the great work! 🌟` },
@@ -329,8 +366,15 @@ export async function scheduleMotivationalNotifications(
 export async function scheduleStudyCheckpointReminders(
   checkpoints: string[],
   studyGoalHours: number,
-  userName: string
+  userName: string,
+  preferences?: UserData['notificationPreferences']
 ): Promise<void> {
+  // Check if study checkpoint notifications are enabled
+  if (!isNotificationEnabled(preferences, 'studyCheckpoints')) {
+    console.log('[Notifications] Study checkpoint notifications disabled by user');
+    return;
+  }
+  
   try {
     const timeMap: Record<string, number> = {
       '9 AM': 9,
@@ -372,6 +416,7 @@ export async function scheduleAllNotifications(userData: any, deadlines: any[]):
     
     const userName = userData.userName || 'Friend';
     const petName = userData.buddyName || 'Quillby';
+    const preferences = userData.notificationPreferences;
     
     // 1. Habit reminders
     if (userData.enabledHabits) {
@@ -382,13 +427,14 @@ export async function scheduleAllNotifications(userData: any, deadlines: any[]):
           mealGoal: userData.mealGoalCount,
           exerciseGoal: userData.exerciseGoalMinutes,
         },
-        userName
+        userName,
+        preferences
       );
     }
     
     // 2. Sleep reminders
     if (userData.enabledHabits?.includes('sleep')) {
-      await scheduleSleepReminders(userName, petName, userData.sleepGoalHours);
+      await scheduleSleepReminders(userName, petName, userData.sleepGoalHours, preferences);
     }
     
     // 3. Study checkpoints
@@ -396,19 +442,20 @@ export async function scheduleAllNotifications(userData: any, deadlines: any[]):
       await scheduleStudyCheckpointReminders(
         userData.studyCheckpoints,
         userData.studyGoalHours,
-        userName
+        userName,
+        preferences
       );
     }
     
     // 4. Deadline notifications
     for (const deadline of deadlines) {
       if (!deadline.isCompleted) {
-        await scheduleDeadlineNotifications(deadline, userName);
+        await scheduleDeadlineNotifications(deadline, userName, preferences);
       }
     }
     
     // 5. Motivational messages
-    await scheduleMotivationalNotifications(userName, petName);
+    await scheduleMotivationalNotifications(userName, petName, preferences);
     
     // Log all scheduled notifications
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();

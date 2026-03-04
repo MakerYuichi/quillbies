@@ -19,6 +19,53 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('[Supabase] Missing environment variables - using fallback values');
 }
 
+// Custom fetch with retry logic for WiFi DNS issues
+const customFetch = async (input: RequestInfo | URL, init?: RequestInit, retryCount = 0): Promise<Response> => {
+  const maxRetries = 2;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  
+  try {
+    const response = await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    // Log the error for debugging
+    console.error(`[Supabase] Fetch attempt ${retryCount + 1} failed:`, error.message || error);
+    
+    // Check if it's a DNS or network error
+    const isDNSError = error.message?.includes('Network request failed') || 
+                       error.message?.includes('Failed to fetch') ||
+                       error.message?.includes('getaddrinfo') ||
+                       error.name === 'AbortError' ||
+                       error.name === 'TimeoutError';
+    
+    // Retry logic for DNS/network errors
+    if (isDNSError && retryCount < maxRetries) {
+      console.log(`[Supabase] Retrying request (attempt ${retryCount + 2}/${maxRetries + 1})...`);
+      // Wait a bit before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      return customFetch(input, init, retryCount + 1);
+    }
+    
+    // If all retries failed, throw descriptive error
+    if (isDNSError) {
+      console.error('[Supabase] All retry attempts failed. This may be due to:');
+      console.error('  - WiFi DNS issues (try switching to mobile data temporarily)');
+      console.error('  - Firewall/proxy blocking the connection');
+      console.error('  - Network configuration issues');
+      throw new Error('Unable to connect to server. Please check your network connection or try mobile data.');
+    }
+    
+    throw error;
+  }
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
@@ -29,7 +76,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
       'X-Client-Info': 'quillby-app',
+      // Add cache control to prevent stale DNS
+      'Cache-Control': 'no-cache',
     },
+    // Use custom fetch with retry logic (correct location)
+    fetch: customFetch,
   },
   db: {
     schema: 'public',
@@ -38,21 +89,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 10,
     },
-  },
-  // Add fetch options with timeout
-  fetch: (url, options = {}) => {
-    return fetch(url, {
-      ...options,
-      // 10 second timeout for all requests
-      signal: AbortSignal.timeout(10000),
-    }).catch((error) => {
-      console.error('[Supabase] Fetch error:', error);
-      // If timeout or network error, throw a more descriptive error
-      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-        throw new Error('Network timeout - please check your internet connection');
-      }
-      throw error;
-    });
   },
 });
 

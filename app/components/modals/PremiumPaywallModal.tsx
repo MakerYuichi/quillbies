@@ -21,12 +21,14 @@ interface PremiumPaywallModalProps {
   visible: boolean;
   onClose: () => void;
   onPurchaseSuccess?: () => void;
+  context?: 'study-session' | 'general'; // Add context prop
 }
 
 export default function PremiumPaywallModal({
   visible,
   onClose,
   onPurchaseSuccess,
+  context = 'general', // Default to general
 }: PremiumPaywallModalProps) {
   const setPremiumStatus = useQuillbyStore((state) => state.setPremiumStatus);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -213,13 +215,15 @@ export default function PremiumPaywallModal({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Context Message */}
-            <View style={styles.contextMessage}>
-              <Text style={styles.contextIcon}>🔒</Text>
-              <Text style={styles.contextText}>
-                You've used all your free boosts for this session! Upgrade to Premium to unlock unlimited Coffee and Apple boosts.
-              </Text>
-            </View>
+            {/* Context Message - Only show during study session */}
+            {context === 'study-session' && (
+              <View style={styles.contextMessage}>
+                <Text style={styles.contextIcon}>🔒</Text>
+                <Text style={styles.contextText}>
+                  You've used all your free boosts for this session! Upgrade to Premium to unlock unlimited Coffee and Apple boosts.
+                </Text>
+              </View>
+            )}
 
             {/* Premium Benefits */}
             <View style={styles.benefitsSection}>

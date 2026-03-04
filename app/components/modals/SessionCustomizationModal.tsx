@@ -12,6 +12,7 @@ import {
   Platform
 } from 'react-native';
 import PremiumPaywallModal from './PremiumPaywallModal';
+import { wp, hp, fs, sp } from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -352,11 +353,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
-    width: SCREEN_WIDTH * 0.9,
-    maxHeight: SCREEN_HEIGHT * 0.8,
+    width: wp(90),
+    maxHeight: hp(80),
     backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: sp(5),
+    padding: sp(6),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -365,24 +366,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 24,
+    fontSize: fs(6),
     color: '#333',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: hp(2.5),
   },
   sectionTitle: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 16,
+    fontSize: fs(4),
     color: '#555',
-    marginTop: 16,
-    marginBottom: 12,
+    marginTop: hp(2),
+    marginBottom: hp(1.5),
   },
   
   presetCard: {
     backgroundColor: '#F5F5F5',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
+    padding: sp(4),
+    borderRadius: sp(3),
+    marginBottom: hp(1.2),
     borderWidth: 2,
     borderColor: '#E0E0E0',
   },
@@ -396,12 +397,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: hp(0.6),
   },
   
   presetName: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 16,
+    fontSize: fs(4),
     fontWeight: '600',
     color: '#333',
   },
@@ -411,14 +412,14 @@ const styles = StyleSheet.create({
   
   presetBadge: {
     backgroundColor: '#6200EA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: sp(3),
   },
   
   presetBadgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: fs(3),
     fontWeight: '600',
   },
   presetBadgeTextLocked: {
@@ -427,17 +428,17 @@ const styles = StyleSheet.create({
   
   presetDescription: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 14,
+    fontSize: fs(3.5),
     color: '#666',
   },
   presetDescriptionLocked: {
     color: '#999',
   },
   premiumBadge: {
-    fontSize: 10,
+    fontSize: fs(2.5),
     color: '#FF9800',
     fontWeight: '600',
-    marginTop: 5,
+    marginTop: hp(0.6),
     textAlign: 'center',
   },
   
@@ -445,27 +446,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: hp(1.8),
   },
   
   settingLabel: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 16,
+    fontSize: fs(4),
     color: '#333',
   },
   
   settingValue: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 16,
+    fontSize: fs(4),
     color: '#666',
   },
   
   toggle: {
     backgroundColor: '#E0E0E0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    minWidth: 50,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.7),
+    borderRadius: sp(4),
+    minWidth: wp(13),
     alignItems: 'center',
   },
   
@@ -475,36 +476,36 @@ const styles = StyleSheet.create({
   
   toggleText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: fs(3),
     fontWeight: '600',
   },
   
   buttonRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 20,
+    gap: wp(2.5),
+    marginTop: hp(2.5),
   },
   
   startButton: {
     flex: 1,
     backgroundColor: '#6200EA',
-    padding: 16,
-    borderRadius: 12,
+    padding: sp(4),
+    borderRadius: sp(3),
     alignItems: 'center',
   },
   
   startButtonText: {
     color: '#FFFFFF',
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 14,
+    fontSize: fs(3.5),
     fontWeight: '700',
   },
   
   cancelButton: {
     flex: 1,
     backgroundColor: 'transparent',
-    padding: 16,
-    borderRadius: 12,
+    padding: sp(4),
+    borderRadius: sp(3),
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#E0E0E0',
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#666',
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 14,
+    fontSize: fs(3.5),
     fontWeight: '600',
   },
 
@@ -539,11 +540,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: hp(1.8),
   },
 
   premiumLabel: {
-    fontSize: 16,
+    fontSize: fs(4),
     color: '#F57F17',
     fontWeight: '600',
     flex: 1,
@@ -553,29 +554,29 @@ const styles = StyleSheet.create({
     flex: 2,
     borderWidth: 2,
     borderColor: '#FFB74D',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
+    borderRadius: sp(2),
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(1),
+    fontSize: fs(3.5),
     backgroundColor: '#FFF',
     color: '#333',
-    marginLeft: 10,
+    marginLeft: wp(2.5),
   },
 
   premiumHint: {
-    fontSize: 12,
+    fontSize: fs(3),
     color: '#F57F17',
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: hp(1.2),
   },
 
   // Premium Custom Session Styles
   premiumTimeLabel: {
-    fontSize: 14,
+    fontSize: fs(3.5),
     fontWeight: '600',
     color: '#F57F17',
-    marginBottom: 8,
+    marginBottom: hp(1),
   },
 
   premiumTimeButton: {
@@ -588,31 +589,31 @@ const styles = StyleSheet.create({
 
   // Custom Time Input Styles
   customTimeContainer: {
-    gap: 20,
+    gap: hp(2.5),
   },
 
   timeInputGroup: {
-    marginBottom: 15,
+    marginBottom: hp(1.8),
   },
 
   timeInputLabel: {
-    fontSize: 14,
+    fontSize: fs(3.5),
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: hp(1),
   },
 
   timeInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 15,
+    gap: wp(4),
   },
 
   timeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
     backgroundColor: '#6200EA',
     justifyContent: 'center',
     alignItems: 'center',
@@ -620,30 +621,30 @@ const styles = StyleSheet.create({
 
   timeButtonText: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: fs(5),
     fontWeight: '700',
   },
 
   timeInput: {
-    width: 80,
-    height: 45, // Increased height for better touch target
+    width: wp(20),
+    height: hp(5.5),
     borderWidth: 2,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: sp(2),
     textAlign: 'center',
-    fontSize: SCREEN_WIDTH * 0.04, // Responsive font size
+    fontSize: fs(4),
     fontWeight: '600',
     color: '#333',
     backgroundColor: '#FFFFFF',
   },
 
   timeHints: {
-    marginTop: 15,
-    gap: 5,
+    marginTop: hp(1.8),
+    gap: hp(0.6),
   },
 
   timeHint: {
-    fontSize: 12,
+    fontSize: fs(3),
     color: '#666',
     textAlign: 'center',
   },

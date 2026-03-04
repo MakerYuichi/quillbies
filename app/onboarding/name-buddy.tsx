@@ -21,6 +21,7 @@ import { useFonts } from 'expo-font';
 import { ChakraPetch_700Bold, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
 import { useQuillbyStore } from '../state/store-modular';
 import { playUISubmitSound } from '../../lib/soundManager';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Get screen dimensions for responsive layout
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -29,6 +30,7 @@ export default function NameBuddyScreen() {
   const router = useRouter();
   const [petName, setPetName] = useState('');
   const setBuddyName = useQuillbyStore((state) => state.setBuddyName);
+  const insets = useSafeAreaInsets(); // Get safe area insets
   
   // Hatching sequence state
   const [tapCount, setTapCount] = useState(0);
@@ -52,15 +54,16 @@ export default function NameBuddyScreen() {
     ChakraPetch_600SemiBold,
   });
 
-  // Handle back button - allow going back to previous onboarding screen
+  // Handle back button - navigate to previous onboarding screen without alert
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      // Allow default back behavior (go to previous onboarding screen)
-      return false;
+      // Navigate back to character select screen
+      router.back();
+      return true; // Prevent default behavior
     });
 
     return () => backHandler.remove();
-  }, []);
+  }, [router]);
 
   // Show loading while fonts load - AFTER all hooks
   if (!fontsLoaded) {
@@ -323,7 +326,7 @@ export default function NameBuddyScreen() {
           </ImageBackground>
 
           {/* Orange Theme Bottom Section - Absolute positioned at bottom */}
-          <View style={styles.orangeSection}>
+          <View style={[styles.orangeSection, { paddingBottom: insets.bottom || 20 }]}>
             <ImageBackground
               source={require('../../assets/backgrounds/orange-theme.png')}
               style={styles.orangeBackground}
@@ -431,7 +434,7 @@ const styles = StyleSheet.create({
   // RESPONSIVE: Instruction below egg
   tapInstruction: {
     position: 'absolute',
-    bottom: -30,
+    bottom: -60,
     fontFamily: 'ChakraPetch_600SemiBold',
     fontSize: SCREEN_WIDTH * 0.04,
     color: '#aa6300ff',
@@ -448,16 +451,17 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    overflow: 'hidden',
+    overflow: 'visible', // Changed from 'hidden' to allow extension
     zIndex: 5,
+    backgroundColor: 'transparent', // Ensure no background color blocking
   },
   orangeBackground: {
-    width: '105%',
-    height: '100%',
+    width: '107%',
+    minHeight: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingTop: 20,
   },
   hatchHint: {
     fontFamily: 'ChakraPetch_700Bold',

@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     // Dynamic positioning based on iPhone 15 Pro specs (393x852)
-    width: '55%', // Reduced from 90% to prevent overlap with currency display
+    width: '65%', // Increased from 55% to 65% to accommodate longer names
     height: (SCREEN_HEIGHT * 66) / 852, // 66px on iPhone 15 Pro
     left: (SCREEN_WIDTH * 16) / 393, // 16px on iPhone 15 Pro
     top: (SCREEN_HEIGHT * 9) / 852, // 9px on iPhone 15 Pro
@@ -108,8 +108,8 @@ const styles = StyleSheet.create({
   },
   clockText: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: (SCREEN_WIDTH * 21) / 393, // 21px on iPhone 15 Pro, scales with screen
-    lineHeight: (SCREEN_WIDTH * 26) / 393, // Reduced from 33 to 26 for tighter spacing
+    fontSize: (SCREEN_WIDTH * 18) / 393, // Reduced from 21 to 18 to prevent truncation
+    lineHeight: (SCREEN_WIDTH * 23) / 393, // Reduced from 26 to 23 for tighter spacing
     color: '#000000',
     textAlign: 'left',
     flexShrink: 1, // Allow text to shrink if needed

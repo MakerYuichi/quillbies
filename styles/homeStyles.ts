@@ -1,4 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
+import { wp, hp, fs, sp } from '../app/utils/responsive';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -327,10 +328,10 @@ export const homeStyles = StyleSheet.create({
     left: (SCREEN_WIDTH * 20) / 393,
     right: (SCREEN_WIDTH * 20) / 393,
     backgroundColor: 'rgba(76, 175, 80, 0.95)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 3,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    borderRadius: sp(2.5),
+    borderWidth: 2,
     borderColor: '#FFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -342,16 +343,16 @@ export const homeStyles = StyleSheet.create({
   },
   exerciseTimerLabel: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 20, // Fixed size for crisp emoji rendering
+    fontSize: fs(3.5),
     color: '#FFF',
-    marginBottom: 4,
+    marginBottom: hp(0.3),
     textAlign: 'center',
   },
   exerciseTimerValue: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: (SCREEN_WIDTH * 28) / 393,
+    fontSize: fs(6),
     color: '#FFF',
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
 
   // Sleep Timer Overlay
@@ -361,10 +362,10 @@ export const homeStyles = StyleSheet.create({
     left: (SCREEN_WIDTH * 20) / 393,
     right: (SCREEN_WIDTH * 20) / 393,
     backgroundColor: 'rgba(126, 87, 194, 0.95)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 3,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    borderRadius: sp(2.5),
+    borderWidth: 2,
     borderColor: '#FFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -376,16 +377,16 @@ export const homeStyles = StyleSheet.create({
   },
   sleepTimerLabel: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: (SCREEN_WIDTH * 16) / 393,
+    fontSize: fs(3.2),
     color: '#FFF',
-    marginBottom: 4,
+    marginBottom: hp(0.3),
     textAlign: 'center',
   },
   sleepTimerValue: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: (SCREEN_WIDTH * 28) / 393,
+    fontSize: fs(6),
     color: '#FFF',
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
 
   // Time Acceleration Overlay

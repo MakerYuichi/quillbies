@@ -23,6 +23,7 @@ import RealTimeClock from '../components/ui/RealTimeClock';
 import SessionCustomizationModal, { SessionConfig } from '../components/modals/SessionCustomizationModal';
 import ExerciseCustomizationModal from '../components/modals/ExerciseCustomizationModal';
 import SleepCustomizationModal from '../components/modals/SleepCustomizationModal';
+import ExerciseCompletionModal from '../components/modals/ExerciseCompletionModal';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
 import { useMealTracking } from '../hooks/useMealTracking';
@@ -129,6 +130,8 @@ function HomeScreenContent() {
   const [checkpointMessageTimestamp, setCheckpointMessageTimestamp] = React.useState<number>(0);
   const [showSessionModal, setShowSessionModal] = React.useState(false);
   const [showExerciseModal, setShowExerciseModal] = React.useState(false);
+  const [showExerciseCompletionModal, setShowExerciseCompletionModal] = React.useState(false);
+  const [exerciseCompletionData, setExerciseCompletionData] = React.useState<any>(null);
   const [showSleepModal, setShowSleepModal] = React.useState(false);
   const [timeAccelerationActive, setTimeAccelerationActive] = React.useState(false);
   const [timeAccelerationProgress, setTimeAccelerationProgress] = React.useState(0);
@@ -375,7 +378,18 @@ function HomeScreenContent() {
 
   const handleFinishExerciseWithReset = () => {
     resetIdleTimer();
-    handleFinishExercise();
+    const completionData = handleFinishExercise();
+    
+    if (completionData) {
+      // Prepare data for completion modal
+      setExerciseCompletionData({
+        duration: completionData.duration,
+        targetDuration: completionData.targetDuration,
+        buddyName: userData.buddyName || 'Hammy',
+        exerciseGoal: userData.exerciseGoalMinutes || 30, // Default 30 minutes
+      });
+      setShowExerciseCompletionModal(true);
+    }
   };
 
   const handleSleepButtonWithReset = () => {
@@ -986,6 +1000,10 @@ function HomeScreenContent() {
   useEffect(() => {
     if (!userData.enabledHabits?.includes('study') || !userData.studyGoalHours) return;
     
+    // Check if it's user's first day
+    const accountAge = userData.createdAt ? Date.now() - new Date(userData.createdAt).getTime() : Infinity;
+    const isFirstDay = accountAge < 24 * 60 * 60 * 1000; // Within 24 hours of account creation
+    
     // Check immediately on mount
     console.log('[HomeScreen] Running initial checkpoint check...');
     try {
@@ -1002,8 +1020,12 @@ function HomeScreenContent() {
         const actualH = Math.floor(result.actual);
         const actualM = Math.round((result.actual - actualH) * 60);
         
-        const message = `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
-                       `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`;
+        // Different message for first day vs regular days
+        const message = isFirstDay 
+          ? `⚠️ Behind by ${missingText}... let's catch up! 📚\n` +
+            `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`
+          : `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
+            `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`;
         console.log('[Checkpoint]', message);
         setCheckpointMessage(message);
         setCheckpointMessageTimestamp(Date.now());
@@ -1033,9 +1055,16 @@ function HomeScreenContent() {
             const actualH = Math.floor(result.actual);
             const actualM = Math.round((result.actual - actualH) * 60);
             
+            // Re-check if it's first day (in case day changed during interval)
+            const currentAccountAge = userData.createdAt ? Date.now() - new Date(userData.createdAt).getTime() : Infinity;
+            const currentIsFirstDay = currentAccountAge < 24 * 60 * 60 * 1000;
+            
             // Update hamster message with checkpoint notification
-            const message = `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
-                           `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`;
+            const message = currentIsFirstDay
+              ? `⚠️ Behind by ${missingText}... let's catch up! 📚\n` +
+                `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`
+              : `⚠️ Behind by ${missingText}... room's getting messy! 📚\n` +
+                `Expected: ${expectedH}h ${expectedM}min by ${result.checkpoint}, You: ${actualH}h ${actualM}min`;
             
             console.log('[Checkpoint]', message);
             setCheckpointMessage(message);
@@ -1050,7 +1079,7 @@ function HomeScreenContent() {
     }, 600000); // Check every 10 minutes instead of every 5 minutes for better performance
     
     return () => clearInterval(checkpointInterval);
-  }, [userData.enabledHabits, userData.studyGoalHours]); // Removed frequently changing dependencies
+  }, [userData.enabledHabits, userData.studyGoalHours, userData.createdAt]); // Added createdAt to dependencies
 
   // Rotate exercise messages during exercise session
   useEffect(() => {
@@ -1581,6 +1610,18 @@ function HomeScreenContent() {
         onStartExercise={handleExerciseStart}
         isPremium={userData.purchasedItems?.includes('premium') || false}
       />
+
+      {/* Exercise Completion Modal */}
+      {exerciseCompletionData && (
+        <ExerciseCompletionModal
+          visible={showExerciseCompletionModal}
+          onClose={() => {
+            setShowExerciseCompletionModal(false);
+            setExerciseCompletionData(null);
+          }}
+          exerciseData={exerciseCompletionData}
+        />
+      )}
 
       {/* Sleep Customization Modal */}
       <SleepCustomizationModal

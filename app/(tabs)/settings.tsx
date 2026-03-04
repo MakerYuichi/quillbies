@@ -12,6 +12,7 @@ import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
 import GemsPurchaseModal from '../components/modals/GemsPurchaseModal';
 import FeedbackModal from '../components/modals/FeedbackModal';
 import AccountDeletionModal from '../components/modals/AccountDeletionModal';
+import NotificationSettingsModal from '../components/modals/NotificationSettingsModal';
 import ThemedScreen from '../components/themed/ThemedScreen';
 import { playTabSound, playUISubmitSound } from '../../lib/soundManager';
 import { getPendingDeletionRequest, cancelAccountDeletion, getDaysUntilDeletion } from '../../lib/accountDeletion';
@@ -48,6 +49,7 @@ export default function SettingsScreen() {
   const [showGemsModal, setShowGemsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showAccountDeletionModal, setShowAccountDeletionModal] = useState(false);
+  const [showNotificationSettingsModal, setShowNotificationSettingsModal] = useState(false);
   
   // Scroll ref for auto-scroll to top when tab is focused
   const scrollRef = useRef<ScrollView>(null);
@@ -460,7 +462,20 @@ export default function SettingsScreen() {
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.bookSpine}>📖 Tutorial</Text>
+              <Text style={styles.bookEmoji}>📖</Text>
+              <Text style={styles.bookText}>Tutorial</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.book, styles.bookPurple]}
+              onPress={() => {
+                playTabSound();
+                setShowNotificationSettingsModal(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.bookEmoji}>🔔</Text>
+              <Text style={styles.bookText}>Notifications</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -471,7 +486,8 @@ export default function SettingsScreen() {
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.bookSpine}>📝 Feedback</Text>
+              <Text style={styles.bookEmoji}>📝</Text>
+              <Text style={styles.bookText}>Feedback</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -482,7 +498,8 @@ export default function SettingsScreen() {
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.bookSpine}>🔄 Reset</Text>
+              <Text style={styles.bookEmoji}>🔄</Text>
+              <Text style={styles.bookText}>Reset</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -540,6 +557,11 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* Modals */}
+      <NotificationSettingsModal
+        visible={showNotificationSettingsModal}
+        onClose={() => setShowNotificationSettingsModal(false)}
+      />
+
       <EditProfileModal
         visible={showProfileModal}
         onClose={() => setShowProfileModal(false)}
@@ -967,6 +989,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#BBDEFB',
     borderColor: '#90CAF9',
   },
+  bookPurple: {
+    backgroundColor: '#E1BEE7',
+    borderColor: '#CE93D8',
+  },
   bookGreen: {
     backgroundColor: '#C8E6C9',
     borderColor: '#A5D6A7',
@@ -981,6 +1007,18 @@ const styles = StyleSheet.create({
     color: '#333',
     transform: [{ rotate: '0deg' }],
     textAlign: 'center',
+  },
+  bookEmoji: {
+    fontSize: SCREEN_WIDTH * 0.08,
+    textAlign: 'center',
+    marginBottom: SCREEN_HEIGHT * 0.005,
+  },
+  bookText: {
+    fontSize: SCREEN_WIDTH * 0.028,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    numberOfLines: 1,
   },
   
   // Footer

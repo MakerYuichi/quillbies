@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch';
 import { useQuillbyStore } from '../state/store-modular';
+import { responsiveWidth, responsiveHeight, responsiveFontSize, responsiveSpacing, isTablet } from '../utils/responsive';
 
 export default function CharacterSelectScreen() {
   const router = useRouter();
@@ -26,15 +27,16 @@ export default function CharacterSelectScreen() {
     ChakraPetch_600SemiBold,
   });
 
-  // Handle back button - allow going back to previous onboarding screen
+  // Handle back button - navigate to previous onboarding screen without alert
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      // Allow default back behavior (go to previous onboarding screen)
-      return false;
+      // Navigate back to welcome screen
+      router.back();
+      return true; // Prevent default behavior
     });
 
     return () => backHandler.remove();
-  }, []);
+  }, [router]);
 
   // Show loading while fonts load
   if (!fontsLoaded) {
@@ -93,9 +95,9 @@ export default function CharacterSelectScreen() {
           
           {/* Speech Bubble for Casual */}
           {selectedCharacter === 'casual' && (
-            <View style={[styles.attachedSpeechBubble, { left: 210, top: 240 }]}>
+            <View style={[styles.attachedSpeechBubble, { left: responsiveWidth(210), top: responsiveHeight(205) }]}>
               <View style={[styles.speechTail, { 
-                left: -15,
+                left: -responsiveSpacing(15),
                 borderRightColor: '#FFFFFF'
               }]} />
               <View style={styles.bubbleContent}>
@@ -133,12 +135,12 @@ export default function CharacterSelectScreen() {
           
           {/* Speech Bubble for Energetic */}
           {selectedCharacter === 'energetic' && (
-            <View style={[styles.attachedSpeechBubble, { left: 10, top: 420 }]}>
+            <View style={[styles.attachedSpeechBubble, { left: responsiveWidth(10), top: responsiveHeight(360) }]}>
               <View style={[styles.speechTail, { 
-                right: -15,
+                right: -responsiveSpacing(15),
                 left: 'auto',
                 borderRightWidth: 0,
-                borderLeftWidth: 15,
+                borderLeftWidth: responsiveSpacing(15),
                 borderLeftColor: '#FFFFFF'
               }]} />
               <View style={styles.bubbleContent}>
@@ -176,9 +178,9 @@ export default function CharacterSelectScreen() {
           
           {/* Speech Bubble for Scholar */}
           {selectedCharacter === 'scholar' && (
-            <View style={[styles.attachedSpeechBubble, { left: 220, top: 620 }]}>
+            <View style={[styles.attachedSpeechBubble, { left: responsiveWidth(220), top: responsiveHeight(530) }]}>
               <View style={[styles.speechTail, { 
-                left: -15,
+                left: -responsiveSpacing(15),
                 borderRightColor: '#FFFFFF'
               }]} />
               <View style={styles.bubbleContent}>
@@ -232,14 +234,14 @@ const styles = StyleSheet.create({
   },
   title: {
     position: 'absolute',
-    width: 408,
-    left: -7,
-    top: 53,
+    width: '100%',
+    top: responsiveHeight(34),
     fontFamily: 'CevicheOne',
-    fontSize: 55,
-    lineHeight: 57,
+    fontSize: responsiveFontSize(48),
+    lineHeight: responsiveFontSize(50),
     textAlign: 'center',
     color: '#63582A',
+    paddingHorizontal: responsiveSpacing(8),
   },
   // Character Cards Base Style (Ellipses)
   characterCard: {
@@ -249,14 +251,14 @@ const styles = StyleSheet.create({
     borderColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 95, // Makes it elliptical (half of width/height)
   },
-  // CASUAL ELLIPSE
+  // CASUAL ELLIPSE - Top Left
   casualCard: {
-    width: 185,
-    height: 191,
-    left: 10,
-    top: 210,
+    width: responsiveWidth(165),
+    height: responsiveHeight(171),
+    left: responsiveWidth(10),
+    top: responsiveHeight(155),
+    borderRadius: responsiveWidth(85),
     shadowColor: '#008339',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
@@ -264,26 +266,26 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   casualImage: {
-    width: 162,
-    height: 196,
+    width: responsiveWidth(145),
+    height: responsiveHeight(176),
   },
   casualLabel: {
     position: 'absolute',
-    width: 85,
-    left: 51,
-    top: 403,
+    left: responsiveWidth(51),
+    top: responsiveHeight(328),
     fontFamily: 'CaveatBrush',
-    fontSize: 36,
-    lineHeight: 45,
+    fontSize: responsiveFontSize(32),
+    lineHeight: responsiveFontSize(40),
     textAlign: 'center',
     color: '#000000',
   },
-  // ENERGETIC ELLIPSE
+  // ENERGETIC ELLIPSE - Right Middle
   energeticCard: {
-    width: 185,
-    height: 191,
-    left: 195,
-    top: 387,
+    width: responsiveWidth(165),
+    height: responsiveHeight(171),
+    left: responsiveWidth(205),
+    top: responsiveHeight(330),
+    borderRadius: responsiveWidth(85),
     shadowColor: '#FF0000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 5,
@@ -291,26 +293,26 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   energeticImage: {
-    width: 160,
-    height: 215,
+    width: responsiveWidth(143),
+    height: responsiveHeight(193),
   },
   energeticLabel: {
     position: 'absolute',
-    width: 119,
-    left: 228,
-    top: 595,
+    left: responsiveWidth(238),
+    top: responsiveHeight(503),
     fontFamily: 'CaveatBrush',
-    fontSize: 36,
-    lineHeight: 45,
+    fontSize: responsiveFontSize(32),
+    lineHeight: responsiveFontSize(40),
     textAlign: 'center',
     color: '#000000',
   },
-  // SCHOLAR ELLIPSE
+  // SCHOLAR ELLIPSE - Bottom Left
   scholarCard: {
-    width: 185,
-    height: 191,
-    left: 22,
-    top: 589,
+    width: responsiveWidth(165),
+    height: responsiveHeight(171),
+    left: responsiveWidth(22),
+    top: responsiveHeight(505),
+    borderRadius: responsiveWidth(85),
     shadowColor: '#ED8600',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
@@ -318,17 +320,16 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   scholarImage: {
-    width: 177,
-    height: 181,
+    width: responsiveWidth(158),
+    height: responsiveHeight(162),
   },
   scholarLabel: {
     position: 'absolute',
-    width: 96,
-    left: 66,
-    top: 780,
+    left: responsiveWidth(66),
+    top: responsiveHeight(678),
     fontFamily: 'CaveatBrush',
-    fontSize: 36,
-    lineHeight: 45,
+    fontSize: responsiveFontSize(32),
+    lineHeight: responsiveFontSize(40),
     textAlign: 'center',
     color: '#000000',
   },
@@ -336,25 +337,25 @@ const styles = StyleSheet.create({
   selectedCasualCard: {
     borderWidth: 3,
     borderColor: '#008339', // Green for Casual
-    transform: [{ scale: 1.10 }],
+    transform: [{ scale: 1.08 }],
   },
   selectedEnergeticCard: {
     borderWidth: 3,
     borderColor: '#FF0000', // Red for Energetic
-    transform: [{ scale: 1.10 }],
+    transform: [{ scale: 1.08 }],
   },
   selectedScholarCard: {
     borderWidth: 3,
     borderColor: '#ED8600', // Orange for Scholar
-    transform: [{ scale: 1.10 }],
+    transform: [{ scale: 1.08 }],
   },
   // ATTACHED SPEECH BUBBLE (appears beside selected hamster)
   attachedSpeechBubble: {
     position: 'absolute',
-    width: 200,
+    width: responsiveWidth(180),
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: responsiveSpacing(20),
+    padding: responsiveSpacing(10),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -364,12 +365,12 @@ const styles = StyleSheet.create({
   },
   speechTail: {
     position: 'absolute',
-    top: 20,
+    top: responsiveSpacing(20),
     width: 0,
     height: 0,
-    borderTopWidth: 10,
-    borderBottomWidth: 10,
-    borderRightWidth: 15,
+    borderTopWidth: responsiveSpacing(10),
+    borderBottomWidth: responsiveSpacing(10),
+    borderRightWidth: responsiveSpacing(15),
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
   },
@@ -378,36 +379,36 @@ const styles = StyleSheet.create({
   },
   bubbleTitle: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 16,
+    fontSize: responsiveFontSize(14),
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: responsiveSpacing(8),
   },
   bubbleMessage: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 14,
+    fontSize: responsiveFontSize(12),
     color: '#333',
     textAlign: 'center',
     fontStyle: 'italic',
-    lineHeight: 18,
+    lineHeight: responsiveFontSize(16),
   },
   // NEXT BUTTON
   nextButton: {
     position: 'absolute',
-    bottom: 30,
+    bottom: responsiveHeight(25),
     left: '50%',
-    marginLeft: -100, // Half of minWidth to center
+    marginLeft: responsiveWidth(-90),
     backgroundColor: '#FF9800',
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 25,
-    minWidth: 200,
+    paddingHorizontal: responsiveSpacing(36),
+    paddingVertical: responsiveSpacing(14),
+    borderRadius: responsiveSpacing(22),
+    minWidth: responsiveWidth(180),
   },
   nextButtonDisabled: {
     backgroundColor: '#CCCCCC',
   },
   nextButtonText: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 18,
+    fontSize: responsiveFontSize(16),
     color: '#FFFFFF',
     textAlign: 'center',
   },
@@ -424,9 +425,9 @@ const styles = StyleSheet.create({
   comingSoonBadge: {
     position: 'absolute',
     backgroundColor: '#FF9800',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: responsiveSpacing(11),
+    paddingVertical: responsiveSpacing(5),
+    borderRadius: responsiveSpacing(11),
     borderWidth: 2,
     borderColor: '#FFFFFF',
     shadowColor: '#000',
@@ -437,7 +438,7 @@ const styles = StyleSheet.create({
   },
   comingSoonText: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 14,
+    fontSize: responsiveFontSize(12),
     color: '#FFFFFF',
     textAlign: 'center',
   },

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions, 
 import { Achievement } from '../../core/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { soundManager, SOUNDS } from '../../../lib/soundManager';
+import { wp, hp, fs, sp } from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -491,7 +492,7 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
   const isRare = rarity === 'rare';
   
   // Confetti size based on rarity
-  const confettiSize = isLegendary ? 48 : isEpic ? 42 : isRare ? 38 : 36;
+  const confettiSize = isLegendary ? fs(12) : isEpic ? fs(10.5) : isRare ? fs(9.5) : fs(9);
   
   // Image border glow based on rarity
   const imageBorderWidth = isLegendary ? 6 : isEpic ? 5 : isRare ? 4 : 3;
@@ -509,10 +510,27 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
         colors={[color1, color2, '#1A1A1A']}
         style={styles.fullScreenContainer}
       >
+        {/* Confetti Rain with themed emojis - Outside ScrollView */}
+        {[confetti1, confetti2, confetti3, confetti4, confetti5, confetti6].map((anim, index) => (
+          <Animated.View 
+            key={index}
+            style={[
+              styles.confetti, 
+              { 
+                left: `${15 + index * 15}%`,
+                transform: [{ translateY: anim }]
+              }
+            ]}
+            pointerEvents="none"
+          >
+            <Text style={[styles.confettiEmoji, { fontSize: confettiSize }]}>{themedEmojis[index]}</Text>
+          </Animated.View>
+        ))}
+        
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          bounces={false}
+          bounces={true}
         >
           <Animated.View 
             style={[
@@ -526,22 +544,6 @@ export default function AchievementUnlockedModal({ visible, achievement, onClose
               }
             ]}
           >
-            {/* Confetti Rain with themed emojis */}
-            {[confetti1, confetti2, confetti3, confetti4, confetti5, confetti6].map((anim, index) => (
-              <Animated.View 
-                key={index}
-                style={[
-                  styles.confetti, 
-                  { 
-                    left: `${15 + index * 15}%`,
-                    transform: [{ translateY: anim }]
-                  }
-                ]}
-              >
-                <Text style={[styles.confettiEmoji, { fontSize: confettiSize }]}>{themedEmojis[index]}</Text>
-              </Animated.View>
-            ))}
-            
             {/* Header */}
             <Text style={styles.title}>🏆 ACHIEVEMENT UNLOCKED! 🏆</Text>
             
@@ -665,27 +667,26 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    minHeight: SCREEN_HEIGHT,
+    paddingVertical: hp(7),
   },
   content: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 60,
+    paddingHorizontal: wp(5),
+    paddingBottom: hp(5),
   },
   confetti: {
     position: 'absolute',
     top: -100,
   },
   confettiEmoji: {
-    fontSize: 36,
+    fontSize: fs(9),
   },
   title: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: 26,
+    fontSize: fs(6.5),
     color: '#FFF',
-    marginBottom: 20,
+    marginBottom: hp(2.5),
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 3 },
@@ -693,12 +694,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   imageContainer: {
-    width: 180,
-    height: 180,
+    width: wp(45),
+    height: wp(45),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    borderRadius: 90,
+    marginBottom: hp(2.5),
+    borderRadius: wp(22.5),
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     shadowOffset: { width: 0, height: 4 },
     elevation: 10,
@@ -708,23 +709,23 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   iconFallback: {
-    fontSize: 100,
+    fontSize: fs(25),
   },
   achievementName: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: 32,
+    fontSize: fs(8),
     color: '#FFF',
-    marginBottom: 12,
+    marginBottom: hp(1.5),
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   rarityBadge: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 16,
-    marginBottom: 16,
+    paddingHorizontal: wp(5),
+    paddingVertical: hp(1),
+    borderRadius: sp(4),
+    marginBottom: hp(2),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
@@ -732,17 +733,17 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   typeBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(0.7),
+    borderRadius: sp(3),
+    marginBottom: hp(1),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   typeText: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 12,
+    fontSize: fs(3),
     color: '#FFF',
     letterSpacing: 1.5,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
@@ -751,7 +752,7 @@ const styles = StyleSheet.create({
   },
   rarityText: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: 14,
+    fontSize: fs(3.5),
     color: '#FFF',
     letterSpacing: 2.5,
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
@@ -760,21 +761,21 @@ const styles = StyleSheet.create({
   },
   description: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 16,
+    fontSize: fs(4),
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
-    paddingHorizontal: 10,
+    marginBottom: hp(3),
+    lineHeight: fs(5.5),
+    paddingHorizontal: wp(2.5),
   },
   rewardsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    borderRadius: sp(4),
+    padding: sp(5),
+    marginBottom: hp(3),
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.25)',
   },
@@ -784,67 +785,67 @@ const styles = StyleSheet.create({
   },
   rewardDivider: {
     width: 2,
-    height: 50,
+    height: hp(6),
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginHorizontal: 16,
+    marginHorizontal: wp(4),
   },
   rewardIcon: {
-    fontSize: 40,
-    marginBottom: 8,
+    fontSize: fs(10),
+    marginBottom: hp(1),
   },
   qbiesIcon: {
-    width: 40,
-    height: 40,
-    marginBottom: 8,
+    width: wp(10),
+    height: wp(10),
+    marginBottom: hp(1),
   },
   rewardValue: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: 28,
+    fontSize: fs(7),
     color: '#FFD700',
-    marginBottom: 4,
+    marginBottom: hp(0.5),
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
   rewardLabel: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 13,
+    fontSize: fs(3.2),
     color: 'rgba(255, 255, 255, 0.85)',
     letterSpacing: 0.8,
   },
   shopItemContainer: {
-    width: '90%',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
+    width: wp(90),
+    padding: sp(4),
+    borderRadius: sp(3),
+    marginBottom: hp(2.5),
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     alignItems: 'center',
   },
   shopItemTitle: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 14,
+    fontSize: fs(3.5),
     color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 6,
+    marginBottom: hp(0.7),
     letterSpacing: 0.5,
   },
   shopItemName: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: 18,
-    marginBottom: 4,
+    fontSize: fs(4.5),
+    marginBottom: hp(0.5),
     textAlign: 'center',
   },
   shopItemSubtext: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 12,
+    fontSize: fs(3),
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: hp(0.5),
   },
   closeButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 50,
-    borderRadius: 25,
+    paddingVertical: hp(1.7),
+    paddingHorizontal: wp(12.5),
+    borderRadius: sp(6.5),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.4,
@@ -855,7 +856,7 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontFamily: 'ChakraPetch_700Bold',
-    fontSize: 18,
+    fontSize: fs(4.5),
     color: '#FFF',
     letterSpacing: 1.8,
   },

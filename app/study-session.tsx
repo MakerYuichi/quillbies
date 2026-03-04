@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { playEndSessionSound } from '../lib/soundManager';
 import { soundManager, SOUNDS } from '../lib/soundManager';
 import { getThemeColors } from './utils/themeColors';
+import { responsiveFontSize, responsiveSpacing, wp, hp, fs, sp } from './utils/responsive';
 
 // Conditional import for keep awake to prevent crashes
 let activateKeepAwakeAsync: any = null;
@@ -190,7 +191,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.60, left: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.744 + SCREEN_HEIGHT * 0.12, // Move up slightly
+        top: SCREEN_HEIGHT * 0.764 + SCREEN_HEIGHT * 0.12, // Move up slightly
         left: SCREEN_WIDTH * 0.051, 
         width: (SCREEN_WIDTH * 0.898) / 2 - 5, // Increase width
         height: SCREEN_HEIGHT * 0.07 
@@ -203,7 +204,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.60, right: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.744 + SCREEN_HEIGHT * 0.12, // Move up slightly
+        top: SCREEN_HEIGHT * 0.764 + SCREEN_HEIGHT * 0.12, // Move up slightly
         left: SCREEN_WIDTH * 0.051 + (SCREEN_WIDTH * 0.898) / 2 + 5, 
         width: (SCREEN_WIDTH * 0.898) / 2 - 5, // Increase width
         height: SCREEN_HEIGHT * 0.07 
@@ -216,7 +217,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.75, left: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.65, // Move up more
+        top: SCREEN_HEIGHT * 0.684, // Move up more
         left: SCREEN_WIDTH * 0.153, 
         width: SCREEN_WIDTH * 0.201, 
         height: SCREEN_HEIGHT * 0.056 
@@ -229,7 +230,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.75, left: SCREEN_WIDTH * 0.1 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.65, // Move up more
+        top: SCREEN_HEIGHT * 0.684, // Move up more
         left: SCREEN_WIDTH * 0.3945, 
         width: SCREEN_WIDTH * 0.201, 
         height: SCREEN_HEIGHT * 0.056 
@@ -242,7 +243,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.75, right: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.65, // Move up more
+        top: SCREEN_HEIGHT * 0.684, // Move up more
         left: SCREEN_WIDTH * 0.636, 
         width: SCREEN_WIDTH * 0.201, 
         height: SCREEN_HEIGHT * 0.056 
@@ -557,7 +558,7 @@ function StudySessionContent() {
 
   
   // Allow showing completion modal even if session is ending
-  if (!session && !showCompletionModal) {
+  if (!session && !showCompletionModal && !completionData) {
     console.log('[StudySession] No active session found, redirecting to focus screen');
     return (
       <View style={styles.container}>
@@ -742,7 +743,7 @@ function StudySessionContent() {
           styles.headerText,
           themeType && themeColors.isDark && { color: '#FFFFFF' }
         ]}>
-          {getCurrentTime()} 🐹 {userData.buddyName || 'Hammy'}'s Focus Session
+          {getCurrentTime()}{'\n'}🐹 {userData.buddyName || 'Hammy'}'s Focus Session
         </Text>
       </View>
 
@@ -1425,6 +1426,7 @@ function StudySessionContent() {
           console.log('[StudySession] Premium purchased successfully!');
           setShowPremiumModal(false);
         }}
+        context="study-session"
       />
     </View>
   );
@@ -1439,14 +1441,16 @@ const styles = StyleSheet.create({
   },
   
   // Background Elements
+  // Background Elements
   blueBgDecor: {
     position: 'absolute',
     width: (SCREEN_WIDTH * 401) / 393, // 401px from CSS
     height: (SCREEN_HEIGHT * 260) / 852, // 260px from CSS
     left: (SCREEN_WIDTH * -8) / 393, // -8px from CSS
-    top: (SCREEN_HEIGHT * -190) / 852, // -190px from CSS
+    top: (SCREEN_HEIGHT * -190) / 852, // Fixed: was -190px which pushed it off screen
     borderWidth: 1,
     borderColor: '#000000',
+    zIndex: 1
   },
   
   wallsBackground: {
@@ -1486,9 +1490,10 @@ const styles = StyleSheet.create({
   headerText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 21) / 393,
+    fontSize: responsiveFontSize(18),
     lineHeight: (SCREEN_HEIGHT * 33) / 852,
     color: '#000000',
+    zIndex: 5
   },
 
   // Currency Container - Holds both Q-Bies and Gems
@@ -1522,7 +1527,7 @@ const styles = StyleSheet.create({
   qCoinsText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: responsiveFontSize(12),
     color: '#333',
   },
   
@@ -1546,7 +1551,7 @@ const styles = StyleSheet.create({
   currencyText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: responsiveFontSize(12),
     color: '#333',
   },
 
@@ -1610,7 +1615,7 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 18) / 393,
+    fontSize: responsiveFontSize(16),
     lineHeight: (SCREEN_HEIGHT * 23) / 852,
     color: '#000000',
   },
@@ -1618,7 +1623,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 18) / 393,
+    fontSize: responsiveFontSize(16),
     lineHeight: (SCREEN_HEIGHT * 22) / 852,
     color: '#000000',
     marginTop: 5,
@@ -1649,20 +1654,22 @@ const styles = StyleSheet.create({
   
   timerText: {
     fontFamily: 'Chakra Petch',
-    fontSize: (SCREEN_WIDTH * 10) / 393,
+    fontSize: fs(2.5),
     color: '#000000',
-    marginTop: 2,
+    marginTop: 3,
+    marginBottom: 3,
   },
   
   statusSubtext: {
     position: 'absolute',
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 14) / 393,
+    fontSize: fs(2.8),
     lineHeight: (SCREEN_HEIGHT * 18) / 852,
     color: '#000000',
-    left: SCREEN_WIDTH * 0.196, // 77/393 = 19.6%
-    bottom: SCREEN_HEIGHT * 0.012, // 10/852 = 1.2%
+    marginTop: 3,
+    left: SCREEN_WIDTH * 0.266, // 77/393 = 19.6%
+    bottom: SCREEN_HEIGHT * 0.002, // 10/852 = 1.2%
   },
 
   // Hamster Character - Large studying position
@@ -1714,14 +1721,14 @@ const styles = StyleSheet.create({
   focusScoreLabel: {
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 12) / 393,
+    fontSize: responsiveFontSize(11),
     color: '#2196F3',
   },
   
   focusScoreValue: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 20) / 393,
+    fontSize: responsiveFontSize(18),
     color: '#1976D2',
   },
   
@@ -1753,14 +1760,14 @@ const styles = StyleSheet.create({
   },
   
   doneIcon: {
-    fontSize: (SCREEN_WIDTH * 24) / 393,
+    fontSize: responsiveFontSize(22),
     color: '#000000',
   },
   
   breakText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 18) / 393,
+    fontSize: responsiveFontSize(16),
     lineHeight: (SCREEN_HEIGHT * 15) / 852,
     textAlign: 'center',
     color: '#000000',
@@ -1769,7 +1776,7 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 18) / 393,
+    fontSize: responsiveFontSize(16),
     lineHeight: (SCREEN_HEIGHT * 15) / 852,
     textAlign: 'center',
     color: '#000000',
@@ -1809,8 +1816,8 @@ const styles = StyleSheet.create({
   speechText: {
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 20) / 393, // Back to original size
-    lineHeight: (SCREEN_HEIGHT * 26) / 852, // Back to original line height
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveSpacing(20),
     color: '#000000',
     textAlign: 'center',
   },
@@ -1831,10 +1838,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: wp(2.5),
+    paddingVertical: hp(1),
     backgroundColor: '#FFE797',
-    borderRadius: 16,
+    borderRadius: sp(4),
     borderWidth: 2,
     borderColor: '#000000',
   },
@@ -1853,7 +1860,7 @@ const styles = StyleSheet.create({
   premiumLabel: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 10) / 393,
+    fontSize: fs(2.2),
     color: '#FFC107',
     textAlign: 'right',
     marginBottom: 2,
@@ -1862,16 +1869,17 @@ const styles = StyleSheet.create({
   buttonLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: wp(1.5),
     flexShrink: 0,
-    minWidth: 80,
+    minWidth: wp(20),
   },
   
   buttonRight: {
     flexDirection: 'column',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    minWidth: 70,
+    minWidth: wp(17),
+    flexShrink: 0,
   },
   
   buttonStats: {
@@ -1888,7 +1896,7 @@ const styles = StyleSheet.create({
   habitButtonLabel: {
     fontFamily: 'Chakra Petch',
     fontWeight: '600',
-    fontSize: (SCREEN_WIDTH * 14) / 393,
+    fontSize: fs(3.2),
     color: '#000000',
   },
   
@@ -1910,7 +1918,7 @@ const styles = StyleSheet.create({
   habitReward: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 13) / 393,
+    fontSize: fs(3),
     color: '#000000',
     opacity: 0.8,
     textAlign: 'right',
@@ -1919,7 +1927,7 @@ const styles = StyleSheet.create({
   habitCost: {
     fontFamily: 'Chakra Petch',
     fontWeight: '600',
-    fontSize: (SCREEN_WIDTH * 11) / 393,
+    fontSize: fs(2.5),
     color: '#FF5722',
     textAlign: 'right',
   },
@@ -1927,7 +1935,7 @@ const styles = StyleSheet.create({
   habitCount: {
     fontFamily: 'Chakra Petch',
     fontWeight: '500',
-    fontSize: (SCREEN_WIDTH * 10) / 393,
+    fontSize: fs(2.2),
     color: '#666666',
     textAlign: 'right',
   },
@@ -1935,13 +1943,13 @@ const styles = StyleSheet.create({
   habitUsed: {
     fontFamily: 'Chakra Petch',
     fontWeight: '700',
-    fontSize: (SCREEN_WIDTH * 12) / 393,
+    fontSize: fs(2.8),
     color: '#999999',
     textAlign: 'right',
   },
   
   lockIcon: {
-    fontSize: (SCREEN_WIDTH * 24) / 393,
+    fontSize: fs(5.5),
     textAlign: 'right',
   },
   
@@ -1949,7 +1957,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontFamily: 'Chakra Petch',
     fontWeight: '400',
-    fontSize: (SCREEN_WIDTH * 14) / 393,
+    fontSize: responsiveFontSize(13),
     lineHeight: (SCREEN_HEIGHT * 18) / 852,
     color: '#000000',
     left: SCREEN_WIDTH * 0.249, // 98/393 = 24.9%
@@ -1957,7 +1965,7 @@ const styles = StyleSheet.create({
   },
   
   errorText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(17),
     color: '#FF0000',
     textAlign: 'center',
     marginTop: 50,
@@ -1967,11 +1975,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: responsiveSpacing(18),
   },
   
   errorSubtext: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(15),
     color: '#666',
     textAlign: 'center',
     marginTop: 10,
@@ -1980,14 +1988,14 @@ const styles = StyleSheet.create({
   
   backButton: {
     backgroundColor: '#6200EA',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
+    paddingHorizontal: responsiveSpacing(26),
+    paddingVertical: responsiveSpacing(13),
     borderRadius: 25,
   },
   
   backButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: responsiveFontSize(15),
     fontWeight: '600',
   },
   
@@ -2003,7 +2011,7 @@ const styles = StyleSheet.create({
   confirmationContainer: {
     backgroundColor: '#FFF',
     borderRadius: 20,
-    padding: 24,
+    padding: responsiveSpacing(20),
     width: '90%',
     maxWidth: 400,
     alignItems: 'center',
@@ -2026,7 +2034,7 @@ const styles = StyleSheet.create({
   },
   
   confirmationTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(22),
     fontWeight: '700',
     color: '#333',
     marginBottom: 12,
@@ -2034,7 +2042,7 @@ const styles = StyleSheet.create({
   },
   
   quillbyMessage: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(15),
     color: '#666',
     fontWeight: '500',
     marginBottom: 16,
@@ -2046,19 +2054,19 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    padding: 16,
+    padding: responsiveSpacing(14),
     marginBottom: 16,
   },
   
   confirmationText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(15),
     color: '#666',
     marginBottom: 8,
     textAlign: 'center',
   },
   
   confirmationWarning: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(15),
     color: '#FF9800',
     fontWeight: '600',
     marginTop: 8,
@@ -2066,7 +2074,7 @@ const styles = StyleSheet.create({
   },
   
   confirmationQuestion: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(17),
     color: '#333',
     fontWeight: '600',
     marginBottom: 20,
@@ -2081,7 +2089,7 @@ const styles = StyleSheet.create({
   
   confirmationButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: responsiveSpacing(12),
     borderRadius: 12,
     alignItems: 'center',
   },
@@ -2096,13 +2104,13 @@ const styles = StyleSheet.create({
   
   cancelButtonText: {
     color: '#666',
-    fontSize: 16,
+    fontSize: responsiveFontSize(15),
     fontWeight: '600',
   },
   
   confirmButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: responsiveFontSize(15),
     fontWeight: '600',
   },
   

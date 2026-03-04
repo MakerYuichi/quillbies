@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useQuillbyStore } from '../../state/store-modular';
 import { CheckpointResult } from '../../core/types';
+import { fs, sp, hp } from '../../utils/responsive';
 
 export default function StudyProgress() {
   const userData = useQuillbyStore((state) => state.userData);
@@ -115,8 +116,8 @@ export default function StudyProgress() {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: sp(3),
+    padding: sp(3),
     borderWidth: 1,
     borderColor: '#E0E0E0',
     flex: 1, // Take available space in side-by-side layout
@@ -125,64 +126,66 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: hp(1),
   },
   title: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 14,
+    fontSize: fs(3.2),
     color: '#333',
+    flexShrink: 1,
   },
   status: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 12,
+    fontSize: fs(2.8),
+    flexShrink: 0,
   },
   progressContainer: {
-    marginBottom: 5,
+    marginBottom: hp(0.6),
   },
   progressBar: {
     width: '100%',
-    height: 8,
+    height: hp(1),
     backgroundColor: '#E0E0E0',
-    borderRadius: 4,
+    borderRadius: sp(1),
     overflow: 'hidden',
-    marginBottom: 5,
+    marginBottom: hp(0.6),
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: sp(1),
   },
   progressText: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 12,
+    fontSize: fs(2.8),
     color: '#666',
     textAlign: 'center',
   },
   warningText: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 11,
+    fontSize: fs(2.5),
     color: '#F44336',
     textAlign: 'center',
     fontStyle: 'italic',
   },
   energyCapWarning: {
     backgroundColor: 'rgba(255, 87, 34, 0.1)',
-    padding: 8,
-    borderRadius: 6,
-    marginTop: 5,
+    padding: sp(2),
+    borderRadius: sp(1.5),
+    marginTop: hp(0.6),
     borderWidth: 1,
     borderColor: '#FF5722',
   },
   energyCapText: {
     fontFamily: 'ChakraPetch_600SemiBold',
-    fontSize: 11,
+    fontSize: fs(2.5),
     color: '#D84315',
     textAlign: 'center',
   },
   messPointsText: {
     fontFamily: 'ChakraPetch_400Regular',
-    fontSize: 10,
+    fontSize: fs(2.3),
     color: '#FF5722',
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: hp(0.3),
   },
 });

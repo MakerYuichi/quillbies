@@ -1,6 +1,12 @@
 // Random reminder system for Casual character
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuillbyStore } from '../state/store-modular';
+
+// Track recently completed activities (within last 5 minutes)
+interface RecentActivity {
+  type: 'water' | 'meal' | 'exercise' | 'sleep';
+  timestamp: number;
+}
 
 // Message collections - now as a function to use buddyName
 const getReminderMessages = (buddyName: string) => ({
@@ -81,6 +87,56 @@ export const useRandomReminders = (buddyName: string) => {
   const userData = useQuillbyStore((state) => state.userData);
   const [reminderMessage, setReminderMessage] = useState<string>('');
   const [reminderTimestamp, setReminderTimestamp] = useState<number>(0);
+  const recentActivities = useRef<RecentActivity[]>([]);
+  
+  // Track previous values to detect changes
+  const prevWaterGlasses = useRef(userData.waterGlasses);
+  const prevMealsLogged = useRef(userData.mealsLogged);
+  const prevExerciseMinutes = useRef(userData.exerciseMinutes);
+  
+  // Detect when activities are completed and add to recent activities
+  useEffect(() => {
+    const now = Date.now();
+    const COOLDOWN_PERIOD = 5 * 60 * 1000; // 5 minutes
+    
+    // Water completed
+    if (userData.waterGlasses > prevWaterGlasses.current) {
+      recentActivities.current.push({ type: 'water', timestamp: now });
+      console.log('[Reminders] Water activity detected, adding cooldown');
+    }
+    
+    // Meal completed
+    if (userData.mealsLogged > prevMealsLogged.current) {
+      recentActivities.current.push({ type: 'meal', timestamp: now });
+      console.log('[Reminders] Meal activity detected, adding cooldown');
+    }
+    
+    // Exercise completed
+    if (userData.exerciseMinutes > prevExerciseMinutes.current) {
+      recentActivities.current.push({ type: 'exercise', timestamp: now });
+      console.log('[Reminders] Exercise activity detected, adding cooldown');
+    }
+    
+    // Update previous values
+    prevWaterGlasses.current = userData.waterGlasses;
+    prevMealsLogged.current = userData.mealsLogged;
+    prevExerciseMinutes.current = userData.exerciseMinutes;
+    
+    // Clean up old activities (older than cooldown period)
+    recentActivities.current = recentActivities.current.filter(
+      activity => now - activity.timestamp < COOLDOWN_PERIOD
+    );
+  }, [userData.waterGlasses, userData.mealsLogged, userData.exerciseMinutes]);
+  
+  // Check if an activity was recently completed
+  const wasRecentlyCompleted = (activityType: 'water' | 'meal' | 'exercise' | 'sleep'): boolean => {
+    const now = Date.now();
+    const COOLDOWN_PERIOD = 5 * 60 * 1000; // 5 minutes
+    
+    return recentActivities.current.some(
+      activity => activity.type === activityType && now - activity.timestamp < COOLDOWN_PERIOD
+    );
+  };
 
   useEffect(() => {
     const REMINDER_MESSAGES = getReminderMessages(buddyName);
@@ -94,33 +150,33 @@ export const useRandomReminders = (buddyName: string) => {
       // Only show reminders if habits are enabled
       const enabledHabits = userData.enabledHabits || [];
 
-      // Morning (6-11 AM): Breakfast reminder
-      if (hour >= 6 && hour <= 11 && !userData.ateBreakfast && enabledHabits.includes('meals')) {
+      // Morning (6-11 AM): Breakfast reminder - skip if meal was just logged
+      if (hour >= 6 && hour <= 11 && !userData.ateBreakfast && enabledHabits.includes('meals') && !wasRecentlyCompleted('meal')) {
         reminders.push(...REMINDER_MESSAGES.meal.breakfast);
       }
 
-      // Lunch time (11 AM-2 PM): Lunch reminder
-      if (hour >= 11 && hour <= 14 && userData.mealsLogged < 2 && enabledHabits.includes('meals')) {
+      // Lunch time (11 AM-2 PM): Lunch reminder - skip if meal was just logged
+      if (hour >= 11 && hour <= 14 && userData.mealsLogged < 2 && enabledHabits.includes('meals') && !wasRecentlyCompleted('meal')) {
         reminders.push(...REMINDER_MESSAGES.meal.lunch);
       }
 
-      // Dinner time (5-8 PM): Dinner reminder
-      if (hour >= 17 && hour <= 20 && userData.mealsLogged < (userData.mealGoalCount || 3) && enabledHabits.includes('meals')) {
+      // Dinner time (5-8 PM): Dinner reminder - skip if meal was just logged
+      if (hour >= 17 && hour <= 20 && userData.mealsLogged < (userData.mealGoalCount || 3) && enabledHabits.includes('meals') && !wasRecentlyCompleted('meal')) {
         reminders.push(...REMINDER_MESSAGES.meal.dinner);
       }
 
-      // Day (10 AM-6 PM): Water reminders
-      if (hour >= 10 && hour <= 18 && userData.waterGlasses < (userData.hydrationGoalGlasses || 8) - 2 && enabledHabits.includes('hydration')) {
+      // Day (10 AM-6 PM): Water reminders - skip if water was just drunk
+      if (hour >= 10 && hour <= 18 && userData.waterGlasses < (userData.hydrationGoalGlasses || 8) - 2 && enabledHabits.includes('hydration') && !wasRecentlyCompleted('water')) {
         reminders.push(...REMINDER_MESSAGES.water);
       }
 
-      // Evening (5-9 PM): Exercise reminder
-      if (hour >= 17 && hour <= 21 && userData.exerciseMinutes < 15 && enabledHabits.includes('exercise')) {
+      // Evening (5-9 PM): Exercise reminder - skip if just exercised
+      if (hour >= 17 && hour <= 21 && userData.exerciseMinutes < 15 && enabledHabits.includes('exercise') && !wasRecentlyCompleted('exercise')) {
         reminders.push(...REMINDER_MESSAGES.exercise);
       }
 
-      // Night (9 PM-1 AM): Sleep reminder
-      if ((hour >= 21 || hour <= 1) && enabledHabits.includes('sleep')) {
+      // Night (9 PM-1 AM): Sleep reminder - skip if just woke up
+      if ((hour >= 21 || hour <= 1) && enabledHabits.includes('sleep') && !wasRecentlyCompleted('sleep')) {
         reminders.push(...REMINDER_MESSAGES.sleep);
       }
 

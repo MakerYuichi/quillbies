@@ -59,15 +59,16 @@ export default function GoalSetupScreen() {
     ChakraPetch_600SemiBold,
   });
 
-  // Handle back button - allow going back to previous onboarding screen
+  // Handle back button - navigate to previous onboarding screen without alert
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      // Allow default back behavior (go to previous onboarding screen)
-      return false;
+      // Navigate back to previous screen (habit-setup or profile)
+      router.back();
+      return true; // Prevent default behavior
     });
 
     return () => backHandler.remove();
-  }, []);
+  }, [router]);
 
   if (!fontsLoaded) {
     return (

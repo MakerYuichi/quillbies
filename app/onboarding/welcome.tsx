@@ -185,18 +185,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Caviche', // Custom Caviche font
-    fontSize: 70,
+    fontSize: 56,
     color: '#63582A',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     letterSpacing: 1,
   },
   description: {
     fontFamily: 'ChakraPetch_400Regular', // Custom Chakra Petch font
-    fontSize: 18,
+    fontSize: 16,
     color: '#000000ff',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
     paddingHorizontal: 10,
   },
   buttonContainer: {
@@ -218,6 +218,6 @@ const styles = StyleSheet.create({
   beginButtonText: {
     fontFamily: 'CaveatBrush',
     color: '#000000ff',
-    fontSize: 48,
+    fontSize: 40,
   },
 });

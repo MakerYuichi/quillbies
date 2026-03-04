@@ -21,7 +21,8 @@ export default function HomeScreen() {
         setDeviceOnboardingCompleted(completed);
         
         if (!completed) {
-          console.log('[HomeScreen] Device onboarding not completed, redirecting to welcome');
+          console.log('[HomeScreen] Device onboarding not completed, restarting from welcome');
+          // Always restart onboarding from the beginning if not completed
           const timer = setTimeout(() => {
             router.replace('/onboarding/welcome');
           }, 1000);
@@ -34,7 +35,7 @@ export default function HomeScreen() {
         }
       } catch (err) {
         console.error('[HomeScreen] Error checking device onboarding:', err);
-        // On error, assume onboarding not completed
+        // On error, assume onboarding not completed and restart from welcome
         setDeviceOnboardingCompleted(false);
         router.replace('/onboarding/welcome');
       }

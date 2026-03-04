@@ -162,31 +162,16 @@ export const useExerciseTracking = (buddyName: string) => {
     const exerciseEndTime = Date.now();
     const durationMs = exerciseEndTime - exerciseStartTime;
     const sessionMinutes = Math.floor(durationMs / (1000 * 60));
-    const sessionHours = Math.floor(sessionMinutes / 60);
-    const sessionMins = sessionMinutes % 60;
     const minutesInt = Math.max(1, sessionMinutes); // Minimum 1 minute
-    
-    // Format duration string for this session
-    const durationText = sessionHours > 0 
-      ? `${sessionHours}h ${sessionMins}m` 
-      : `${sessionMinutes}m`;
     
     // Calculate new accumulated minutes
     const newAccumulatedMinutes = accumulatedMinutes + sessionMinutes;
     setAccumulatedMinutes(newAccumulatedMinutes);
     
-    // Calculate total hours and minutes from accumulated minutes
-    const totalHours = Math.floor(newAccumulatedMinutes / 60);
-    const totalMins = newAccumulatedMinutes % 60;
-    
-    // Format total with minutes
-    const totalText = totalMins > 0 
-      ? `${totalHours}h ${totalMins}m` 
-      : `${totalHours}h`;
-    
     // Reset ALL states immediately to prevent jumping - including animation
     setIsExercising(false);
     setExerciseStartTime(null);
+    const targetDuration = exerciseDuration; // Save before resetting
     setExerciseDuration(null);
     setElapsedSeconds(0);
     setCurrentAnimation('idle'); // Reset animation immediately
@@ -194,24 +179,12 @@ export const useExerciseTracking = (buddyName: string) => {
     // Log exercise in store
     logExercise(minutesInt);
     
-    // Update message based on exercise duration
-    let newMessage = '';
-    if (sessionMinutes < 5) {
-      newMessage = `💪 Quick ${durationText} session! Good little break!\n(${totalText} today)`;
-    } else if (sessionMinutes >= 5 && sessionMinutes < 15) {
-      newMessage = `🎯 Solid ${durationText} workout! Feeling energized!\n(${totalText} today)`;
-    } else if (sessionMinutes >= 15) {
-      newMessage = `⭐ Wow, ${durationText}! We crushed it! Bonus energy! ⚡\n(${totalText} today)`;
-    }
-    
-    setMessage(newMessage);
-    setMessageTimestamp(Date.now());
-    
-    // Clear message after 3 seconds
-    setTimeout(() => {
-      setMessage('');
-      setMessageTimestamp(0);
-    }, 3000);
+    // Return completion data for modal
+    return {
+      duration: sessionMinutes,
+      targetDuration: targetDuration,
+      accumulatedMinutes: newAccumulatedMinutes,
+    };
   };
 
   // Format accumulated exercise for display (with minutes)

@@ -139,6 +139,18 @@ export interface UserData {
   // Achievements
   achievements?: AchievementProgress; // Achievement progress tracking
   totalXP?: number; // Total XP earned
+  
+  // Notification Preferences
+  notificationPreferences?: {
+    deadlines?: boolean; // Deadline reminders (3 days, 1 day, critical)
+    water?: boolean; // Hydration reminders
+    meals?: boolean; // Meal time reminders
+    exercise?: boolean; // Exercise reminders
+    sleep?: boolean; // Sleep/bedtime reminders
+    studyCheckpoints?: boolean; // Study checkpoint reminders
+    motivational?: boolean; // Motivational messages from pet
+    allEnabled?: boolean; // Master toggle for all notifications
+  };
 }
 
 export interface SessionData {
