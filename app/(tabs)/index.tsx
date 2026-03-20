@@ -411,7 +411,7 @@ function HomeScreenContent() {
     const startOfDue = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const diffTime = startOfDue.getTime() - startOfToday.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
     const formattedDate = date.toLocaleDateString('en-US', options);

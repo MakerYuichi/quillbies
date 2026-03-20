@@ -333,13 +333,12 @@ function StudySessionContent() {
       buddyName: userData.buddyName || 'Hammy',
     };
     
+    // Set both completion data AND show modal flag TOGETHER to prevent race condition
     setCompletionData(data);
+    setShowCompletionModal(true);
     
     // DON'T end session yet - keep it until modal closes
     // This prevents "No active session" error
-    
-    // Show completion modal
-    setShowCompletionModal(true);
   };
   
   // Handle completion modal close
@@ -557,7 +556,7 @@ function StudySessionContent() {
   };
 
   
-  // Allow showing completion modal even if session is ending
+  // Show "No active session" screen only if there's truly no session and no completion in progress
   if (!session && !showCompletionModal && !completionData) {
     console.log('[StudySession] No active session found, redirecting to focus screen');
     return (
@@ -572,15 +571,6 @@ function StudySessionContent() {
             <Text style={styles.backButtonText}>Go to Focus</Text>
           </TouchableOpacity>
         </View>
-        
-        {/* Interactive Tooltip for first-time users - show even without session */}
-        <InteractiveTooltip
-          visible={showTooltip}
-          currentStep={tooltipStep}
-          steps={tooltipSteps}
-          onNext={handleTooltipNext}
-          onSkip={handleTooltipSkip}
-        />
       </View>
     );
   }

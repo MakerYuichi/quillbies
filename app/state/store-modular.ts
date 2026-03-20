@@ -365,6 +365,15 @@ export const useQuillbyStore = create<QuillbyStore>()(
       checkStudyCheckpoints: () => {
         const [set, get] = args;
         const { userData } = get();
+
+        // Skip entirely if user is within 24-hour grace period
+        const accountAge = userData.createdAt ? Date.now() - new Date(userData.createdAt).getTime() : Infinity;
+        const isInGracePeriod = accountAge < 24 * 60 * 60 * 1000;
+        if (isInGracePeriod) {
+          const hoursRemaining = Math.ceil((24 * 60 * 60 * 1000 - accountAge) / (60 * 60 * 1000));
+          console.log(`[Checkpoint] 🎉 NEW USER GRACE PERIOD - Skipping checkpoint check. ${hoursRemaining}h remaining`);
+          return { isBehind: false };
+        }
         
         console.log('[Checkpoint] Checking study checkpoints...', {
           studyGoalHours: userData.studyGoalHours,

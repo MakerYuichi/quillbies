@@ -8,6 +8,7 @@ export const useExerciseTracking = (buddyName: string) => {
   const userData = useQuillbyStore((state) => state.userData);
   const logExercise = useQuillbyStore((state) => state.logExercise);
   const resetDay = useQuillbyStore((state) => state.resetDay);
+  const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isExercising, setIsExercising] = useState(false);
   const [exerciseStartTime, setExerciseStartTime] = useState<number | null>(null);
   const [exerciseType, setExerciseType] = useState<'walk' | 'stretch' | 'cardio' | 'energizer' | 'custom'>('walk');
@@ -125,6 +126,16 @@ export const useExerciseTracking = (buddyName: string) => {
     }
   }, [userData.lastExerciseReset, userData.lastCheckInDate, resetDay]);
 
+  const setTimedMessage = (text: string, durationMs = 4000) => {
+    if (messageTimeoutRef.current) clearTimeout(messageTimeoutRef.current);
+    setMessage(text);
+    setMessageTimestamp(Date.now());
+    messageTimeoutRef.current = setTimeout(() => {
+      setMessage('');
+      setMessageTimestamp(0);
+    }, durationMs);
+  };
+
   const handleStartExercise = (type: 'walk' | 'stretch' | 'cardio' | 'energizer' | 'custom' = 'walk', duration: number | null = null) => {
     // Start exercising
     setIsExercising(true);
@@ -133,17 +144,16 @@ export const useExerciseTracking = (buddyName: string) => {
     setExerciseStartTime(Date.now());
     setCurrentAnimation('exercising');
     
-    const exerciseNames: Record<string, string> = {
-      walk: 'Walking',
-      stretch: 'Stretching', 
-      cardio: 'Cardio',
-      energizer: 'Energizing',
-      custom: 'Custom'
+    const startMessages: Record<string, string> = {
+      walk: `🚶 Let's go for a walk, ${buddyName} is cheering you on!\nTap "Finish" when done!`,
+      stretch: `🧘 Stretch it out! ${buddyName} is loosening up too!\nTap "Finish" when done!`,
+      cardio: `🔥 Cardio time! ${buddyName} is hyped up!\nTap "Finish" when done!`,
+      energizer: `⚡ Quick energizer! ${buddyName} is bouncing with you!\nTap "Finish" when done!`,
+      custom: `🏃‍♂️ Custom workout! ${buddyName} is ready for anything!\nTap "Finish" when done!`,
     };
     
-    const newMessage = `🏃‍♂️ Alright, let's do this! ${exerciseNames[type]?.toLowerCase() || 'exercise'} time...\nTap "Finish" when done!`;
-    setMessage(newMessage);
-    setMessageTimestamp(Date.now());
+    const newMessage = startMessages[type] ?? `🏃‍♂️ Let's do this! Tap "Finish" when done!`;
+    setTimedMessage(newMessage);
   };
 
   const handleFinishExercise = () => {
@@ -178,6 +188,17 @@ export const useExerciseTracking = (buddyName: string) => {
     
     // Log exercise in store
     logExercise(minutesInt);
+
+    // Update speech bubble with completion message
+    const completionMessages: Record<string, string> = {
+      walk: `🚶 Great walk! ${buddyName} is proud of you! +${minutesInt}min 💪`,
+      stretch: `🧘 Feeling flexible! ${buddyName} loved that stretch! +${minutesInt}min ✨`,
+      cardio: `🔥 Crushed it! ${buddyName} is fired up! +${minutesInt}min 🏆`,
+      energizer: `⚡ Energized! ${buddyName} is buzzing! +${minutesInt}min 🌟`,
+      custom: `🏃‍♂️ Workout done! ${buddyName} is impressed! +${minutesInt}min 💪`,
+    };
+    const savedType = exerciseType;
+    setTimedMessage(completionMessages[savedType] ?? `✅ Exercise done! +${minutesInt}min 💪`);
     
     // Return completion data for modal
     return {
@@ -218,6 +239,13 @@ export const useExerciseTracking = (buddyName: string) => {
       return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
   };
+
+  // Cleanup message timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (messageTimeoutRef.current) clearTimeout(messageTimeoutRef.current);
+    };
+  }, []);
 
   return {
     isExercising,

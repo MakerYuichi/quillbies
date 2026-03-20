@@ -25,18 +25,21 @@ const HAMSTER_OPTIONS = [
     name: 'Casual Hammy',
     description: 'Relaxed and easygoing',
     image: require('../../../assets/onboarding/hamster-casual.png'),
+    available: true,
   },
   {
     id: 'energetic',
     name: 'Energetic Hammy',
     description: 'Full of energy and enthusiasm',
     image: require('../../../assets/onboarding/hamster-energetic.png'),
+    available: false,
   },
   {
     id: 'scholar',
     name: 'Scholar Hammy',
     description: 'Studious and focused',
     image: require('../../../assets/onboarding/hamster-scholar.png'),
+    available: false,
   },
 ];
 
@@ -73,15 +76,36 @@ export default function ChangeHamsterModal({
                 style={[
                   styles.hamsterCard,
                   selectedCharacter === hamster.id && styles.hamsterCardSelected,
+                  !hamster.available && styles.hamsterCardDisabled,
                 ]}
-                onPress={() => setSelectedCharacter(hamster.id)}
+                onPress={() => hamster.available && setSelectedCharacter(hamster.id)}
+                disabled={!hamster.available}
+                activeOpacity={hamster.available ? 0.7 : 1}
               >
-                <Image source={hamster.image} style={styles.hamsterImage} resizeMode="contain" />
+                <Image 
+                  source={hamster.image} 
+                  style={[
+                    styles.hamsterImage,
+                    !hamster.available && styles.hamsterImageDisabled
+                  ]} 
+                  resizeMode="contain" 
+                />
                 <View style={styles.hamsterInfo}>
-                  <Text style={styles.hamsterName}>{hamster.name}</Text>
-                  <Text style={styles.hamsterDescription}>{hamster.description}</Text>
+                  <Text style={[
+                    styles.hamsterName,
+                    !hamster.available && styles.hamsterNameDisabled
+                  ]}>{hamster.name}</Text>
+                  <Text style={[
+                    styles.hamsterDescription,
+                    !hamster.available && styles.hamsterDescriptionDisabled
+                  ]}>{hamster.description}</Text>
                 </View>
-                {selectedCharacter === hamster.id && (
+                {!hamster.available && (
+                  <View style={styles.comingSoonBadge}>
+                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                  </View>
+                )}
+                {selectedCharacter === hamster.id && hamster.available && (
                   <Text style={styles.checkmark}>✓</Text>
                 )}
               </TouchableOpacity>
@@ -156,10 +180,17 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
     backgroundColor: '#E8F5E9',
   },
+  hamsterCardDisabled: {
+    backgroundColor: '#F5F5F5',
+    opacity: 0.6,
+  },
   hamsterImage: {
     width: 60,
     height: 60,
     marginRight: 15,
+  },
+  hamsterImageDisabled: {
+    opacity: 0.5,
   },
   hamsterInfo: {
     flex: 1,
@@ -170,9 +201,29 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
+  hamsterNameDisabled: {
+    color: '#999',
+  },
   hamsterDescription: {
     fontSize: 14,
     color: '#666',
+  },
+  hamsterDescriptionDisabled: {
+    color: '#AAA',
+  },
+  comingSoonBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  comingSoonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFF',
   },
   checkmark: {
     position: 'absolute',

@@ -83,16 +83,16 @@ export const useTimeBasedHabitFeedback = (buddyName: string) => {
               
               if (currentHour >= 21) {
                 expectedProgress = 1.0;
-                timeContext = "It's 9 PM";
+                timeContext = `It's ${timeString}`;
               } else if (currentHour >= 18) {
                 expectedProgress = 0.75;
-                timeContext = "It's evening";
+                timeContext = `It's ${timeString}`;
               } else if (currentHour >= 12) {
                 expectedProgress = 0.33;
-                timeContext = "It's afternoon";
+                timeContext = `It's ${timeString}`;
               } else if (currentHour >= 9) {
                 expectedProgress = 0.1;
-                timeContext = "It's morning";
+                timeContext = `It's ${timeString}`;
               }
               
               const expectedHours = studyGoal * expectedProgress;
@@ -112,19 +112,19 @@ export const useTimeBasedHabitFeedback = (buddyName: string) => {
               
               if (currentHour >= 22) {
                 expectedWater = waterGoal;
-                waterTimeContext = "It's 10 PM";
+                waterTimeContext = `It's ${timeString}`;
               } else if (currentHour >= 18) {
                 expectedWater = waterGoal * 0.8;
-                waterTimeContext = "It's 6 PM";
+                waterTimeContext = `It's ${timeString}`;
               } else if (currentHour >= 14) {
                 expectedWater = waterGoal * 0.6;
-                waterTimeContext = "It's 2 PM";
+                waterTimeContext = `It's ${timeString}`;
               } else if (currentHour >= 10) {
                 expectedWater = waterGoal * 0.4;
-                waterTimeContext = "It's 10 AM";
+                waterTimeContext = `It's ${timeString}`;
               } else if (currentHour >= 7) {
                 expectedWater = waterGoal * 0.2;
-                waterTimeContext = "It's morning";
+                waterTimeContext = `It's ${timeString}`;
               }
               
               if (userData.waterGlasses < expectedWater && expectedWater > 0) {
@@ -140,13 +140,13 @@ export const useTimeBasedHabitFeedback = (buddyName: string) => {
               
               if (currentHour >= 20) {
                 expectedMeals = mealGoal;
-                mealTimeContext = "It's 8 PM";
+                mealTimeContext = `It's ${timeString}`;
               } else if (currentHour >= 14) {
                 expectedMeals = 2;
-                mealTimeContext = "It's 2 PM";
+                mealTimeContext = `It's ${timeString}`;
               } else if (currentHour >= 10) {
                 expectedMeals = 1;
-                mealTimeContext = "It's 10 AM";
+                mealTimeContext = `It's ${timeString}`;
               }
               
               if (userData.mealsLogged < expectedMeals && expectedMeals > 0) {
