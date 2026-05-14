@@ -4,12 +4,14 @@ import { useQuillbyStore } from '../state/store-modular';
 import RoomLayers from '../components/room/RoomLayers';
 import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
 import GemsPurchaseModal from '../components/modals/GemsPurchaseModal';
+import QbiesInfoModal from '../components/modals/QbiesInfoModal';
 import ShopItemCard from '../components/shop/ShopItemCard';
 import PurchaseConfirmModal from '../components/shop/PurchaseConfirmModal';
 import PurchaseSuccessModal from '../components/shop/PurchaseSuccessModal';
 import { playEquipSound, playTabSound } from '../../lib/soundManager';
 import { getThemeColors } from '../utils/themeColors';
 import RealTimeClock from '../components/ui/RealTimeClock';
+import { showRewardedAd } from '../../lib/adManager';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -29,6 +31,7 @@ export default function ShopScreen() {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [showGemsModal, setShowGemsModal] = useState(false);
+  const [showQbiesModal, setShowQbiesModal] = useState(false);
   const [requiredGems, setRequiredGems] = useState(0);
   const [insufficientCoins, setInsufficientCoins] = useState(false);
   const [requiredCoins, setRequiredCoins] = useState(0);
@@ -37,6 +40,27 @@ export default function ShopScreen() {
   const [useGemsForPurchase, setUseGemsForPurchase] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [purchasedItem, setPurchasedItem] = useState<any>(null);
+  const [watchAdLoading, setWatchAdLoading] = useState(false);
+
+  const updateUserData = useQuillbyStore((state) => state.updateUserData);
+  const addGems = useQuillbyStore((state) => state.addGems);
+
+  const handleWatchAdForGems = async () => {
+    setWatchAdLoading(true);
+    try {
+      const reward = await showRewardedAd(userData.isPremium ?? false);
+      if (reward !== null) {
+        addGems(reward, 'Watched rewarded ad');
+        console.log(`[Shop] Rewarded ad: +${reward} gems`);
+      } else {
+        console.log('[Shop] Rewarded ad not completed or not available');
+      }
+    } catch (e) {
+      console.warn('[Shop] Rewarded ad error:', e);
+    } finally {
+      setWatchAdLoading(false);
+    }
+  };
   
   const buddyName = userData.buddyName || 'Quillby';
   const shopItems = getShopItems();
@@ -252,6 +276,7 @@ export default function ShopScreen() {
           gems={userData.gems || 0}
           hideItems={false}
           onGemsPress={() => setShowGemsModal(true)}
+          onQCoinsPress={() => setShowQbiesModal(true)}
         />
         
         {/* Clock - Same as home tab */}
@@ -260,6 +285,7 @@ export default function ShopScreen() {
 
       {/* Scrollable Content - Starts below floor like home tab */}
       <View style={styles.scrollableContentArea}>
+
         {/* Category Tabs */}
         <View style={[
           styles.categoryContainer,
@@ -475,6 +501,12 @@ export default function ShopScreen() {
           setRequiredGems(0);
         }}
         requiredGems={requiredGems > 0 ? requiredGems : undefined}
+      />
+
+      {/* Q-Bies Info Modal */}
+      <QbiesInfoModal
+        visible={showQbiesModal}
+        onClose={() => setShowQbiesModal(false)}
       />
     </View>
   );

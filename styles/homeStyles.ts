@@ -55,7 +55,7 @@ export const homeStyles = StyleSheet.create({
     top: (SCREEN_HEIGHT * 490) / 852, // Start below floor (reduced by 90px total from 580)
     left: 0,
     right: 0,
-    bottom: (SCREEN_HEIGHT * 30) / 852, // Responsive padding from bottom edge
+    bottom: (SCREEN_HEIGHT * 5) / 852, // Responsive padding from bottom edge
     zIndex: 20, // Above cleaning overlay (15) and other overlays
     backgroundColor: 'transparent', // Transparent by default to show orange background
   },

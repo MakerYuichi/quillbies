@@ -103,46 +103,76 @@ export const loadAllUserData = async () => {
 
     console.log('[LoadAll] Loading all user data...');
 
-    // Load from tables with proper error handling
+    // Each query gets its own 8s timeout so a single hanging query
+    // doesn't block the entire load on slow/broken WiFi networks.
+    const withTimeout = <T>(promise: Promise<T>, label: string): Promise<T | null> =>
+      Promise.race([
+        promise,
+        new Promise<null>((resolve) =>
+          setTimeout(() => {
+            console.warn(`[LoadAll] Query timed out: ${label}`);
+            resolve(null);
+          }, 8000)
+        ),
+      ]);
+
+    // Load from tables with per-query timeouts
     const results = await Promise.allSettled([
-      // User profile (primary)
-      supabase.from('user_profiles').select('*').eq('id', user.id).single(),
-      
-      // Daily data (consolidated - includes fields from old daily_progress)
-      supabase.from('daily_data').select('*').eq('user_id', user.id).eq('date_tracked', new Date().toISOString().split('T')[0]).single(),
-      
-      // Deadlines
-      supabase.from('deadlines').select('*').eq('user_id', user.id).order('due_date', { ascending: true }),
-      
-      // Purchased items - use user_shop_items table with equipped status
-      supabase.from('user_shop_items').select('item_id, category, is_equipped').eq('user_id', user.id),
-      
-      // Sleep sessions (last 30 days)
-      supabase.from('sleep_sessions').select('*').eq('user_id', user.id).gte('date_assigned', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
-      
-      // Focus sessions (today)
-      supabase.from('focus_sessions').select('*').eq('user_id', user.id).gte('start_time', new Date().toISOString().split('T')[0])
+      withTimeout(
+        supabase.from('user_profiles').select('*').eq('id', user.id).single(),
+        'user_profiles'
+      ),
+      withTimeout(
+        supabase.from('daily_data').select('*').eq('user_id', user.id).eq('date_tracked', new Date().toISOString().split('T')[0]).single(),
+        'daily_data'
+      ),
+      withTimeout(
+        supabase.from('deadlines').select('*').eq('user_id', user.id).order('due_date', { ascending: true }),
+        'deadlines'
+      ),
+      withTimeout(
+        supabase.from('user_shop_items').select('item_id, category, is_equipped').eq('user_id', user.id),
+        'user_shop_items'
+      ),
+      withTimeout(
+        supabase.from('sleep_sessions').select('*').eq('user_id', user.id).gte('date_assigned', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+        'sleep_sessions'
+      ),
+      withTimeout(
+        supabase.from('focus_sessions').select('*').eq('user_id', user.id).gte('start_time', new Date().toISOString().split('T')[0]),
+        'focus_sessions'
+      ),
     ]);
 
-    // Extract successful results
+    // Extract results — each may be null if it timed out
     const [userProfileResult, dailyDataResult, deadlinesResult, purchasedItemsResult, sleepSessionsResult, focusSessionsResult] = results;
+
+    const getValue = (result: PromiseSettledResult<any>) =>
+      result.status === 'fulfilled' ? result.value : null;
+
+    const userProfileData = getValue(userProfileResult);
+    const dailyDataData = getValue(dailyDataResult);
+    const deadlinesData = getValue(deadlinesResult);
+    const purchasedItemsData = getValue(purchasedItemsResult);
+    const sleepSessionsData = getValue(sleepSessionsResult);
+    const focusSessionsData = getValue(focusSessionsResult);
 
     // Log results
     console.log('[LoadAll] Results:');
-    console.log('- user_profiles:', userProfileResult.status === 'fulfilled' ? '✅' : '❌');
-    console.log('- daily_data:', dailyDataResult.status === 'fulfilled' ? '✅' : '❌');
-    console.log('- deadlines:', deadlinesResult.status === 'fulfilled' ? '✅' : '❌');
-    console.log('- purchased_items:', purchasedItemsResult.status === 'fulfilled' ? '✅' : '❌');
-    console.log('- sleep_sessions:', sleepSessionsResult.status === 'fulfilled' ? '✅' : '❌');
-    console.log('- focus_sessions:', focusSessionsResult.status === 'fulfilled' ? '✅' : '❌');
+    console.log('- user_profiles:', userProfileData ? '✅' : '❌ (timeout or error)');
+    console.log('- daily_data:', dailyDataData ? '✅' : '❌ (timeout or error)');
+    console.log('- deadlines:', deadlinesData ? '✅' : '❌ (timeout or error)');
+    console.log('- purchased_items:', purchasedItemsData ? '✅' : '❌ (timeout or error)');
+    console.log('- sleep_sessions:', sleepSessionsData ? '✅' : '❌ (timeout or error)');
+    console.log('- focus_sessions:', focusSessionsData ? '✅' : '❌ (timeout or error)');
 
     return {
-      userProfile: userProfileResult.status === 'fulfilled' ? userProfileResult.value.data : null,
-      dailyData: dailyDataResult.status === 'fulfilled' ? dailyDataResult.value.data : null,
-      deadlines: deadlinesResult.status === 'fulfilled' ? (deadlinesResult.value.data || []) : [],
-      purchasedItems: purchasedItemsResult.status === 'fulfilled' ? (purchasedItemsResult.value.data || []) : [],
-      sleepSessions: sleepSessionsResult.status === 'fulfilled' ? (sleepSessionsResult.value.data || []) : [],
-      focusSessions: focusSessionsResult.status === 'fulfilled' ? (focusSessionsResult.value.data || []) : [],
+      userProfile: userProfileData?.data ?? null,
+      dailyData: dailyDataData?.data ?? null,
+      deadlines: deadlinesData?.data ?? [],
+      purchasedItems: purchasedItemsData?.data ?? [],
+      sleepSessions: sleepSessionsData?.data ?? [],
+      focusSessions: focusSessionsData?.data ?? [],
     };
   } catch (error) {
     console.error('[LoadAll] Failed to load all data:', error);
@@ -163,22 +193,27 @@ export const periodicSync = async (userData: any) => {
 
 // Ensure user profiles exist in all necessary tables before any operations
 const ensureAllUserProfiles = async (userId: string, userData: any) => {
+  const QUERY_TIMEOUT = 8000;
+  const withTimeout = <T>(promise: Promise<T>): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Query timed out')), QUERY_TIMEOUT)
+      ),
+    ]);
+
   try {
     console.log('[EnsureProfiles] Ensuring user_profiles entry exists...');
 
-    // Ensure user_profiles entry exists
-    const { data: userProfile, error: userProfileError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('id', userId)
-      .single();
+    const { data: userProfile, error: userProfileError } = await withTimeout(
+      supabase.from('user_profiles').select('id').eq('id', userId).single()
+    );
 
     if (userProfileError && userProfileError.code === 'PGRST116') {
       console.log('[EnsureProfiles] Creating user_profiles entry...');
       
-      const { error: createUserProfileError } = await supabase
-        .from('user_profiles')
-        .insert([
+      const { error: createUserProfileError } = await withTimeout(
+        supabase.from('user_profiles').insert([
           {
             id: userId,
             email: userData.email || null,
@@ -191,7 +226,7 @@ const ensureAllUserProfiles = async (userId: string, userData: any) => {
             energy: userData.energy || 100,
             max_energy_cap: userData.maxEnergyCap || 100,
             q_coins: userData.qCoins || 100,
-            gems: userData.gems || 0, // Add gems to initial profile creation
+            gems: userData.gems || 0,
             mess_points: userData.messPoints || 0,
             current_streak: userData.currentStreak || 0,
             enabled_habits: userData.enabledHabits || ['study', 'hydration', 'sleep', 'exercise'],
@@ -206,13 +241,13 @@ const ensureAllUserProfiles = async (userId: string, userData: any) => {
             created_at: new Date(),
             updated_at: new Date(),
           }
-        ]);
+        ])
+      );
 
       if (createUserProfileError) {
         console.error('[EnsureProfiles] Failed to create user_profiles:', createUserProfileError);
         throw createUserProfileError;
       }
-      
       console.log('[EnsureProfiles] ✅ user_profiles created');
     } else if (userProfileError) {
       console.error('[EnsureProfiles] Error checking user_profiles:', userProfileError);

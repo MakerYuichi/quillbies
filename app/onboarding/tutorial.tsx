@@ -304,22 +304,20 @@ export default function TutorialScreen() {
         ]).start(() => resolve());
       });
       
-      // Complete onboarding with error handling
       console.log('[Tutorial] Starting onboarding completion...');
-      await completeOnboarding();
-      console.log('[Tutorial] Onboarding completion successful');
+
+      // Complete onboarding state update (local only, fast)
+      // Do NOT await the sync — it makes network calls that can hang on WiFi.
+      // The sync runs in the background via syncToDatabase's throttle mechanism.
+      completeOnboarding();
+      console.log('[Tutorial] Onboarding state updated');
       
-      // Small delay before navigation to ensure state is updated
-      setTimeout(() => {
-        console.log('[Tutorial] Navigating to home screen...');
-        router.replace('/(tabs)');
-      }, 100);
+      // Navigate immediately — don't wait for network
+      console.log('[Tutorial] Navigating to home screen...');
+      router.replace('/(tabs)');
       
     } catch (error) {
       console.error('[Tutorial] Error during completion:', error);
-      
-      // Fallback: navigate anyway but log the error
-      console.log('[Tutorial] Navigating despite error...');
       router.replace('/(tabs)');
     }
   };

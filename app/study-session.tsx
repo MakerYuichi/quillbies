@@ -13,6 +13,7 @@ import { playEndSessionSound } from '../lib/soundManager';
 import { soundManager, SOUNDS } from '../lib/soundManager';
 import { getThemeColors } from './utils/themeColors';
 import { responsiveFontSize, responsiveSpacing, wp, hp, fs, sp } from './utils/responsive';
+import { showInterstitial } from '../lib/adManager';
 
 // Conditional import for keep awake to prevent crashes
 let activateKeepAwakeAsync: any = null;
@@ -342,7 +343,7 @@ function StudySessionContent() {
   };
   
   // Handle completion modal close
-  const handleCompletionClose = () => {
+  const handleCompletionClose = async () => {
     // Clean up any active timers
     if (breakTimer) {
       clearInterval(breakTimer);
@@ -363,6 +364,21 @@ function StudySessionContent() {
     
     setShowCompletionModal(false);
     setCompletionData(null);
+
+    // Show interstitial every 3rd session for non-premium users
+    try {
+      const countKey = 'quillby_session_count';
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const raw = await AsyncStorage.getItem(countKey);
+      const count = (parseInt(raw || '0') + 1);
+      await AsyncStorage.setItem(countKey, String(count));
+      if (count % 3 === 0) {
+        await showInterstitial(userData.isPremium ?? false);
+      }
+    } catch (e) {
+      // Non-critical — just navigate
+    }
+
     router.replace('/(tabs)');
   };
   

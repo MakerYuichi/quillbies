@@ -7,7 +7,8 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { useFonts } from 'expo-font';
 import { useQuillbyStore } from './state/store-modular';
 import { initializeRevenueCat } from '../lib/revenueCat';
-import { authenticateDevice, isDeviceAuthenticated } from '../lib/deviceAuth';
+import { initializeAds } from '../lib/adManager';
+import { authenticateDevice } from '../lib/deviceAuth';
 import { requestNotificationPermissions, sendMessNotification } from '../lib/notifications';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ImagePreloader from './components/ImagePreloader';
@@ -297,16 +298,18 @@ export default function RootLayout() {
     try {
       console.log('[App] Initializing device authentication...');
       
-      // Initialize RevenueCat
+      // Initialize RevenueCat (non-blocking — doesn't need network warmup)
       try {
         console.log('[App] Initializing RevenueCat...');
         await initializeRevenueCat();
         console.log('[App] RevenueCat initialized successfully');
       } catch (rcError) {
         console.warn('[App] RevenueCat initialization failed (this is normal in emulator):', rcError);
-        // RevenueCat errors are expected in emulator without Google Play billing
-        // The app will work fine, just without in-app purchases
       }
+
+      // Initialize Google Ads — fire and forget, never blocks app startup
+      // BannerAdView waits for adsReady flag via onAdsReady() callback
+      initializeAds().catch(e => console.warn('[App] Ads init failed:', e));
       
       // Preload images first for instant display
       await preloadImages();
@@ -319,23 +322,8 @@ export default function RootLayout() {
       } catch (soundError) {
         console.warn('[App] Sound preloading failed:', soundError);
       }
-      
-      // Check if already authenticated
-      const authenticated = await isDeviceAuthenticated();
-      
-      if (authenticated) {
-        console.log('[App] Device already authenticated');
-      } else {
-        // Authenticate device
-        try {
-          const result = await authenticateDevice();
-          console.log('[App] Device authenticated:', result);
-        } catch (authError) {
-          console.warn('[App] Device authentication failed, continuing in offline mode:', authError);
-        }
-      }
-      
-      // Initialize local user data (only if needed)
+
+      // Initialize local user data first (always works, no network needed)
       try {
         const { initializeUser: initUser } = useQuillbyStore.getState();
         initUser();
@@ -343,15 +331,41 @@ export default function RootLayout() {
       } catch (userError) {
         console.warn('[App] User initialization failed:', userError);
       }
+
+      // SERIALIZED network flow:
+      // 1. Warmup TCP connection (cheap GET — defeats ISP DPI inspection hold)
+      // 2. Authenticate (reads persisted session from AsyncStorage — zero network for returning users)
+      // 3. Load DB data only after auth is confirmed
+      try {
+        const { warmupSupabaseConnection } = await import('../lib/networkWarmup');
+        await warmupSupabaseConnection();
+      } catch (warmupError) {
+        console.warn('[App] Network warmup failed, continuing:', warmupError);
+      }
+
+      // Authenticate device (uses getSession() — no network call for returning users)
+      try {
+        const result = await authenticateDevice();
+        console.log('[App] Device authenticated:', result.offline ? 'offline mode' : 'online');
+      } catch (authError) {
+        console.warn('[App] Device authentication failed, continuing in offline mode:', authError);
+      }
       
-      // Load data from database after initialization
+      // Load data from database only after auth (serialized, not parallel)
       try {
         console.log('[App] Loading data from database...');
         const { loadFromDatabase: loadDB } = useQuillbyStore.getState();
-        await loadDB();
+        // Hard 10s timeout — if WiFi is slow or blocking Supabase, skip DB load
+        // and continue with local AsyncStorage data. Sync will retry in background.
+        await Promise.race([
+          loadDB(),
+          new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error('DB load timed out after 10s')), 10000)
+          ),
+        ]);
         console.log('[App] Database data loaded');
-      } catch (dbError) {
-        console.warn('[App] Database load failed, continuing with local data:', dbError);
+      } catch (dbError: any) {
+        console.warn('[App] Database load failed or timed out, continuing with local data:', dbError?.message || dbError);
       }
       
       // Request notification permissions

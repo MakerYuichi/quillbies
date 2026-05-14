@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { playTabSound } from '../../lib/soundManager';
 import { useState, useEffect } from 'react';
@@ -9,6 +9,7 @@ import AchievementUnlockedModal from '../components/modals/AchievementUnlockedMo
 import { ACHIEVEMENTS } from '../core/achievements';
 import { Achievement } from '../core/types';
 import { getThemeColors } from '../utils/themeColors';
+import BannerAdView from '../components/ads/BannerAdView';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -60,8 +61,11 @@ export default function TabLayout() {
     return unsubscribe;
   }, []);
   
+  const TAB_BAR_HEIGHT = 60 + insets.bottom;
+  const BANNER_HEIGHT = 50; // Standard BANNER size is 320x50
+
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: themeType ? themeColors.tabBarActive : '#FF9800',
@@ -70,10 +74,12 @@ export default function TabLayout() {
             backgroundColor: themeType ? themeColors.tabBar : '#FFFFFF',
             borderTopWidth: 1,
             borderTopColor: themeType ? (themeColors.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)') : '#EEE',
-            height: 60 + insets.bottom,
+            height: TAB_BAR_HEIGHT,
             paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
             paddingTop: 8,
           },
+          // Push screen content up so it's not hidden behind banner + tab bar
+          sceneStyle: { paddingBottom: userData.isPremium ? 0 : BANNER_HEIGHT },
           headerShown: false,
         }}
         screenListeners={{
@@ -126,7 +132,21 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-    
+
+    {/* Banner ad — absolutely positioned just above the tab bar */}
+    {!userData.isPremium && (
+      <View style={{
+        position: 'absolute',
+        bottom: TAB_BAR_HEIGHT,
+        left: 0,
+        right: 0,
+        height: BANNER_HEIGHT,
+        zIndex: 100,
+      }}>
+        <BannerAdView isPremium={userData.isPremium} />
+      </View>
+    )}
+
     {/* Achievement Celebration Modal */}
     <AchievementUnlockedModal
       visible={showCelebration}
@@ -136,6 +156,6 @@ export default function TabLayout() {
         setCelebrationAchievement(null);
       }}
     />
-    </>
+    </View>
   );
 }

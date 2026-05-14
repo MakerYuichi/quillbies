@@ -16,9 +16,10 @@ interface RoomLayersProps {
   hideItems?: boolean; // Hide plants/furniture for shop preview
   showDefaultBackground?: boolean; // Show orange theme background when no theme (home tab only)
   onGemsPress?: () => void; // Callback when gems display is pressed
+  onQCoinsPress?: () => void; // Callback when Q-Bies display is pressed
 }
 
-export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0, gems = 0, hideItems = false, showDefaultBackground = false, onGemsPress }: RoomLayersProps) {
+export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isSleeping = false, sleepAnimation = 'idle', qCoins = 0, gems = 0, hideItems = false, showDefaultBackground = false, onGemsPress, onQCoinsPress }: RoomLayersProps) {
   const userData = useQuillbyStore((state) => state.userData);
   const roomCustomization = userData.roomCustomization;
   
@@ -456,14 +457,19 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
       {/* LAYER 10: Currency Display - Q-Bies and Gems */}
       <View style={styles.currencyContainer} pointerEvents="box-none">
         {/* Q-Bies */}
-        <View style={[
-          styles.qCoinsContainer,
-          hasTheme && { 
-            backgroundColor: themeColors.isDark ? 'rgba(255, 152, 0, 0.5)' : 'rgba(255, 255, 255, 0.95)',
-            borderColor: themeColors.isDark ? '#FFB74D' : '#FF9800',
-            borderWidth: 2.5,
-          }
-        ]}>
+        <TouchableOpacity
+          style={[
+            styles.qCoinsContainer,
+            hasTheme && { 
+              backgroundColor: themeColors.isDark ? 'rgba(255, 152, 0, 0.5)' : 'rgba(255, 255, 255, 0.95)',
+              borderColor: themeColors.isDark ? '#FFB74D' : '#FF9800',
+              borderWidth: 2.5,
+            }
+          ]}
+          onPress={onQCoinsPress}
+          activeOpacity={onQCoinsPress ? 0.7 : 1}
+          disabled={!onQCoinsPress}
+        >
           <Image 
             source={require('../../../assets/overall/qbies.png')}
             style={styles.qbiesIcon}
@@ -481,7 +487,7 @@ export default function RoomLayers({ pointerEvents = 'auto', messPoints = 0, isS
           ]}>
             {qCoins}
           </Text>
-        </View>
+        </TouchableOpacity>
         
         {/* Gems - Only show if gems > 0 or in shop */}
         {gems >= 0 && (

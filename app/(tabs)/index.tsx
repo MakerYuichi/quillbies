@@ -24,6 +24,8 @@ import SessionCustomizationModal, { SessionConfig } from '../components/modals/S
 import ExerciseCustomizationModal from '../components/modals/ExerciseCustomizationModal';
 import SleepCustomizationModal from '../components/modals/SleepCustomizationModal';
 import ExerciseCompletionModal from '../components/modals/ExerciseCompletionModal';
+import GemsPurchaseModal from '../components/modals/GemsPurchaseModal';
+import QbiesInfoModal from '../components/modals/QbiesInfoModal';
 import { useWaterTracking } from '../hooks/useWaterTracking';
 import { useSleepTracking } from '../hooks/useSleepTracking';
 import { useMealTracking } from '../hooks/useMealTracking';
@@ -133,6 +135,8 @@ function HomeScreenContent() {
   const [showExerciseCompletionModal, setShowExerciseCompletionModal] = React.useState(false);
   const [exerciseCompletionData, setExerciseCompletionData] = React.useState<any>(null);
   const [showSleepModal, setShowSleepModal] = React.useState(false);
+  const [showGemsModal, setShowGemsModal] = React.useState(false);
+  const [showQbiesModal, setShowQbiesModal] = React.useState(false);
   const [timeAccelerationActive, setTimeAccelerationActive] = React.useState(false);
   const [timeAccelerationProgress, setTimeAccelerationProgress] = React.useState(0);
   const [accelerationInterval, setAccelerationInterval] = React.useState<NodeJS.Timeout | null>(null);
@@ -1185,13 +1189,15 @@ function HomeScreenContent() {
       
       <View style={[styles.environmentContainer, isExercising && styles.hidden]}>
         <RoomLayers 
-          pointerEvents="none" 
+          pointerEvents="box-none" 
           messPoints={userData.messPoints} 
           isSleeping={isSleeping} 
           sleepAnimation={sleepAnimation} 
           qCoins={userData.qCoins}
           gems={userData.gems || 0}
           showDefaultBackground={true}
+          onGemsPress={() => setShowGemsModal(true)}
+          onQCoinsPress={() => setShowQbiesModal(true)}
         />
         {/* Sleep Timer Overlay - Show when sleeping */}
         {isSleeping && (
@@ -1628,6 +1634,19 @@ function HomeScreenContent() {
         visible={showSleepModal}
         onClose={() => setShowSleepModal(false)}
         onStartSleep={handleSleepStart}
+      />
+
+      {/* Gems Purchase Modal */}
+      <GemsPurchaseModal
+        visible={showGemsModal}
+        onClose={() => setShowGemsModal(false)}
+        onPurchaseSuccess={() => setShowGemsModal(false)}
+      />
+
+      {/* Q-Bies Info Modal */}
+      <QbiesInfoModal
+        visible={showQbiesModal}
+        onClose={() => setShowQbiesModal(false)}
       />
 
     </ImageBackground>

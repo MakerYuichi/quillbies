@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, ActivityIn
 import { getGemOfferings, purchaseGemPackage, GEM_AMOUNTS } from '../../../lib/revenueCat';
 import { PurchasesPackage } from 'react-native-purchases';
 import { useQuillbyStore } from '../../state/store-modular';
+import { showRewardedAd } from '../../../lib/adManager';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -21,9 +22,25 @@ export default function GemsPurchaseModal({
 }: GemsPurchaseModalProps) {
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null); // Track which package is being purchased
+  const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
+  const [watchAdLoading, setWatchAdLoading] = useState(false);
   const userData = useQuillbyStore((state) => state.userData);
   const addGems = useQuillbyStore((state) => state.addGems);
+
+  const handleWatchAd = async () => {
+    setWatchAdLoading(true);
+    try {
+      const reward = await showRewardedAd(userData.isPremium ?? false);
+      if (reward !== null) {
+        addGems(reward, 'Watched rewarded ad');
+        console.log(`[GemsPurchaseModal] +${reward} gems from ad`);
+      }
+    } catch (e) {
+      console.warn('[GemsPurchaseModal] Ad error:', e);
+    } finally {
+      setWatchAdLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -130,6 +147,36 @@ export default function GemsPurchaseModal({
               </Text>
             </View>
           )}
+
+          {/* Watch Ad for Free Gems */}
+          <TouchableOpacity
+            onPress={handleWatchAd}
+            disabled={watchAdLoading}
+            style={[styles.watchAdButton, watchAdLoading && { opacity: 0.6 }]}
+          >
+            {watchAdLoading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <>
+                <Text style={{ fontSize: 22 }}>📺</Text>
+                <View>
+                  <Text style={styles.watchAdText}>Watch a short ad</Text>
+                  <Text style={{ fontSize: 11, color: '#FFE082', fontFamily: 'ChakraPetch_400Regular' }}>
+                    Earn +20 💎 gems — FREE
+                  </Text>
+                </View>
+                <View style={{
+                  backgroundColor: '#FFB300',
+                  borderRadius: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  marginLeft: 'auto',
+                }}>
+                  <Text style={{ fontSize: 11, color: '#FFF', fontFamily: 'ChakraPetch_700Bold' }}>FREE</Text>
+                </View>
+              </>
+            )}
+          </TouchableOpacity>
 
           {/* Loading State */}
           {loading && (
@@ -364,5 +411,29 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 10,
+  },
+  watchAdButton: {
+    backgroundColor: '#FF6F00',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: '#FFB300',
+    shadowColor: '#FF6F00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  watchAdText: {
+    fontSize: 15,
+    fontFamily: 'ChakraPetch_700Bold',
+    color: '#FFF',
+    letterSpacing: 0.5,
   },
 });

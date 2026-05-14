@@ -3,156 +3,149 @@ import * as SecureStore from 'expo-secure-store';
 import { supabase } from './supabase';
 
 const DEVICE_ID_KEY = 'quillby_device_id';
+const OFFLINE_USER_KEY = 'quillby_offline_user_id';
+const AUTH_TIMEOUT_MS = 8000; // 8s max for any auth network call
 
-/**
- * Generate a simple unique device ID without crypto
- * Format: timestamp-random
- */
 const generateDeviceId = (): string => {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 15);
   return `${timestamp}-${random}`;
 };
 
-/**
- * Get or create a device ID for this device
- * Device ID is stored securely and persists across app restarts
- */
 export const getOrCreateDeviceId = async (): Promise<string> => {
   try {
-    // Try to get existing device ID from secure storage
     const existingId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
-    
     if (existingId) {
       console.log(`[DeviceAuth] Using existing device ID: ${existingId.substring(0, 8)}...`);
       return existingId;
     }
-    
-    // Generate new device ID
     const newDeviceId = generateDeviceId();
     console.log(`[DeviceAuth] Generated new device ID: ${newDeviceId.substring(0, 8)}...`);
-    
-    // Store securely
     await SecureStore.setItemAsync(DEVICE_ID_KEY, newDeviceId);
-    
     return newDeviceId;
   } catch (err) {
     console.error('[DeviceAuth] Error managing device ID:', err);
-    throw err;
+    // Return a temporary ID rather than throwing — never block the app
+    return generateDeviceId();
   }
 };
 
+const getOrCreateOfflineUserId = async (deviceId: string): Promise<string> => {
+  try {
+    const existing = await SecureStore.getItemAsync(OFFLINE_USER_KEY);
+    if (existing) return existing;
+    const offlineId = `offline_${deviceId}`;
+    await SecureStore.setItemAsync(OFFLINE_USER_KEY, offlineId);
+    return offlineId;
+  } catch {
+    return `offline_${deviceId}`;
+  }
+};
+
+/** Wraps a promise with a timeout. Rejects with 'timeout' if it takes too long. */
+const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+};
+
 /**
- * Authenticate device using Supabase Anonymous Auth
- * - Gets or creates device ID
- * - Signs in with anonymous auth
- * - User profiles will be created on first sync
- * 
- * No email/password needed!
+ * Authenticate device:
+ * 1. Read persisted session from AsyncStorage (no network for returning users)
+ * 2. If session valid → return immediately, zero network calls
+ * 3. If no session → signInAnonymously with 8s timeout
+ * 4. Any failure → stable offline ID, app continues normally
  */
 export const authenticateDevice = async () => {
+  const deviceId = await getOrCreateDeviceId();
+  console.log('[DeviceAuth] Device ID:', deviceId.substring(0, 8) + '...');
+
   try {
-    console.log('[DeviceAuth] Starting device authentication...');
-    
-    // Get device ID
-    const deviceId = await getOrCreateDeviceId();
-    console.log('[DeviceAuth] Device ID:', deviceId.substring(0, 8) + '...');
-    
-    // Try anonymous sign in (checks if already authenticated)
-    const { data: { user: existingUser } } = await supabase.auth.getUser();
-    
-    if (existingUser && existingUser.is_anonymous) {
-      console.log('[DeviceAuth] Already authenticated as anonymous user');
-      return { userId: existingUser.id, deviceId };
-    }
-    
-    // Sign in anonymously
-    console.log('[DeviceAuth] Signing in anonymously...');
-    const { data: { user }, error: signInError } = await supabase.auth.signInAnonymously({
-      options: {
-        data: {
-          device_id: deviceId,
-          device_type: 'mobile',
-        }
+    // getSession() reads AsyncStorage — no network call for returning users
+    const { data: sessionData } = await withTimeout(
+      supabase.auth.getSession(),
+      5000 // 5s max even for AsyncStorage read
+    );
+
+    const session = sessionData?.session;
+    if (session?.user) {
+      const expiresAt = session.expires_at ?? 0;
+      const nowSecs = Math.floor(Date.now() / 1000);
+      if (expiresAt > nowSecs + 60) {
+        console.log('[DeviceAuth] Valid session found, user:', session.user.id.substring(0, 8) + '...');
+        return { userId: session.user.id, deviceId };
       }
-    });
-    
-    if (signInError) {
-      console.warn('[DeviceAuth] Anonymous sign in failed (offline mode):', signInError.message);
-      // Return a mock user ID for offline mode
-      return { userId: `offline_${deviceId}`, deviceId, offline: true };
+      console.log('[DeviceAuth] Session expired, re-authenticating...');
     }
-    
-    if (!user) {
-      console.warn('[DeviceAuth] No user returned from anonymous sign in, using offline mode');
-      return { userId: `offline_${deviceId}`, deviceId, offline: true };
+
+    // No valid session — sign in anonymously with hard timeout
+    console.log('[DeviceAuth] Signing in anonymously...');
+    const { data, error } = await withTimeout(
+      supabase.auth.signInAnonymously({
+        options: { data: { device_id: deviceId, device_type: 'mobile' } },
+      }),
+      AUTH_TIMEOUT_MS
+    );
+
+    if (error) {
+      console.warn('[DeviceAuth] Sign in failed, offline mode:', error.message);
+      return { userId: await getOrCreateOfflineUserId(deviceId), deviceId, offline: true };
     }
-    
-    const userId = user.id;
-    console.log('[DeviceAuth] Anonymous sign in successful! User ID:', userId.substring(0, 8) + '...');
-    console.log('[DeviceAuth] User profiles will be created on first sync operation');
-    
-    return { userId, deviceId };
-  } catch (err) {
-    console.warn('[DeviceAuth] Authentication failed, using offline mode:', err);
-    const deviceId = await getOrCreateDeviceId();
-    return { userId: `offline_${deviceId}`, deviceId, offline: true };
+
+    if (!data?.user) {
+      console.warn('[DeviceAuth] No user returned, offline mode');
+      return { userId: await getOrCreateOfflineUserId(deviceId), deviceId, offline: true };
+    }
+
+    console.log('[DeviceAuth] Signed in! User:', data.user.id.substring(0, 8) + '...');
+    return { userId: data.user.id, deviceId };
+
+  } catch (err: any) {
+    console.warn('[DeviceAuth] Auth failed, offline mode:', err?.message || err);
+    return { userId: await getOrCreateOfflineUserId(deviceId), deviceId, offline: true };
   }
 };
 
-/**
- * Check if device is already authenticated
- */
 export const isDeviceAuthenticated = async (): Promise<boolean> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    return !!user;
-  } catch (err) {
-    console.warn('[DeviceAuth] Error checking auth (offline mode):', err);
-    // Return true to skip auth in offline mode
-    return true;
+    const { data } = await withTimeout(supabase.auth.getSession(), 5000);
+    const session = data?.session;
+    if (!session?.user) return false;
+    const expiresAt = session.expires_at ?? 0;
+    return expiresAt > Math.floor(Date.now() / 1000) + 60;
+  } catch {
+    return false;
   }
 };
 
-/**
- * Get current authenticated device user
- */
 export const getDeviceUser = async () => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
     console.log('[DeviceAuth] getDeviceUser called');
-    
+    const { data, error } = await withTimeout(supabase.auth.getSession(), 5000);
     if (error) {
-      console.warn('[DeviceAuth] Error getting user (offline mode):', error.message);
+      console.warn('[DeviceAuth] Error getting session:', error.message);
       return null;
     }
-    
-    if (!user) {
-      console.log('[DeviceAuth] No user found');
-      return null;
+    const user = data?.session?.user ?? null;
+    if (user) {
+      console.log('[DeviceAuth] Returning user with ID:', user.id.substring(0, 8) + '...');
+    } else {
+      console.log('[DeviceAuth] No active session');
     }
-    
-    console.log('[DeviceAuth] Returning user with ID:', user.id);
     return user;
   } catch (err) {
-    console.warn('[DeviceAuth] Error getting device user (offline mode):', err);
+    console.warn('[DeviceAuth] getDeviceUser timed out or failed:', err);
     return null;
   }
 };
 
-/**
- * Sign out device (optional - usually not needed for device auth)
- */
 export const signOutDevice = async () => {
   try {
     const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error('[DeviceAuth] Sign out error:', error);
-      throw error;
-    }
-    
+    if (error) throw error;
     console.log('[DeviceAuth] Signed out');
     return { success: true };
   } catch (err) {
@@ -161,29 +154,20 @@ export const signOutDevice = async () => {
   }
 };
 
-/**
- * Export device ID for backup (optional feature)
- */
 export const exportDeviceId = async (): Promise<string | null> => {
   try {
-    const id = await SecureStore.getItemAsync(DEVICE_ID_KEY);
-    return id;
-  } catch (err) {
-    console.error('[DeviceAuth] Error exporting device ID:', err);
+    return await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  } catch {
     return null;
   }
 };
 
-/**
- * Import device ID for restore (optional feature)
- */
 export const importDeviceId = async (deviceId: string): Promise<boolean> => {
   try {
     await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
-    console.log('[DeviceAuth] Device ID imported successfully');
+    console.log('[DeviceAuth] Device ID imported');
     return true;
-  } catch (err) {
-    console.error('[DeviceAuth] Error importing device ID:', err);
+  } catch {
     return false;
   }
 };
