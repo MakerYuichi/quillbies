@@ -14,6 +14,7 @@ import {
 import { PurchasesPackage } from 'react-native-purchases';
 import { getOfferings, purchasePremium, restorePurchases } from '../../../lib/revenueCat';
 import { useQuillbyStore } from '../../state/store-modular';
+import PremiumUnlockedModal from './PremiumUnlockedModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -21,20 +22,23 @@ interface PremiumPaywallModalProps {
   visible: boolean;
   onClose: () => void;
   onPurchaseSuccess?: () => void;
-  context?: 'study-session' | 'general'; // Add context prop
+  context?: 'study-session' | 'general';
+  onGoToShop?: () => void;
 }
 
 export default function PremiumPaywallModal({
   visible,
   onClose,
   onPurchaseSuccess,
-  context = 'general', // Default to general
+  context = 'general',
+  onGoToShop,
 }: PremiumPaywallModalProps) {
   const setPremiumStatus = useQuillbyStore((state) => state.setPremiumStatus);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
+  const [showUnlockedModal, setShowUnlockedModal] = useState(false);
 
   // Load available products
   useEffect(() => {
@@ -104,20 +108,7 @@ export default function PremiumPaywallModal({
       if (result.success) {
         // Update local state
         setPremiumStatus(true);
-
-        Alert.alert(
-          '🎉 Welcome to Premium!',
-          'You now have access to all premium features including legendary themes, exclusive items, and extended focus sessions!',
-          [
-            {
-              text: 'Awesome!',
-              onPress: () => {
-                onPurchaseSuccess?.();
-                onClose();
-              },
-            },
-          ]
-        );
+        setShowUnlockedModal(true);
       } else {
         if (result.error !== 'Purchase cancelled') {
           Alert.alert('Purchase Failed', result.error || 'Something went wrong');
@@ -149,19 +140,7 @@ export default function PremiumPaywallModal({
       if (result.success) {
         if (result.isPremium) {
           setPremiumStatus(true);
-          Alert.alert(
-            '✅ Purchases Restored',
-            'Your premium subscription has been restored!',
-            [
-              {
-                text: 'Great!',
-                onPress: () => {
-                  onPurchaseSuccess?.();
-                  onClose();
-                },
-              },
-            ]
-          );
+          setShowUnlockedModal(true);
         } else {
           Alert.alert(
             'No Purchases Found',
@@ -199,6 +178,7 @@ export default function PremiumPaywallModal({
   };
 
   return (
+    <>
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.overlay}>
         <View style={styles.container}>
@@ -382,6 +362,17 @@ export default function PremiumPaywallModal({
         </View>
       </View>
     </Modal>
+
+    <PremiumUnlockedModal
+      visible={showUnlockedModal}
+      onGoToShop={onGoToShop}
+      onClose={() => {
+        setShowUnlockedModal(false);
+        onPurchaseSuccess?.();
+        onClose();
+      }}
+    />
+    </>
   );
 }
 

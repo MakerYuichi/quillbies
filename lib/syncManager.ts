@@ -40,8 +40,9 @@ export const syncAllUserData = async (userData: any) => {
         q_coins: userData.qCoins,
         gems: userData.gems || 0, // Add gems sync
         mess_points: userData.messPoints,
-        is_premium: userData.isPremium ?? false,
-        premium_expires_at: userData.premiumExpiresAt ?? null,
+        // NOTE: is_premium and premium_expires_at are NOT synced from local state.
+        // They are only written by the promo/purchase flow directly.
+        // This prevents a locally-cached true from overwriting a DB revocation.
         current_streak: userData.currentStreak || 0,
         last_check_in_date: userData.lastCheckInDate || new Date().toISOString().split('T')[0],
         last_active_timestamp: userData.lastActiveTimestamp || Date.now(),

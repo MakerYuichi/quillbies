@@ -9,6 +9,10 @@ export interface FeedbackData {
   description: string;
   email?: string;
   userName: string;
+  buddyName?: string;
+  country?: string;
+  streak?: number;
+  selectedCharacter?: string;
   deviceId: string;
   appVersion: string;
   timestamp: string;
@@ -60,6 +64,10 @@ export async function submitFeedback(feedback: FeedbackData): Promise<void> {
           description: feedback.description,
           email: feedback.email || null,
           user_name: feedback.userName,
+          buddy_name: feedback.buddyName || feedback.userName,
+          country: feedback.country || '',
+          streak: feedback.streak ?? null,
+          selected_character: feedback.selectedCharacter || 'casual',
           device_id: feedback.deviceId,
           platform: deviceInfo.platform,
           os_version: deviceInfo.osVersion,

@@ -1606,7 +1606,7 @@ function HomeScreenContent() {
         visible={showSessionModal}
         onClose={() => setShowSessionModal(false)}
         onStartSession={handleSessionStart}
-        isPremium={userData.purchasedItems?.includes('premium') || false}
+        isPremium={userData.isPremium === true}
       />
 
       {/* Exercise Customization Modal */}
@@ -1614,7 +1614,7 @@ function HomeScreenContent() {
         visible={showExerciseModal}
         onClose={() => setShowExerciseModal(false)}
         onStartExercise={handleExerciseStart}
-        isPremium={userData.purchasedItems?.includes('premium') || false}
+        isPremium={userData.isPremium === true}
       />
 
       {/* Exercise Completion Modal */}

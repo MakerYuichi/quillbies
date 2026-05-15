@@ -181,8 +181,15 @@ export const useQuillbyStore = create<QuillbyStore>()(
               currentStreak: dbData.userProfile.current_streak !== null && dbData.userProfile.current_streak !== undefined
                 ? dbData.userProfile.current_streak
                 : userData.currentStreak,
-              isPremium: dbData.userProfile.is_premium ?? userData.isPremium ?? false,
-              premiumExpiresAt: dbData.userProfile.premium_expires_at ?? userData.premiumExpiresAt ?? null,
+              // DB is the source of truth for premium — never fall back to local
+              // (so revoking premium in Supabase takes effect on next load)
+              isPremium: (() => {
+                const dbVal = dbData.userProfile.is_premium;
+                const result = dbVal === true;
+                console.log(`[Load] 🔑 PREMIUM CHECK — DB value: ${JSON.stringify(dbVal)} (type: ${typeof dbVal}) → isPremium: ${result}`);
+                return result;
+              })(),
+              premiumExpiresAt: dbData.userProfile.premium_expires_at ?? null,
               
               // Goals and settings
               enabledHabits: dbData.userProfile.enabled_habits ?? userData.enabledHabits,
@@ -347,6 +354,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
               deadlines: mergedDeadlines
             });
             console.log('[Load] ✅ Database data merged successfully');
+            console.log(`[Load] 🔑 PREMIUM FINAL STATE — isPremium: ${mergedUserData.isPremium}, expiresAt: ${mergedUserData.premiumExpiresAt}`);
             
             // Verify the state was actually updated
             const updatedState = get();
@@ -364,6 +372,16 @@ export const useQuillbyStore = create<QuillbyStore>()(
             }, 5 * 60 * 1000); // Sync every 5 minutes
           } else {
             console.log('[Load] No database data found, using local state');
+            // If we got a response but no profile, the user may have been deleted/reset.
+            // Clear premium from local state so it can't persist indefinitely offline.
+            if (dbData !== null) {
+              // dbData came back but userProfile was null — clear premium
+              const { userData } = get();
+              if (userData.isPremium) {
+                console.log('[Load] Profile missing from DB — clearing local premium status');
+                set({ userData: { ...userData, isPremium: false, premiumExpiresAt: null } });
+              }
+            }
           }
         } catch (error) {
           console.error('[Load] ❌ Failed to load from database:', error);

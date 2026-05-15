@@ -10,9 +10,10 @@ import EditGoalsModal from '../components/modals/EditGoalsModal';
 import EditProfileModal from '../components/modals/EditProfileModal';
 import PremiumPaywallModal from '../components/modals/PremiumPaywallModal';
 import GemsPurchaseModal from '../components/modals/GemsPurchaseModal';
-import FeedbackModal from '../components/modals/FeedbackModal';
 import AccountDeletionModal from '../components/modals/AccountDeletionModal';
 import NotificationSettingsModal from '../components/modals/NotificationSettingsModal';
+import PromoCodeModal from '../components/modals/PromoCodeModal';
+import CommunityFeedModal from '../components/modals/CommunityFeedModal';
 import ThemedScreen from '../components/themed/ThemedScreen';
 import { playTabSound, playUISubmitSound } from '../../lib/soundManager';
 import { getPendingDeletionRequest, cancelAccountDeletion, getDaysUntilDeletion } from '../../lib/accountDeletion';
@@ -47,9 +48,10 @@ export default function SettingsScreen() {
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [showGemsModal, setShowGemsModal] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [showAccountDeletionModal, setShowAccountDeletionModal] = useState(false);
   const [showNotificationSettingsModal, setShowNotificationSettingsModal] = useState(false);
+  const [showPromoCodeModal, setShowPromoCodeModal] = useState(false);
   
   // Scroll ref for auto-scroll to top when tab is focused
   const scrollRef = useRef<ScrollView>(null);
@@ -109,7 +111,6 @@ export default function SettingsScreen() {
       goals: { expression: 'excited', message: "Time to aim high! 🎯" },
       tutorial: { expression: 'happy', message: "Want to learn together? 📖" },
       reset: { expression: 'curious', message: "Starting fresh? 🔄" },
-      feedback: { expression: 'excited', message: "I'd love to hear from you! 💌" },
     };
     
     const reaction = reactions[section];
@@ -455,53 +456,78 @@ export default function SettingsScreen() {
           {/* Bookshelf */}
           <View style={styles.bookshelfContainer}>
             <TouchableOpacity 
-              style={[styles.book, styles.bookBlue]}
+              style={styles.communityBtn}
               onPress={() => {
                 reactToTap('tutorial');
                 router.push('/onboarding/tutorial');
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.bookEmoji}>📖</Text>
-              <Text style={styles.bookText}>Tutorial</Text>
+              <Text style={styles.communityBtnEmoji}>📖</Text>
+              <Text style={styles.communityBtnText}>Tutorial</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.book, styles.bookPurple]}
+              style={styles.communityBtn}
               onPress={() => {
                 playTabSound();
                 setShowNotificationSettingsModal(true);
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.bookEmoji}>🔔</Text>
-              <Text style={styles.bookText}>Notifications</Text>
+              <Text style={styles.communityBtnEmoji}>🔔</Text>
+              <Text style={styles.communityBtnText}>Notifi-{'\n'}cations</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.book, styles.bookGreen]}
+              style={styles.communityBtn}
               onPress={() => {
-                reactToTap('feedback');
-                setShowFeedbackModal(true);
+                playTabSound();
+                setShowCommunityModal(true);
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.bookEmoji}>📝</Text>
-              <Text style={styles.bookText}>Feedback</Text>
+              <Text style={styles.communityBtnEmoji}>🌍</Text>
+              <Text style={styles.communityBtnText}>Community{'\n'}Diary</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.book, styles.bookRed]}
+              style={styles.communityBtn}
               onPress={() => {
                 reactToTap('reset');
                 handleResetOnboarding();
               }}
               activeOpacity={0.85}
             >
-              <Text style={styles.bookEmoji}>🔄</Text>
-              <Text style={styles.bookText}>Reset</Text>
+              <Text style={styles.communityBtnEmoji}>🔄</Text>
+              <Text style={styles.communityBtnText}>Reset</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* 🎟️ Promo Code */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>🎟️ Promo Code</Text>
+            <Text style={styles.pawPrint}>🎁</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.promoCodeCard}
+            onPress={() => {
+              playTabSound();
+              setShowPromoCodeModal(true);
+            }}
+            activeOpacity={0.85}
+          >
+            <View style={styles.promoCodeLeft}>
+              <Text style={styles.promoCodeIcon}>🎟️</Text>
+              <View>
+                <Text style={styles.promoCodeTitle}>Redeem a Code</Text>
+                <Text style={styles.promoCodeSubtitle}>Get free Gems, Q-Bies, or Premium</Text>
+              </View>
+            </View>
+            <Text style={styles.promoCodeArrow}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 🗑️ Account Settings */}
@@ -617,6 +643,10 @@ export default function SettingsScreen() {
           console.log('[Settings] Premium purchased successfully!');
           setShowPaywallModal(false);
         }}
+        onGoToShop={() => {
+          setShowPaywallModal(false);
+          router.push('/(tabs)/shop');
+        }}
       />
 
       <GemsPurchaseModal
@@ -628,9 +658,18 @@ export default function SettingsScreen() {
         }}
       />
 
-      <FeedbackModal
-        visible={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
+      <CommunityFeedModal
+        visible={showCommunityModal}
+        onClose={() => setShowCommunityModal(false)}
+      />
+
+      <PromoCodeModal
+        visible={showPromoCodeModal}
+        onClose={() => setShowPromoCodeModal(false)}
+        onGoToShop={() => {
+          setShowPromoCodeModal(false);
+          router.push('/(tabs)/shop');
+        }}
       />
 
       <AccountDeletionModal
@@ -997,6 +1036,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#C8E6C9',
     borderColor: '#A5D6A7',
   },
+  bookOrange: {
+    backgroundColor: '#FFE0B2',
+    borderColor: '#FFCC80',
+  },
   bookRed: {
     backgroundColor: '#FFCDD2',
     borderColor: '#EF9A9A',
@@ -1018,7 +1061,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     textAlign: 'center',
-    numberOfLines: 1,
   },
   
   // Footer
@@ -1341,5 +1383,78 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
+  },
+
+  // Community Diary button — looks like a leather-bound book
+  communityBtn: {
+    width: SCREEN_WIDTH * 0.18,
+    height: SCREEN_WIDTH * 0.22,
+    backgroundColor: '#5C3A1E',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#3E2410',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#3E2410',
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+    // Left spine
+    borderLeftWidth: 6,
+    borderLeftColor: '#3E2410',
+  },
+  communityBtnEmoji: {
+    fontSize: SCREEN_WIDTH * 0.07,
+    marginBottom: 4,
+  },
+  communityBtnText: {
+    fontSize: SCREEN_WIDTH * 0.024,
+    fontWeight: '700',
+    color: '#F5DEB3',
+    textAlign: 'center',
+    lineHeight: SCREEN_WIDTH * 0.032,
+  },
+
+  // Promo Code Section
+  promoCodeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingVertical: SCREEN_HEIGHT * 0.02,
+    paddingHorizontal: SCREEN_WIDTH * 0.05,
+    borderWidth: 2,
+    borderColor: '#FFB74D',
+    shadowColor: '#FF9800',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  promoCodeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  promoCodeIcon: {
+    fontSize: 32,
+  },
+  promoCodeTitle: {
+    fontSize: SCREEN_WIDTH * 0.042,
+    fontFamily: 'ChakraPetch_700Bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  promoCodeSubtitle: {
+    fontSize: SCREEN_WIDTH * 0.032,
+    fontFamily: 'ChakraPetch_400Regular',
+    color: '#888',
+  },
+  promoCodeArrow: {
+    fontSize: 28,
+    color: '#FF9800',
+    fontWeight: '700',
   },
 });

@@ -192,7 +192,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.60, left: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.764 + SCREEN_HEIGHT * 0.12, // Move up slightly
+        top: SCREEN_HEIGHT * 0.764 + SCREEN_HEIGHT * 0.09, // Move up slightly
         left: SCREEN_WIDTH * 0.051, 
         width: (SCREEN_WIDTH * 0.898) / 2 - 5, // Increase width
         height: SCREEN_HEIGHT * 0.07 
@@ -205,7 +205,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.60, right: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.764 + SCREEN_HEIGHT * 0.12, // Move up slightly
+        top: SCREEN_HEIGHT * 0.764 + SCREEN_HEIGHT * 0.09, // Move up slightly
         left: SCREEN_WIDTH * 0.051 + (SCREEN_WIDTH * 0.898) / 2 + 5, 
         width: (SCREEN_WIDTH * 0.898) / 2 - 5, // Increase width
         height: SCREEN_HEIGHT * 0.07 
@@ -218,7 +218,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.75, left: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.684, // Move up more
+        top: SCREEN_HEIGHT * 0.652, // Move up more
         left: SCREEN_WIDTH * 0.153, 
         width: SCREEN_WIDTH * 0.201, 
         height: SCREEN_HEIGHT * 0.056 
@@ -231,7 +231,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.75, left: SCREEN_WIDTH * 0.1 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.684, // Move up more
+        top: SCREEN_HEIGHT * 0.652, // Move up more
         left: SCREEN_WIDTH * 0.3945, 
         width: SCREEN_WIDTH * 0.201, 
         height: SCREEN_HEIGHT * 0.056 
@@ -244,7 +244,7 @@ function StudySessionContent() {
       position: { top: SCREEN_HEIGHT * 0.75, right: SCREEN_WIDTH * 0.051 },
       arrowDirection: 'down' as const,
       highlightArea: { 
-        top: SCREEN_HEIGHT * 0.684, // Move up more
+        top: SCREEN_HEIGHT * 0.652, // Move up more
         left: SCREEN_WIDTH * 0.636, 
         width: SCREEN_WIDTH * 0.201, 
         height: SCREEN_HEIGHT * 0.056 

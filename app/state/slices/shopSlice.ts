@@ -306,13 +306,34 @@ export const createShopSlice: StateCreator<
       premiumExpiresAt: expiresAt !== undefined ? expiresAt : userData.premiumExpiresAt,
     };
     
-    set({
-      userData: updatedUserData
-    });
+    set({ userData: updatedUserData });
     
     console.log('[Shop] Premium status updated:', isPremium, expiresAt ? `expires ${expiresAt}` : '(permanent)');
     
-    // Sync to database
+    // Write is_premium directly to DB — syncToDatabase intentionally skips this field
+    // to prevent local cache from overwriting DB revocations
+    (async () => {
+      try {
+        const { getDeviceUser } = await import('../../../lib/deviceAuth');
+        const { supabase } = await import('../../../lib/supabase');
+        const user = await getDeviceUser();
+        if (user) {
+          await supabase
+            .from('user_profiles')
+            .update({
+              is_premium: isPremium,
+              premium_expires_at: expiresAt ?? null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id);
+          console.log('[Shop] ✅ is_premium written directly to DB:', isPremium);
+        }
+      } catch (e) {
+        console.warn('[Shop] Failed to write premium status to DB:', e);
+      }
+    })();
+
+    // Sync other fields (coins, gems, etc.) — is_premium excluded from syncToDatabase
     syncToDatabase(updatedUserData);
   }
 });

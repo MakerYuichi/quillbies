@@ -11,7 +11,7 @@ import {
 } from 'react-native-google-mobile-ads';
 
 // ─── Ad Unit IDs ────────────────────────────────────────────────────────────
-const IS_PRODUCTION = true; // flip to false to use Google test ad IDs
+const IS_PRODUCTION = false; // flip to true when releasing to production
 
 export const AD_UNITS = {
   BANNER: IS_PRODUCTION

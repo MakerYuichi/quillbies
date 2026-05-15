@@ -486,6 +486,10 @@ export default function ShopScreen() {
           console.log('[Shop] Premium purchased successfully!');
           setShowPaywallModal(false);
         }}
+        onGoToShop={() => {
+          setShowPaywallModal(false);
+          setSelectedCategory('theme');
+        }}
       />
 
       {/* Gems Purchase Modal */}

@@ -117,7 +117,11 @@ export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, i
   
   return (
     <TouchableOpacity style={[styles.container, { width: cardWidth }]} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.card, { borderColor: color1, height: cardHeight }]}>
+      <View style={[
+        styles.card,
+        { borderColor: item.requiresPremium && isPremium ? '#FFD700' : color1, height: cardHeight },
+        item.requiresPremium && isPremium && styles.premiumUnlockedCard,
+      ]}>
         <View style={[styles.innerGlow, { backgroundColor: color1, opacity: 0.15 }]} />
         
         {/* Rarity Stars - Top Right Corner */}
@@ -129,6 +133,13 @@ export default function ShopItemCard({ item, isPurchased, isEquipped, onPress, i
         {isEquipped && (
           <View style={[styles.equippedBadge, { backgroundColor: color1 }]}>
             <Text style={styles.equippedText}>✓</Text>
+          </View>
+        )}
+
+        {/* Premium Crown Badge - Top Left (when premium unlocked, not equipped) */}
+        {item.requiresPremium && isPremium && !isEquipped && (
+          <View style={styles.premiumUnlockedBadge}>
+            <Text style={styles.premiumUnlockedIcon}>👑</Text>
           </View>
         )}
         
@@ -396,5 +407,30 @@ const styles = StyleSheet.create({
   },
   lockedIcon: {
     opacity: 0.3,
+  },
+
+  // Premium Unlocked — subtle gold treatment
+  premiumUnlockedCard: {
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  premiumUnlockedBadge: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  premiumUnlockedIcon: {
+    fontSize: 10,
+    lineHeight: 12,
   },
 });
