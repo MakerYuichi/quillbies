@@ -126,6 +126,7 @@ export interface UserData {
   
   // Premium Status
   isPremium?: boolean; // Whether user has premium subscription
+  premiumExpiresAt?: string | null; // ISO timestamp — null means permanent (paid subscription)
   
   // Diet Type
   dietType?: 'small-portions' | 'normal-portions' | 'large-portions'; // Meal portion preference

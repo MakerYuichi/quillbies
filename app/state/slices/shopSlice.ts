@@ -12,7 +12,7 @@ export interface ShopSlice {
   updateRoomCustomization: (lightType?: string, plantType?: string) => void;
   equipItem: (itemId: string, category: string) => Promise<boolean>;
   unequipItem: (category: string) => Promise<boolean>;
-  setPremiumStatus: (isPremium: boolean) => void;
+  setPremiumStatus: (isPremium: boolean, expiresAt?: string | null) => void;
 }
 
 export const createShopSlice: StateCreator<
@@ -297,19 +297,20 @@ export const createShopSlice: StateCreator<
     syncToDatabase(updatedUserData);
   },
 
-  setPremiumStatus: (isPremium: boolean) => {
+  setPremiumStatus: (isPremium: boolean, expiresAt?: string | null) => {
     const { userData } = get();
     
     const updatedUserData = {
       ...userData,
-      isPremium
+      isPremium,
+      premiumExpiresAt: expiresAt !== undefined ? expiresAt : userData.premiumExpiresAt,
     };
     
     set({
       userData: updatedUserData
     });
     
-    console.log('[Shop] Premium status updated:', isPremium);
+    console.log('[Shop] Premium status updated:', isPremium, expiresAt ? `expires ${expiresAt}` : '(permanent)');
     
     // Sync to database
     syncToDatabase(updatedUserData);

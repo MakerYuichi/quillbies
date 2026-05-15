@@ -255,9 +255,26 @@ export const showRewardedAd = (isPremium: boolean): Promise<number | null> => {
   });
 };
 
+// ─── Test devices ────────────────────────────────────────────────────────────
+// Add your physical device's advertising ID here to use real ad units without
+// policy violations. Find it at: Android Settings → Google → Ads → Ad ID
+// You can also register devices in the AdMob dashboard under Ad Inspector.
+const TEST_DEVICE_IDS: string[] = [
+  // 'YOUR-DEVICE-AD-ID-HERE',
+];
+
 // ─── Initialize ──────────────────────────────────────────────────────────────
 export const initializeAds = async () => {
   try {
+    // Register test devices so real ad unit IDs can be used during development
+    // without risking invalid traffic policy violations
+    if (TEST_DEVICE_IDS.length > 0) {
+      await MobileAds().setRequestConfiguration({
+        testDeviceIdentifiers: TEST_DEVICE_IDS,
+      });
+      console.log('[Ads] Test devices registered:', TEST_DEVICE_IDS.length);
+    }
+
     await MobileAds().initialize();
     console.log('[Ads] MobileAds initialized');
     adsReady = true;

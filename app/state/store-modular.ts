@@ -182,6 +182,7 @@ export const useQuillbyStore = create<QuillbyStore>()(
                 ? dbData.userProfile.current_streak
                 : userData.currentStreak,
               isPremium: dbData.userProfile.is_premium ?? userData.isPremium ?? false,
+              premiumExpiresAt: dbData.userProfile.premium_expires_at ?? userData.premiumExpiresAt ?? null,
               
               // Goals and settings
               enabledHabits: dbData.userProfile.enabled_habits ?? userData.enabledHabits,
@@ -294,6 +295,15 @@ export const useQuillbyStore = create<QuillbyStore>()(
               mergedUserData.lastExerciseReset = today;
               mergedUserData.lastStudyReset = today;
               mergedUserData.lastConsumableReset = today;
+            }
+
+            // Check if timed premium has expired
+            if (mergedUserData.isPremium && mergedUserData.premiumExpiresAt) {
+              if (new Date(mergedUserData.premiumExpiresAt) < new Date()) {
+                console.log('[Load] Promo premium expired — revoking');
+                mergedUserData.isPremium = false;
+                mergedUserData.premiumExpiresAt = null;
+              }
             }
 
             // Convert database deadlines to local format

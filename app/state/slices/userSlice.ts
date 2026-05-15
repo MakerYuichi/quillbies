@@ -12,6 +12,7 @@ export interface UserSlice {
   resetDay: () => void;
   addGems: (amount: number, reason?: string) => void;
   spendGems: (amount: number, reason?: string) => boolean;
+  addQCoins: (amount: number, reason?: string) => void;
   
   // Onboarding actions
   completeOnboarding: () => Promise<void>;
@@ -37,6 +38,7 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     lastActiveTimestamp: Date.now(),
     onboardingCompleted: false,
     isPremium: false, // Premium status for legendary items
+    premiumExpiresAt: null, // null = permanent; ISO string = timed promo premium
     sleepSessions: [],
     ateBreakfast: false,
     waterGlasses: 0,
@@ -566,5 +568,14 @@ export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
     set({ userData: updatedUserData });
     syncToDatabase(updatedUserData);
     return true;
+  },
+
+  addQCoins: (amount: number, reason?: string) => {
+    const { userData } = get();
+    const newQCoins = userData.qCoins + amount;
+    console.log(`[QCoins] Adding ${amount} Q-Bies. Reason: ${reason || 'N/A'}. Total: ${userData.qCoins} → ${newQCoins}`);
+    const updatedUserData = { ...userData, qCoins: newQCoins };
+    set({ userData: updatedUserData });
+    syncToDatabase(updatedUserData);
   }
 });

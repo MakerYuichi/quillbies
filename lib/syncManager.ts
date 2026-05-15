@@ -40,6 +40,8 @@ export const syncAllUserData = async (userData: any) => {
         q_coins: userData.qCoins,
         gems: userData.gems || 0, // Add gems sync
         mess_points: userData.messPoints,
+        is_premium: userData.isPremium ?? false,
+        premium_expires_at: userData.premiumExpiresAt ?? null,
         current_streak: userData.currentStreak || 0,
         last_check_in_date: userData.lastCheckInDate || new Date().toISOString().split('T')[0],
         last_active_timestamp: userData.lastActiveTimestamp || Date.now(),

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useQuillbyStore } from '../../state/store-modular';
 import { getOrCreateDeviceId } from '../../../lib/deviceAuth';
+import { redeemPromoCode } from '../../../lib/promoCodes';
 
 interface Props {
   visible: boolean;
@@ -25,6 +26,7 @@ export default function PromoCodeModal({ visible, onClose }: Props) {
 
   const addGems = useQuillbyStore((state) => state.addGems);
   const addQCoins = useQuillbyStore((state) => state.addQCoins);
+  const setPremiumStatus = useQuillbyStore((state) => state.setPremiumStatus);
 
   const handleRedeem = async () => {
     if (!code.trim()) return;
@@ -41,11 +43,13 @@ export default function PromoCodeModal({ visible, onClose }: Props) {
 
       const res = await redeemPromoCode(code, deviceId);
 
-      if (res.success && res.rewardType && res.rewardAmount) {
+      if (res.success && res.rewardType && res.rewardAmount !== undefined) {
         if (res.rewardType === 'gems') {
           addGems(res.rewardAmount, `promo:${code.trim().toUpperCase()}`);
-        } else {
+        } else if (res.rewardType === 'coins') {
           addQCoins(res.rewardAmount, `promo:${code.trim().toUpperCase()}`);
+        } else if (res.rewardType === 'premium') {
+          setPremiumStatus(true, res.premiumExpiresAt ?? null);
         }
         setResult({ success: true, message: res.message ?? '🎉 Code redeemed!' });
         setCode('');
